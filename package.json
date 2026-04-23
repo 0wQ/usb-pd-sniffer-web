@@ -1,0 +1,22 @@
+{
+  "name": "usb-pd-sniffer-web-v2-workspace",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "bun@1.3.10",
+  "engines": {
+    "bun": ">=1.3.10"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "web:dev": "bun run --cwd packages/pd-web dev",
+    "web:build": "bun run --cwd packages/pd-web build",
+    "web:preview": "bun run --cwd packages/pd-web preview",
+    "build": "bun run clean && bunx tsc -b tsconfig.json",
+    "clean": "rm -rf packages/*/dist packages/*/*.tsbuildinfo",
+    "test": "bun test",
+    "typecheck": "bunx tsc -b tsconfig.json --pretty false"
+  }
+}

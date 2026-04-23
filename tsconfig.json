@@ -1,0 +1,14 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/pd-core"
+    },
+    {
+      "path": "./packages/pd-monitor"
+    },
+    {
+      "path": "./packages/pd-web"
+    }
+  ]
+}

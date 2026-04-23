@@ -1,0 +1,23 @@
+{
+  "name": "@usb-pd-sniffer/pd-core",
+  "version": "0.1.0",
+  "description": "Explain-first USB PD parser core for usb-pd-sniffer-web-v2.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "rm -rf dist && bunx tsc -p tsconfig.json",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "typecheck": "bunx tsc -p tsconfig.json --pretty false"
+  }
+}

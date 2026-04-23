@@ -1,0 +1,29 @@
+{
+  "name": "@usb-pd-sniffer/pd-monitor",
+  "version": "0.1.0",
+  "description": "Shared monitor-event adapter helpers for the USB PD sniffer workspace.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "rm -rf dist && bunx tsc -p tsconfig.json",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "typecheck": "bunx tsc -p tsconfig.json --pretty false"
+  },
+  "dependencies": {
+    "@usb-pd-sniffer/pd-core": "0.1.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

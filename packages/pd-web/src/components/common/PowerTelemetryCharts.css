@@ -1,0 +1,47 @@
+.power-uplot {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.power-uplot .u-wrap {
+  background:
+    radial-gradient(circle at 18% 16%, rgba(92, 200, 255, 0.08), transparent 34%),
+    radial-gradient(circle at 82% 14%, rgba(126, 231, 135, 0.07), transparent 32%),
+    linear-gradient(180deg, rgba(17, 24, 39, 0.96), rgba(7, 11, 20, 0.985));
+  border-radius: 0.75rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 0 0 1px rgba(148, 163, 184, 0.08);
+}
+
+.power-uplot .u-over {
+  cursor: crosshair;
+}
+
+.power-uplot .u-select {
+  background: rgba(92, 200, 255, 0.16);
+  border: 1px solid rgba(92, 200, 255, 0.38);
+}
+
+.power-uplot .u-axis {
+  color: rgba(226, 232, 240, 0.72);
+}
+
+.power-uplot .u-label {
+  color: rgba(148, 163, 184, 0.7);
+  letter-spacing: 0.02em;
+}
+
+.power-uplot .u-cursor-x,
+.power-uplot .u-cursor-y {
+  border-color: rgba(248, 250, 252, 0.16) !important;
+}
+
+.power-uplot .u-cursor-pt {
+  box-shadow:
+    0 0 0 1px rgba(11, 18, 32, 0.96),
+    0 0 12px rgba(255, 255, 255, 0.06);
+}
+
+.power-uplot-shell .uplot {
+  width: 100%;
+}
