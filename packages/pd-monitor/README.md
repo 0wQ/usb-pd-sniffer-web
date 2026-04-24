@@ -131,7 +131,10 @@ Current record emission behavior:
 - `PD_SOP0`, `PD_SOP1`, `PD_SOP2`, `PD_SOP1_DEBUG`, and `PD_SOP2_DEBUG` emit records with raw PD packet bytes.
 - `HARD_RESET`, `CABLE_RESET`, and `PD_ERROR` are accepted by the monitor path.
 - `POWER_TELEMETRY` emits through `onPowerSample()`, not `onRecord()`.
-- UFCS event constants exist in the ABI, but UFCS single/chunk record emission and chunk assembly are not complete yet.
+- `UFCS_DP_SINGLE` and `UFCS_DM_SINGLE` emit records directly.
+- `UFCS_DP_CHUNK0` / `UFCS_DM_CHUNK0` are cached internally.
+- `UFCS_DP_CHUNK1` / `UFCS_DM_CHUNK1` are assembled with a cached same-direction, same-`recv_counter` chunk0 and emitted as `UFCS_DP_SINGLE` / `UFCS_DM_SINGLE` records.
+- Incomplete or mismatched UFCS chunks are dropped at this layer for now.
 
 ## Power Samples
 
@@ -198,7 +201,5 @@ These exports remain available for tests and tooling, but `pd-web` should prefer
 
 ## Known Follow-Ups
 
-- Assemble UFCS chunk reports inside `pd-monitor` so `pd-web` only sees complete UFCS records.
 - Rename `MonitorRecord.pd_raw` / `MonitorRecord.pd_data_len` to `data` / `data_len` after the web store and CSV paths are migrated.
 - Add tests around `createMonitorDevice()` with a fake WebHID object before extending transport behavior further.
-

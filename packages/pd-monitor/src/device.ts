@@ -10,6 +10,7 @@ import {
 } from "./monitorAdapter.js";
 
 const DEVICE_FILTER = { vendorId: 0x1a86, productId: 0x2333 } as const;
+const UFCS_CHUNK_CACHE_LIMIT = 8;
 
 type HidDeviceLike = {
   readonly vendorId: number;
@@ -44,6 +45,8 @@ type HidLike = {
 type NavigatorWithHid = {
   readonly hid?: HidLike;
 };
+
+type UfcsDirection = "dp" | "dm";
 
 export type MonitorRecord = {
   timestamp_us: number;
@@ -100,6 +103,11 @@ export type MonitorDevice = {
 };
 
 export type MonitorPdTxTarget = "SOP" | "SOP_PRIME" | "SOP_DPRIME";
+
+export type MonitorRecordNormalizer = {
+  push(record: MonitorRecord): MonitorRecord[];
+  reset(): void;
+};
 
 export function parsePdHexPayload(input: string): Uint8Array {
   const trimmed = input.trim();
@@ -219,11 +227,117 @@ function recordToPowerSample(record: MonitorRecord): MonitorPowerSample {
   };
 }
 
+function ufcsSingleEventType(eventType: number): number | null {
+  switch (eventType) {
+    case MONITOR_EVENT.UFCS_DP_SINGLE:
+    case MONITOR_EVENT.UFCS_DM_SINGLE:
+      return eventType;
+    default:
+      return null;
+  }
+}
+
+function ufcsChunk0Direction(eventType: number): UfcsDirection | null {
+  switch (eventType) {
+    case MONITOR_EVENT.UFCS_DP_CHUNK0:
+      return "dp";
+    case MONITOR_EVENT.UFCS_DM_CHUNK0:
+      return "dm";
+    default:
+      return null;
+  }
+}
+
+function ufcsChunk1Direction(eventType: number): UfcsDirection | null {
+  switch (eventType) {
+    case MONITOR_EVENT.UFCS_DP_CHUNK1:
+      return "dp";
+    case MONITOR_EVENT.UFCS_DM_CHUNK1:
+      return "dm";
+    default:
+      return null;
+  }
+}
+
+function ufcsAssembledEventType(direction: UfcsDirection): number {
+  return direction === "dp" ? MONITOR_EVENT.UFCS_DP_SINGLE : MONITOR_EVENT.UFCS_DM_SINGLE;
+}
+
+function ufcsChunkKey(direction: UfcsDirection, recvCounter: number): string {
+  return `${direction}:${recvCounter}`;
+}
+
+function cloneRecord(record: MonitorRecord): MonitorRecord {
+  return {
+    ...record,
+    pd_raw: record.pd_raw.slice(0, record.pd_data_len),
+  };
+}
+
+function trimUfcsChunkCache(cache: Map<string, MonitorRecord>): void {
+  while (cache.size > UFCS_CHUNK_CACHE_LIMIT) {
+    const oldestKey = cache.keys().next().value as string | undefined;
+    if (oldestKey === undefined) return;
+    cache.delete(oldestKey);
+  }
+}
+
+function assembleUfcsRecord(chunk0: MonitorRecord, chunk1: MonitorRecord, direction: UfcsDirection): MonitorRecord {
+  const data = [
+    ...chunk0.pd_raw.slice(0, chunk0.pd_data_len),
+    ...chunk1.pd_raw.slice(0, chunk1.pd_data_len),
+  ];
+
+  return {
+    ...chunk0,
+    event_type: ufcsAssembledEventType(direction),
+    pd_data_len: data.length,
+    pd_raw: data,
+  };
+}
+
+export function createMonitorRecordNormalizer(): MonitorRecordNormalizer {
+  const ufcsChunk0ByKey = new Map<string, MonitorRecord>();
+
+  return {
+    push(record: MonitorRecord): MonitorRecord[] {
+      if (ufcsSingleEventType(record.event_type) !== null) {
+        return [record];
+      }
+
+      const chunk0Direction = ufcsChunk0Direction(record.event_type);
+      if (chunk0Direction !== null) {
+        ufcsChunk0ByKey.set(ufcsChunkKey(chunk0Direction, record.recv_counter), cloneRecord(record));
+        trimUfcsChunkCache(ufcsChunk0ByKey);
+        return [];
+      }
+
+      const chunk1Direction = ufcsChunk1Direction(record.event_type);
+      if (chunk1Direction !== null) {
+        const key = ufcsChunkKey(chunk1Direction, record.recv_counter);
+        const chunk0 = ufcsChunk0ByKey.get(key);
+        ufcsChunk0ByKey.delete(key);
+        if (chunk0 === undefined) {
+          return [];
+        }
+
+        return [assembleUfcsRecord(chunk0, record, chunk1Direction)];
+      }
+
+      return isPdMonitorEvent(record.event_type) ? [record] : [];
+    },
+    reset(): void {
+      ufcsChunk0ByKey.clear();
+    },
+  };
+}
+
 export function createMonitorDevice(): MonitorDevice {
   const hid = getHid();
   const recordListeners = new Set<(record: MonitorRecord) => void>();
   const powerListeners = new Set<(sample: MonitorPowerSample) => void>();
   const statusListeners = new Set<(status: MonitorDeviceStatus) => void>();
+  const recordNormalizer = createMonitorRecordNormalizer();
 
   let device: HidDeviceLike | null = null;
   let isConnecting = false;
@@ -249,6 +363,16 @@ export function createMonitorDevice(): MonitorDevice {
     for (const listener of statusListeners) listener(current);
   };
 
+  const emitRecord = (record: MonitorRecord): void => {
+    for (const listener of recordListeners) listener(record);
+  };
+
+  const processRecord = (record: MonitorRecord): void => {
+    for (const normalizedRecord of recordNormalizer.push(record)) {
+      emitRecord(normalizedRecord);
+    }
+  };
+
   const handleInputReport = (event: HidInputReportEventLike): void => {
     try {
       const record = reportToRecord(event.reportId, event.data);
@@ -258,11 +382,7 @@ export function createMonitorDevice(): MonitorDevice {
         return;
       }
 
-      if (!isPdMonitorEvent(record.event_type)) {
-        return;
-      }
-
-      for (const listener of recordListeners) listener(record);
+      processRecord(record);
     } catch (caught) {
       error = caught instanceof Error ? caught.message : "Failed to parse HID input report.";
       emitStatus();
@@ -324,6 +444,7 @@ export function createMonitorDevice(): MonitorDevice {
     if (!isCurrentDevice) return;
 
     current.removeEventListener("inputreport", handleInputReport);
+    recordNormalizer.reset();
     device = null;
     emitStatus();
   };
@@ -399,6 +520,7 @@ export function createMonitorDevice(): MonitorDevice {
           await current.close();
         }
       } finally {
+        recordNormalizer.reset();
         device = null;
         emitStatus();
       }
@@ -416,6 +538,7 @@ export function createMonitorDevice(): MonitorDevice {
       if (device !== null) {
         device.removeEventListener("inputreport", handleInputReport);
       }
+      recordNormalizer.reset();
       device = null;
       emitStatus();
     },
