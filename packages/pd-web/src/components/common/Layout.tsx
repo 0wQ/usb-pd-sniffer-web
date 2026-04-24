@@ -22,7 +22,7 @@ type Props = {
   onSendHardReset: () => Promise<void>
   onSendCableReset: () => Promise<void>
   isSendingCommand: boolean
-  isWebHidSupported: boolean
+  isDeviceSupported: boolean
   currentView: AppView
   onViewChange: (view: AppView) => void
 }
@@ -40,7 +40,7 @@ const Layout = ({
   onSendHardReset,
   onSendCableReset,
   isSendingCommand,
-  isWebHidSupported,
+  isDeviceSupported,
   currentView,
   onViewChange,
 }: Props) => {
@@ -89,7 +89,7 @@ const Layout = ({
             onSendHardReset={onSendHardReset}
             onSendCableReset={onSendCableReset}
             isSendingCommand={isSendingCommand}
-            isWebHidSupported={isWebHidSupported}
+            isDeviceSupported={isDeviceSupported}
             currentView={currentView}
             onViewChange={onViewChange}
           />

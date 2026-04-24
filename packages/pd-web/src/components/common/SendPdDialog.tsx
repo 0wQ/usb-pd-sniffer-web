@@ -139,7 +139,7 @@ const SendPdDialog = ({
       <div className="modal-box max-w-2xl">
         <h3 className="text-lg font-bold">Native PD TX</h3>
         <p className="mt-2 text-sm text-base-content/70">
-          Send raw PD bytes over WebHID OUT. Enter header + data objects only, without CRC.
+          Send raw PD bytes through the monitor device. Enter header + data objects only, without CRC.
         </p>
 
         <div className="mt-4 grid gap-4">
@@ -289,8 +289,8 @@ const SendPdDialog = ({
           ) : (
             <div className="rounded-lg border border-base-300 bg-base-200/70 px-3 py-4 text-sm text-base-content/70">
               {mode === 'hard_reset'
-                ? 'Send a Hard Reset over the native HID OUT path.'
-                : 'Send a Cable Reset over the native HID OUT path.'}
+                ? 'Send a Hard Reset through the native monitor device.'
+                : 'Send a Cable Reset through the native monitor device.'}
             </div>
           )}
 
@@ -322,7 +322,7 @@ const SendPdDialog = ({
 
           {!isConnected && (
             <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
-              Connect the native HID device before sending.
+              Connect the native monitor device before sending.
             </div>
           )}
         </div>

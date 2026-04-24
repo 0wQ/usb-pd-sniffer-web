@@ -2,7 +2,7 @@
 
 `pd-web` is the browser UI for `usb-pd-sniffer-web-v2`.
 
-It owns WebHID, capture buffers, protocol table rendering, generic decode detail rendering, power telemetry display, and PD transmit controls. Protocol payload meaning should come from `@usb-pd-sniffer/pd-core`, not from view-layer special cases.
+It owns browser UI state, capture buffers, protocol table rendering, generic decode detail rendering, power telemetry display, and PD transmit controls. Native device access is delegated to `@usb-pd-sniffer/pd-monitor`. Protocol payload meaning should come from `@usb-pd-sniffer/pd-core`, not from view-layer special cases.
 
 ## Source Layout
 
@@ -12,8 +12,8 @@ It owns WebHID, capture buffers, protocol table rendering, generic decode detail
 | `src/components/common` | Shared app chrome, dialogs, masks, and navigation widgets. |
 | `src/components/pages` | Page-level components such as the power telemetry page. |
 | `src/components/power` | Power telemetry chart components and chart-specific styles. |
-| `src/hooks` | WebHID and browser lifecycle hooks. |
-| `src/lib/live` | HID report parsing, monitor/core adapter calls, and TX helpers. |
+| `src/hooks` | Browser lifecycle hooks and monitor-device subscriptions. |
+| `src/lib/live` | Monitor/core adapter calls and TX helpers. |
 | `src/stores` | Zustand device/capture state. |
 | `src/types` | Web app data types. |
 | `src/utils` | App-local utilities such as CSV helpers. |

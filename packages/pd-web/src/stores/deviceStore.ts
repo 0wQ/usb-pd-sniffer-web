@@ -1,11 +1,11 @@
 import { create } from 'zustand'
 import type { CaptureRecord, PowerSample } from '@/types/pd'
 
-const HID_STORAGE_KEYS = {
-  autoConnectOnLoad: 'usb-pd-hid-autoConnectOnLoad',
-  autoReconnectOnHotplug: 'usb-pd-hid-autoReconnectOnHotplug',
-  manualDisconnect: 'usb-pd-hid-manualDisconnect',
-  lastDeviceFingerprint: 'usb-pd-hid-lastDeviceFingerprint',
+const DEVICE_STORAGE_KEYS = {
+  autoConnectOnLoad: 'usb-pd-device-autoConnectOnLoad',
+  autoReconnectOnHotplug: 'usb-pd-device-autoReconnectOnHotplug',
+  manualDisconnect: 'usb-pd-device-manualDisconnect',
+  lastDeviceFingerprint: 'usb-pd-device-lastDeviceFingerprint',
   detailContextBacktrackRecords: 'usb-pd-detail-context-backtrack-records',
   powerCaptureEnabled: 'usb-pd-power-capture-enabled',
 } as const
@@ -230,12 +230,12 @@ const useDeviceStore = create<DeviceState>()((set, get) => ({
   // Initial state
   isConnected: false,
   isConnecting: false,
-  manualDisconnect: readBool(HID_STORAGE_KEYS.manualDisconnect, false),
-  autoConnectOnLoad: readBool(HID_STORAGE_KEYS.autoConnectOnLoad, true),
-  autoReconnectOnHotplug: readBool(HID_STORAGE_KEYS.autoReconnectOnHotplug, true),
-  lastDeviceFingerprint: readString(HID_STORAGE_KEYS.lastDeviceFingerprint, null),
-  detailContextBacktrackRecords: readNullableNumber(HID_STORAGE_KEYS.detailContextBacktrackRecords, null),
-  powerCaptureEnabled: readBool(HID_STORAGE_KEYS.powerCaptureEnabled, false),
+  manualDisconnect: readBool(DEVICE_STORAGE_KEYS.manualDisconnect, false),
+  autoConnectOnLoad: readBool(DEVICE_STORAGE_KEYS.autoConnectOnLoad, true),
+  autoReconnectOnHotplug: readBool(DEVICE_STORAGE_KEYS.autoReconnectOnHotplug, true),
+  lastDeviceFingerprint: readString(DEVICE_STORAGE_KEYS.lastDeviceFingerprint, null),
+  detailContextBacktrackRecords: readNullableNumber(DEVICE_STORAGE_KEYS.detailContextBacktrackRecords, null),
+  powerCaptureEnabled: readBool(DEVICE_STORAGE_KEYS.powerCaptureEnabled, false),
   protocolSelectedIndex: null,
   reportsBuffer: new ReportsBuffer(),
   powerBuffer: new PowerSamplesBuffer(POWER_BUFFER_CAPACITY),
@@ -254,34 +254,34 @@ const useDeviceStore = create<DeviceState>()((set, get) => ({
   setIsConnecting: (isConnecting) => set({ isConnecting }),
 
   setManualDisconnect: (manualDisconnect) => {
-    writeValue(HID_STORAGE_KEYS.manualDisconnect, String(manualDisconnect))
+    writeValue(DEVICE_STORAGE_KEYS.manualDisconnect, String(manualDisconnect))
     set({ manualDisconnect })
   },
 
   setAutoConnectOnLoad: (autoConnectOnLoad) => {
-    writeValue(HID_STORAGE_KEYS.autoConnectOnLoad, String(autoConnectOnLoad))
+    writeValue(DEVICE_STORAGE_KEYS.autoConnectOnLoad, String(autoConnectOnLoad))
     set({ autoConnectOnLoad })
   },
 
   setAutoReconnectOnHotplug: (autoReconnectOnHotplug) => {
-    writeValue(HID_STORAGE_KEYS.autoReconnectOnHotplug, String(autoReconnectOnHotplug))
+    writeValue(DEVICE_STORAGE_KEYS.autoReconnectOnHotplug, String(autoReconnectOnHotplug))
     set({ autoReconnectOnHotplug })
   },
 
   setLastDeviceFingerprint: (lastDeviceFingerprint) => {
     if (lastDeviceFingerprint === null) {
-      removeValue(HID_STORAGE_KEYS.lastDeviceFingerprint)
+      removeValue(DEVICE_STORAGE_KEYS.lastDeviceFingerprint)
       set({ lastDeviceFingerprint: null })
       return
     }
 
-    writeValue(HID_STORAGE_KEYS.lastDeviceFingerprint, lastDeviceFingerprint)
+    writeValue(DEVICE_STORAGE_KEYS.lastDeviceFingerprint, lastDeviceFingerprint)
     set({ lastDeviceFingerprint })
   },
 
   setDetailContextBacktrackRecords: (detailContextBacktrackRecords) => {
     writeValue(
-      HID_STORAGE_KEYS.detailContextBacktrackRecords,
+      DEVICE_STORAGE_KEYS.detailContextBacktrackRecords,
       detailContextBacktrackRecords === null ? 'unlimited' : String(detailContextBacktrackRecords)
     )
     set({ detailContextBacktrackRecords })
@@ -290,7 +290,7 @@ const useDeviceStore = create<DeviceState>()((set, get) => ({
   setPowerCaptureEnabled: (powerCaptureEnabled) => {
     const { powerUpdateTimer } = get()
 
-    writeValue(HID_STORAGE_KEYS.powerCaptureEnabled, String(powerCaptureEnabled))
+    writeValue(DEVICE_STORAGE_KEYS.powerCaptureEnabled, String(powerCaptureEnabled))
 
     if (!powerCaptureEnabled && powerUpdateTimer !== null) {
       clearTimeout(powerUpdateTimer)

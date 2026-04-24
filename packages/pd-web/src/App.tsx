@@ -2,7 +2,7 @@ import { Toaster } from 'sonner'
 import Layout from '@/components/common/Layout'
 import PowerPage from '@/components/pages/PowerPage'
 import { type AppView } from '@/components/common/ViewTabs'
-import { useWebHid } from '@/hooks/useWebHid'
+import { useMonitorDevice } from '@/hooks/useMonitorDevice'
 import { useBeforeUnloadWarning } from '@/hooks/useBeforeUnloadWarning'
 import useDeviceStore from '@/stores/deviceStore'
 import { useState } from 'react'
@@ -13,17 +13,17 @@ function App() {
   // 数据丢失警告
   useBeforeUnloadWarning()
 
-  // 初始化 WebHID hook
+  // 初始化 monitor device hook
   const {
-    connectHID,
-    disconnectHID,
+    connectDevice,
+    disconnectDevice,
     sendRawPdFrame,
     sendHardReset,
     sendCableReset,
     isSending,
-    isWebHidSupported,
-    webHidError,
-  } = useWebHid()
+    isDeviceSupported,
+    deviceError,
+  } = useMonitorDevice()
 
   // 从 store 读取连接状态
   const isConnected = useDeviceStore((state) => state.isConnected)
@@ -38,9 +38,9 @@ function App() {
   const handleConnectBtnClick = () => {
     if (isConnecting) return
     if (isConnected) {
-      disconnectHID()
+      disconnectDevice()
     } else {
-      connectHID()
+      connectDevice()
     }
   }
 
@@ -63,8 +63,8 @@ function App() {
         }}
       />
 
-      {/* WebHID 不支持时显示警告 */}
-      {!isWebHidSupported && (
+      {/* Monitor device API 不支持时显示警告 */}
+      {!isDeviceSupported && (
         <div className="mx-auto w-full max-w-4xl px-5 pt-5">
           <div role="alert" className="alert alert-error">
             <svg
@@ -81,9 +81,9 @@ function App() {
               />
             </svg>
             <div>
-              <h3 className="font-bold">WebHID API Not Supported</h3>
+              <h3 className="font-bold">Monitor Device API Not Supported</h3>
               <div className="text-sm">
-                {webHidError || 'Your browser does not support WebHID. Please use Chrome, Edge, or Opera (version 89+).'}
+                {deviceError || 'Your browser does not support the required monitor device API. Please use Chrome, Edge, or Opera (version 89+).'}
               </div>
             </div>
           </div>
@@ -103,7 +103,7 @@ function App() {
           onSendHardReset={handleSendHardReset}
           onSendCableReset={handleSendCableReset}
           isSendingCommand={isSending}
-          isWebHidSupported={isWebHidSupported}
+          isDeviceSupported={isDeviceSupported}
           currentView={currentView}
           onViewChange={setCurrentView}
         />
@@ -112,7 +112,7 @@ function App() {
           isConnected={isConnected}
           isConnecting={isConnecting}
           onConnectBtnClick={handleConnectBtnClick}
-          isWebHidSupported={isWebHidSupported}
+          isDeviceSupported={isDeviceSupported}
           currentView={currentView}
           onViewChange={setCurrentView}
         />

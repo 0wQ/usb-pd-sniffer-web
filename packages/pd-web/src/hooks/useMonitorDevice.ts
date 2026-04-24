@@ -9,13 +9,13 @@ import { parsePdHexPayload, type WebPdTxTarget } from '@/lib/live/tx'
 
 function statusError(status: MonitorDeviceStatus): string | null {
   if (!status.isSupported) {
-    return 'WebHID is not supported. Please use Chrome, Edge, or Opera.'
+    return 'Monitor device API is not supported. Please use Chrome, Edge, or Opera.'
   }
 
   return status.error
 }
 
-export function useWebHid() {
+export function useMonitorDevice() {
   const setIsConnected = useDeviceStore((state) => state.setIsConnected)
   const setIsConnecting = useDeviceStore((state) => state.setIsConnecting)
   const manualDisconnect = useDeviceStore((state) => state.manualDisconnect)
@@ -33,8 +33,8 @@ export function useWebHid() {
   const latestPowerCaptureEnabled = useRef(powerCaptureEnabled)
   const latestAutoReconnect = useRef(autoReconnectOnHotplug)
   const latestFingerprint = useRef(lastDeviceFingerprint)
-  const [isWebHidSupported, setIsWebHidSupported] = useState(false)
-  const [webHidError, setWebHidError] = useState<string | null>(null)
+  const [isDeviceSupported, setIsDeviceSupported] = useState(false)
+  const [deviceError, setDeviceError] = useState<string | null>(null)
   const [isSending, setIsSending] = useState(false)
 
   useEffect(() => {
@@ -65,8 +65,8 @@ export function useWebHid() {
     })
 
     const offStatus = monitorDevice.onStatus((status) => {
-      setIsWebHidSupported(status.isSupported)
-      setWebHidError(statusError(status))
+      setIsDeviceSupported(status.isSupported)
+      setDeviceError(statusError(status))
       setIsConnected(status.isConnected)
       setIsConnecting(status.isConnecting)
       setIsSending(status.isSending)
@@ -95,15 +95,15 @@ export function useWebHid() {
       await deviceRef.current?.connectAuthorized(lastDeviceFingerprint)
     } catch (err) {
       if (err instanceof Error) {
-        setWebHidError(err.message)
+        setDeviceError(err.message)
       }
     }
   }, [lastDeviceFingerprint, manualDisconnect])
 
-  const connectHID = useCallback(async () => {
+  const connectDevice = useCallback(async () => {
     const monitorDevice = deviceRef.current
     if (monitorDevice === null || !monitorDevice.isSupported) {
-      alert('WebHID is not supported in your browser. Please use Chrome, Edge, or Opera (version 89+).')
+      alert('Monitor device API is not supported in your browser. Please use Chrome, Edge, or Opera (version 89+).')
       return
     }
 
@@ -116,13 +116,13 @@ export function useWebHid() {
           return
         }
 
-        setWebHidError(err.message)
+        setDeviceError(err.message)
         alert(`Failed to connect: ${err.message}`)
       }
     }
   }, [setManualDisconnect])
 
-  const disconnectHID = useCallback(async () => {
+  const disconnectDevice = useCallback(async () => {
     setManualDisconnect(true)
     await deviceRef.current?.disconnect()
     resetDevice()
@@ -142,19 +142,19 @@ export function useWebHid() {
   }, [])
 
   useEffect(() => {
-    if (!isWebHidSupported) return
+    if (!isDeviceSupported) return
     if (!autoConnectOnLoad) return
     void tryAutoConnectAuthorizedDevice()
-  }, [autoConnectOnLoad, isWebHidSupported, tryAutoConnectAuthorizedDevice])
+  }, [autoConnectOnLoad, isDeviceSupported, tryAutoConnectAuthorizedDevice])
 
   return {
-    connectHID,
-    disconnectHID,
+    connectDevice,
+    disconnectDevice,
     sendRawPdFrame,
     sendHardReset,
     sendCableReset,
     isSending,
-    isWebHidSupported,
-    webHidError
+    isDeviceSupported,
+    deviceError
   }
 }

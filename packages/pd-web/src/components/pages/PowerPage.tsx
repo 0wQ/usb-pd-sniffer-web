@@ -44,7 +44,7 @@ type Props = {
   isConnected: boolean
   isConnecting: boolean
   onConnectBtnClick: () => void
-  isWebHidSupported: boolean
+  isDeviceSupported: boolean
   currentView: AppView
   onViewChange: (view: AppView) => void
 }
@@ -53,7 +53,7 @@ const PowerPage = ({
   isConnected,
   isConnecting,
   onConnectBtnClick,
-  isWebHidSupported,
+  isDeviceSupported,
   currentView,
   onViewChange,
 }: Props) => {
@@ -89,7 +89,7 @@ const PowerPage = ({
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              {isWebHidSupported && (
+              {isDeviceSupported && (
                 <button
                   className="btn btn-sm rounded-full gap-2"
                   onClick={onConnectBtnClick}
@@ -204,7 +204,7 @@ const PowerPage = ({
               <div className="mt-3 grid gap-3 font-mono md:grid-cols-2 2xl:grid-cols-4">
                 <div className="rounded-xl border border-base-300 bg-base-100/80 px-3 py-2">
                   <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">
-                    HID Session
+                    Device Session
                   </div>
                   <div className="mt-1 text-sm text-base-content">
                     {isConnected ? 'Connected' : isConnecting ? 'Connecting' : 'Disconnected'}

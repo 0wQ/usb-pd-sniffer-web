@@ -449,7 +449,7 @@ type CardProps = {
   onSendHardReset: () => Promise<void>
   onSendCableReset: () => Promise<void>
   isSendingCommand: boolean
-  isWebHidSupported: boolean
+  isDeviceSupported: boolean
   currentView: AppView
   onViewChange: (view: AppView) => void
 }
@@ -470,7 +470,7 @@ const Card = memo(({
   onSendHardReset,
   onSendCableReset,
   isSendingCommand,
-  isWebHidSupported,
+  isDeviceSupported,
   currentView,
   onViewChange,
 }: CardProps) => {
@@ -600,7 +600,7 @@ const Card = memo(({
           </div>
           <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-2 xl:w-auto">
             <div className="flex flex-wrap items-center gap-2">
-              {isWebHidSupported && (
+              {isDeviceSupported && (
                 <button
                   className="btn btn-sm rounded-full gap-2"
                   onClick={onConnectBtnClick}
@@ -629,7 +629,7 @@ const Card = memo(({
               <button
                 className={TOOLBAR_ICON_BUTTON_CLASS}
                 onClick={() => setTxDialogOpen(true)}
-                disabled={!isWebHidSupported || !isConnected || isSendingCommand}
+                disabled={!isDeviceSupported || !isConnected || isSendingCommand}
                 aria-label="Native PD TX"
               >
                 <svg
@@ -665,10 +665,10 @@ const Card = memo(({
                   </svg>
                 </label>
                 <div tabIndex={0} className="dropdown-content z-20 w-72 rounded-box bg-base-100 p-3 shadow-md">
-                  {isWebHidSupported && (
+                  {isDeviceSupported && (
                     <>
                     <div className="px-1 pb-2 text-xs font-semibold text-base-content/60 select-none">
-                      WebHID Settings
+                      Monitor Device Settings
                     </div>
                     <label className="flex items-center justify-between gap-3 px-1 py-2">
                       <span className="text-sm select-none">Auto connect on load</span>
@@ -696,7 +696,7 @@ const Card = memo(({
                     </>
                   )}
                   <div className={clsx('px-1 pb-2 text-xs font-semibold text-base-content/60 select-none', {
-                    'pt-3 mt-3 border-t border-base-300': isWebHidSupported,
+                    'pt-3 mt-3 border-t border-base-300': isDeviceSupported,
                   })}>
                     Decode Settings
                   </div>
