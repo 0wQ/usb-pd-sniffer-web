@@ -4,7 +4,7 @@ import 'uplot/dist/uPlot.min.css'
 import './PowerTelemetryCharts.css'
 import type { PowerSample } from '@/types/pd'
 
-type SeriesKey = 'vbus' | 'ibus' | 'pbus'
+type SeriesKey = 'vbus' | 'ibus'
 
 type SeriesConfig = {
   key: SeriesKey
@@ -238,7 +238,6 @@ function prepareData(samples: PowerSample[]): PreparedData {
   const yValues = {
     vbus: new Float64Array(samples.length),
     ibus: new Float64Array(samples.length),
-    pbus: new Float64Array(samples.length),
   }
 
   for (let index = 0; index < samples.length; index += 1) {
@@ -246,7 +245,6 @@ function prepareData(samples: PowerSample[]): PreparedData {
     xValues[index] = sample.timestamp_us / 1_000_000
     yValues.vbus[index] = sample.vbus_mv
     yValues.ibus[index] = sample.ibus_ma
-    yValues.pbus[index] = sample.pbus_10mw / 100
   }
 
   return {

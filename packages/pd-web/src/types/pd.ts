@@ -4,7 +4,6 @@ export interface PDReport {
   drop_count?: number
   vbus_mv: number
   ibus_ma?: number
-  pbus_10mw?: number
   cc1_mv: number
   cc2_mv: number
   dp_mv?: number
@@ -20,7 +19,6 @@ export interface PowerSample {
   recv_counter: number
   vbus_mv: number
   ibus_ma: number
-  pbus_10mw: number
   cc1_mv: number
   cc2_mv: number
   dp_mv: number

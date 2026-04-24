@@ -147,15 +147,10 @@ const formatMinutes = (minutes: number): string => {
 const formatHexData = (pdRaw: number[], pdDataLen: number): string => {
   if (pdDataLen <= 0) return ''
 
-  // pdDataLen counts the 4-byte CRC. For normal frames show (len - 4) bytes to
-  // drop the CRC. If CRC is missing and pdDataLen <= 4, only show the declared
-  // bytes (typically the 2-byte header) instead of leaking buffer garbage.
-  const payloadLen = pdDataLen > 4
-    ? Math.max(0, Math.min(pdRaw.length, pdDataLen - 4))
-    : Math.max(0, Math.min(pdRaw.length, pdDataLen))
+  const visibleLen = Math.max(0, Math.min(pdRaw.length, pdDataLen))
 
   return pdRaw
-    .slice(0, payloadLen)
+    .slice(0, visibleLen)
     .map((byte) => byte.toString(16).padStart(2, '0').toUpperCase())
     .join(' ')
 }

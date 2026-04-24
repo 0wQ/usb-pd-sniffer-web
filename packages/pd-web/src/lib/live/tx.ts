@@ -2,7 +2,7 @@ import { decodeMessage, type DecodedMessage, type MessageFrame } from '@usb-pd-s
 import {
   encodeNativeMonitorTxCommandBody,
   MONITOR_TX_CMD,
-  NATIVE_HID_OUT_REPORT_ID,
+  NATIVE_HID_REPORT_ID,
   type NativeMonitorTxCommand,
 } from '@usb-pd-sniffer/pd-monitor'
 
@@ -92,5 +92,5 @@ export async function sendNativeMonitorCommand(
   }
 
   const body = encodeNativeMonitorTxCommandBody(command)
-  await device.sendReport(NATIVE_HID_OUT_REPORT_ID, new Uint8Array(body))
+  await device.sendReport(NATIVE_HID_REPORT_ID, new Uint8Array(body))
 }

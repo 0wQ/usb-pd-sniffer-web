@@ -1,5 +1,5 @@
-export const USB_HID_IN_REPORT_ID = 0x01
-export const USB_HID_REPORT_BODY_SIZE = 63
+export const USB_HID_REPORT_ID = 0x00
+export const USB_HID_REPORT_BODY_SIZE = 64
 export const MONITOR_PAYLOAD_MAX_LEN = 34
 
 function getU16LE(bytes: Uint8Array, offset: number): number {
@@ -27,20 +27,16 @@ function copyDataViewBytes(data: DataView): Uint8Array {
 function normalizeReportBody(reportId: number, data: DataView): Uint8Array {
   const bytes = copyDataViewBytes(data)
 
+  if (reportId !== USB_HID_REPORT_ID) {
+    throw new Error(`Unexpected HID input report ID ${reportId}; expected ${USB_HID_REPORT_ID}.`)
+  }
+
   if (bytes.length === USB_HID_REPORT_BODY_SIZE) {
     return bytes
   }
 
-  if (bytes.length === USB_HID_REPORT_BODY_SIZE + 1 && bytes[0] === USB_HID_IN_REPORT_ID) {
-    return bytes.subarray(1)
-  }
-
-  if (reportId === USB_HID_IN_REPORT_ID && bytes.length === USB_HID_REPORT_BODY_SIZE) {
-    return bytes
-  }
-
   throw new Error(
-    `Unexpected HID input report length ${bytes.length}; expected ${USB_HID_REPORT_BODY_SIZE} or ${USB_HID_REPORT_BODY_SIZE + 1}.`
+    `Unexpected HID input report length ${bytes.length}; expected ${USB_HID_REPORT_BODY_SIZE}.`
   )
 }
 
@@ -50,7 +46,6 @@ export type WebHidPdReport = {
   drop_count?: number
   vbus_mv: number
   ibus_ma: number
-  pbus_10mw: number
   cc1_mv: number
   cc2_mv: number
   dp_mv: number
@@ -66,21 +61,20 @@ export function parseWebHidPdReport(reportId: number, data: DataView): WebHidPdR
   const timestampUsLo = getU32LE(body, 0)
   const timestampUsHi = getU32LE(body, 4)
   const timestampUs = (BigInt(timestampUsHi) << 32n) | BigInt(timestampUsLo)
-  const payloadLen = Math.min(body[28] ?? 0, MONITOR_PAYLOAD_MAX_LEN)
+  const payloadLen = Math.min(body[26] ?? 0, MONITOR_PAYLOAD_MAX_LEN)
 
   return {
     timestamp_us: Number(timestampUs),
     recv_counter: getU32LE(body, 8),
     vbus_mv: getU16LE(body, 12),
     ibus_ma: getI16LE(body, 14),
-    pbus_10mw: getU16LE(body, 16),
-    cc1_mv: getU16LE(body, 18),
-    cc2_mv: getU16LE(body, 20),
-    dp_mv: getU16LE(body, 22),
-    dm_mv: getU16LE(body, 24),
-    event_type: body[26] ?? 0,
-    active_cc: body[27] ?? 0,
+    cc1_mv: getU16LE(body, 16),
+    cc2_mv: getU16LE(body, 18),
+    dp_mv: getU16LE(body, 20),
+    dm_mv: getU16LE(body, 22),
+    event_type: body[24] ?? 0,
+    active_cc: body[25] ?? 0,
     pd_data_len: payloadLen,
-    pd_raw: Array.from(body.subarray(29, 29 + payloadLen)),
+    pd_raw: Array.from(body.subarray(27, 27 + payloadLen)),
   }
 }

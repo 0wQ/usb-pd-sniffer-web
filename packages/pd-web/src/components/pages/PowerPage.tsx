@@ -16,9 +16,6 @@ function formatCurrentMa(ma: number): string {
   return `${(ma / 1000).toFixed(3)} A`
 }
 
-function formatPower10mw(value: number): string {
-  return `${(value / 100).toFixed(2)} W`
-}
 
 function formatActiveCc(activeCc: number): string {
   if (activeCc === 1) return 'CC1'
@@ -240,7 +237,7 @@ const PowerPage = ({
                   <div className="mt-1 space-y-1 text-sm text-base-content/75">
                     <div>{latestSample ? formatTimestampUs(latestSample.timestamp_us) : '-'}</div>
                     <div>{latestSample ? `${formatVoltageMv(latestSample.vbus_mv)} / ${formatCurrentMa(latestSample.ibus_ma)}` : 'No data'}</div>
-                    <div>{latestSample ? `${formatPower10mw(latestSample.pbus_10mw)} / ${formatActiveCc(latestSample.active_cc)}` : '-'}</div>
+                    <div>{latestSample ? formatActiveCc(latestSample.active_cc) : '-'}</div>
                   </div>
                 </div>
               </div>

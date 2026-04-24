@@ -62,7 +62,6 @@ export function useWebHid() {
           recv_counter: report.recv_counter,
           vbus_mv: report.vbus_mv,
           ibus_ma: report.ibus_ma,
-          pbus_10mw: report.pbus_10mw,
           cc1_mv: report.cc1_mv,
           cc2_mv: report.cc2_mv,
           dp_mv: report.dp_mv ?? 0,

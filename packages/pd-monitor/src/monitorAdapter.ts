@@ -6,7 +6,6 @@ import type {
 export type MonitorSnapshot = {
   vbusMv: number;
   ibusMa: number;
-  pbus10mw: number;
   cc1Mv: number;
   cc2Mv: number;
   dpMv: number;
@@ -49,10 +48,9 @@ export const MONITOR_EVENT = {
   UFCS_DM_CHUNK1: 45
 } as const;
 
-export const NATIVE_HID_IN_REPORT_ID = 0x01;
-export const NATIVE_HID_OUT_REPORT_ID = 0x02;
-export const NATIVE_HID_REPORT_BODY_SIZE = 63;
-export const NATIVE_TX_PAYLOAD_MAX_LEN = 61;
+export const NATIVE_HID_REPORT_ID = 0x00;
+export const NATIVE_HID_REPORT_BODY_SIZE = 64;
+export const NATIVE_TX_PAYLOAD_MAX_LEN = 62;
 
 export const MONITOR_TX_CMD = {
   SEND_RAW_SOP0: 0x01,
