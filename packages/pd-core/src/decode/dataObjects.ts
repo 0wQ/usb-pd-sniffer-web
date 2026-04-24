@@ -764,7 +764,7 @@ function buildPowerObject(
   const supplyType = extractBits(raw32, 30, 2);
 
   // Source priority for protocol terms and parser cross-checking is documented in
-  // docs/planning/pd-core-v2-reference-policy.md.
+  // .docs/planning/pd-core-v2-reference-policy.md.
   // Table 6.7 is the reliable source here: 01b = Battery, 10b = Variable.
   // Some plain-text table extraction around 6.11/6.12 flips the labels.
   if (supplyType === 0b00) {

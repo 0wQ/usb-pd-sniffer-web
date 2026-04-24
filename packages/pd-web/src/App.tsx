@@ -1,6 +1,6 @@
 import { Toaster } from 'sonner'
 import Layout from '@/components/common/Layout'
-import PowerPage from '@/components/common/PowerPage'
+import PowerPage from '@/components/pages/PowerPage'
 import { type AppView } from '@/components/common/ViewTabs'
 import { useWebHid } from '@/hooks/useWebHid'
 import { useBeforeUnloadWarning } from '@/hooks/useBeforeUnloadWarning'

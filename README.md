@@ -1,121 +1,74 @@
-# USB PD Sniffer Web Workspace
+# USB PD Sniffer Web v2
 
-This workspace is intentionally split before any browser UI work starts.
+This workspace is the v2 rewrite for the USB PD sniffer host UI and parser stack.
 
-Development baseline: `bun + TypeScript`.
+The current priority is `pd-core-v2` correctness and an ET240-style detail view. Compatibility with the old `usb-pd-sniffer-web` project is intentionally not a goal.
 
-The parser library itself is intended to stay runtime-agnostic. Bun is used as
-the development toolchain here, not as a requirement for downstream users of
-`@usb-pd-sniffer/pd-core`.
+## Workspace Layout
 
-## Packages
+| Path | Role |
+| --- | --- |
+| `packages/pd-core` | Protocol-only USB PD decoder. No WebHID, host transport, table aliases, or UI projection. |
+| `packages/pd-monitor` | Shared monitor-event adapter that converts firmware/HID monitor records into core input frames. |
+| `packages/pd-web` | React + WebHID application that consumes `pd-core` output directly. |
+| `.docs/planning` | Local scope, policy, and decoder coverage tracking. |
+| `.docs/reference` | Local format notes for external files and host-facing compatibility. |
 
-- `@usb-pd-sniffer/pd-core`
-  Pure TypeScript parsing library. No WebHID, no Node HID, no UI.
-- `@usb-pd-sniffer/pd-cli`
-  Command-line harness for fixtures and later hardware integration.
+## Current MVP State
 
-## Public Library Positioning
+`pd-core` currently exposes an explain-first model:
 
-`@usb-pd-sniffer/pd-core` should remain a standard package:
+- `DecodedMessage`
+- `sections[]`
+- `Section.fields[]`
+- `Section.issues[]`
 
-- standard `package.json` exports
-- generated `.d.ts`
-- no Bun-specific runtime APIs in library code
-- reusable from Bun, Node, browser bundlers, and test runners
-- public API starts at observed PD frames, not HID events
+The web app renders these sections generically in `DecodeCard`; it should not add protocol-specific projections for message payload meaning.
 
-## Why This Order
+Major completed branches include:
 
-The main project risk is PD parsing correctness, not rendering. The parser must
-be stable, testable, and reusable before a web UI consumes it.
+- Message Header and Extended Message Header bit-level decode
+- Control message identification
+- Source/Sink Capabilities and EPR Source/Sink Capabilities PDO decode
+- Request and EPR_Request decode
+- common Data Messages such as Alert, Battery_Status, BIST, Enter_USB, EPR_Mode, Source_Info, Revision, and Get_Country_Info
+- common Extended Messages such as Status, PPS_Status, Source/Sink Capabilities Extended, Country_Info, Country_Codes, battery/manufacturer families, and Extended_Control
+- named raw data block output for Security and Firmware Update families
 
-## Initial Scope
+Known post-MVP branches are tracked in `.docs/planning/pd-core-v2-coverage-by-type.md`.
 
-- Freeze `pd-core` input/output contract
-- Build descriptor-driven message classification
-- Keep monitor/HID normalization in adapters and CLI
-- Validate both fixture replay and live HID streaming
+## Package Boundaries
 
-## Current Coverage
+- `pd-core` stays protocol-only and parse-first.
+- `pd-monitor` owns firmware monitor-event normalization.
+- `pd-web` owns WebHID, capture buffers, power telemetry charts, table rendering, and detail rendering.
+- Explicit context, when needed, is provided by callers; `pd-core` does not keep hidden rolling state.
 
-`pd-core` currently includes:
+## Commands
 
-- Message Header and message-family classification
-- Control/Data/Extended descriptor registries
-- PDO/APDO decode
-- Request and EPR_Request decode with capability-context checks
-- Get_Country_Info, Enter_USB, EPR_Mode, Source_Info, Revision, Battery_Status, Alert, and BIST data object decode
-- Structured/Unstructured VDM header decode
-- Initial VDO families: ID Header, Cert Stat, Product, Discover SVIDs responder, generic Discover Modes Mode VDO, UFP, DFP, Passive Cable, Active Cable VDO1/VDO2, and VPD
-- Generic structured/unstructured vendor-defined payload envelopes for mode-specific, SVID-specific, and otherwise opaque VDO payloads
-- Extended Message Header and typed data blocks for Source_Capabilities_Extended, Sink_Capabilities_Extended, Status, Extended_Control, PPS_Status, Country_Codes, Country_Info, battery-query families, manufacturer-info families, Security/Firmware envelopes, and Vendor_Defined_Extended VDM envelopes
-- Optional sequence analyzer for capability-context interpretation using latest SPR/EPR source capabilities
-
-Recent parser-mainline refinements include:
-
-- richer `Alert`, `Battery_Status`, `Source_Info`, and `Revision` value shapes
-- richer `Country_Codes` / `Country_Info` structures for direct upper-layer consumption
-- richer battery/manufacturer reference semantics in battery and manufacturer extended data blocks
-- richer support-state semantics in `PPS_Status`, `Battery_Capabilities`, and `Manufacturer_Info`
-- structured `Peak Current` / sink load-characteristic subfields inside Source/Sink Capabilities Extended blocks
-
-These recent refinements improved parser utility, but they do not change the
-mainline rule: future work should prioritize missing normative structure and
-coverage gaps before adding more convenience-oriented derived fields.
-
-The parser is intentionally parse-first:
-
-- structural decode is primary
-- suspicious or non-conformant values surface as non-blocking `issues`
-- decoded objects still preserve `raw32` and field-level visibility
-
-`pd-core` is not intended to grow into a protocol checker:
-
-- parser work should prioritize field extraction and typed object modeling
-- `issues` should stay focused on structural decode facts such as short payloads, reserved encodings, and directly local inconsistencies
-- message-usage policing and broader protocol-correctness heuristics should not drive roadmap priority
-
-## Current Boundaries
-
-Current `pd-core` coverage is substantial but not complete:
-
-- many PD 3.2 message families are decoded structurally
-- some payload families remain intentionally opaque when the USB PD main specification does not define their inner fields
-- external sub-specification payloads such as DisplayPort Alt Mode or Thunderbolt are not deeply decoded here
-- some parser checklist items are considered complete within USB PD scope even though adjacent USB4 / Alt Mode behavior remains intentionally outside `pd-core`
-- chunked Extended Message reconstruction is still deferred
-
-## Deferred Until Transport Changes
-
-- Full Extended Message support
-- Chunked message reassembly
-- Browser UI
-
-## Quick Start
-
-Run the sample fixture:
-
-```bash
-bun run cli:sample
-bun run cli:sample:json
-bun run cli:list
-bun run cli:live
-bun run cli:live:all
-```
-
-When TypeScript is installed in the workspace:
+Run from `usb-pd-sniffer-web-v2`:
 
 ```bash
 bun run typecheck
 bun run build
+bun run test
+bun run web:dev
 ```
 
-See:
+Package-specific checks:
 
-- `docs/README.md`
-- `docs/spec/pd-parser-foundation.md`
-- `docs/spec/pd-core-io-contract.md`
-- `docs/spec/pd-schema.md`
-- `docs/planning/pd-roadmap.md`
-- `docs/planning/pd-core-coverage-checklist.md`
+```bash
+bun run --cwd packages/pd-core typecheck
+bun run --cwd packages/pd-core build
+bun run --cwd packages/pd-web typecheck
+bun run --cwd packages/pd-web build
+```
+
+## Docs
+
+- `AGENT.md`: local implementation constraints and reference order.
+- `.docs/README.md`: local documentation index.
+- `.docs/planning/pd-core-v2-coverage-by-type.md`: branch-level decoder progress board.
+- `.docs/planning/pd-core-v2-context-and-assemble-policy.md`: context and chunk assemble policy.
+- `.docs/planning/pd-core-v2-reference-policy.md`: source/reference policy for parser work.
+- `.docs/reference/pd-pdstream-format.md`: `.pdStream` format notes.

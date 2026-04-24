@@ -3,7 +3,7 @@ import { lazy, Suspense, useMemo, useState } from 'react'
 import useDeviceStore from '@/stores/deviceStore'
 import ViewTabs, { type AppView } from '@/components/common/ViewTabs'
 
-const PowerTelemetryCharts = lazy(() => import('@/components/common/PowerTelemetryCharts'))
+const PowerTelemetryCharts = lazy(() => import('@/components/power/PowerTelemetryCharts'))
 
 const POWER_WINDOW_OPTIONS = [2000, 5000, 10000, 20000, 50000] as const
 const TOOLBAR_ICON_BUTTON_CLASS = 'btn btn-sm btn-square btn-ghost'
