@@ -1,68 +1,16 @@
 import { create } from 'zustand'
 import { createCaptureBuffer, type CaptureBuffer } from '@/lib/buffers/captureBuffer'
 import { createPowerSamplesBuffer, type PowerSamplesBuffer } from '@/lib/buffers/powerSamplesBuffer'
+import {
+  readDevicePreferences,
+  writeAutoConnectOnLoad,
+  writeAutoReconnectOnHotplug,
+  writeDetailContextBacktrackRecords,
+  writeLastDeviceFingerprint,
+  writeManualDisconnect,
+  writePowerCaptureEnabled,
+} from '@/lib/preferences/devicePreferences'
 import type { CaptureRecord, PowerSample } from '@/types/pd'
-
-const DEVICE_STORAGE_KEYS = {
-  autoConnectOnLoad: 'usb-pd-device-autoConnectOnLoad',
-  autoReconnectOnHotplug: 'usb-pd-device-autoReconnectOnHotplug',
-  manualDisconnect: 'usb-pd-device-manualDisconnect',
-  lastDeviceFingerprint: 'usb-pd-device-lastDeviceFingerprint',
-  detailContextBacktrackRecords: 'usb-pd-detail-context-backtrack-records',
-  powerCaptureEnabled: 'usb-pd-power-capture-enabled',
-} as const
-
-const readBool = (key: string, fallback: boolean): boolean => {
-  try {
-    const value = localStorage.getItem(key)
-    if (value === null) return fallback
-    if (value === 'true') return true
-    if (value === 'false') return false
-    return fallback
-  } catch {
-    return fallback
-  }
-}
-
-const readString = (key: string, fallback: string | null): string | null => {
-  try {
-    const value = localStorage.getItem(key)
-    if (value === null) return fallback
-    if (value === '') return null
-    return value
-  } catch {
-    return fallback
-  }
-}
-
-const readNullableNumber = (key: string, fallback: number | null): number | null => {
-  try {
-    const value = localStorage.getItem(key)
-    if (value === null) return fallback
-    if (value === 'unlimited') return null
-    const parsed = Number.parseInt(value, 10)
-    return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback
-  } catch {
-    return fallback
-  }
-}
-
-const writeValue = (key: string, value: string): void => {
-  try {
-    localStorage.setItem(key, value)
-  } catch {
-    // ignore
-  }
-}
-
-const removeValue = (key: string): void => {
-  try {
-    localStorage.removeItem(key)
-  } catch {
-    // ignore
-  }
-}
-
 
 interface DeviceState {
   // 设备状态
@@ -121,16 +69,18 @@ const POWER_BUFFER_CAPACITY = 50_000
 const POWER_BATCH_SIZE = 200
 const POWER_BATCH_TIMEOUT = 50
 
+const initialPreferences = readDevicePreferences()
+
 const useDeviceStore = create<DeviceState>()((set, get) => ({
   // Initial state
   isConnected: false,
   isConnecting: false,
-  manualDisconnect: readBool(DEVICE_STORAGE_KEYS.manualDisconnect, false),
-  autoConnectOnLoad: readBool(DEVICE_STORAGE_KEYS.autoConnectOnLoad, true),
-  autoReconnectOnHotplug: readBool(DEVICE_STORAGE_KEYS.autoReconnectOnHotplug, true),
-  lastDeviceFingerprint: readString(DEVICE_STORAGE_KEYS.lastDeviceFingerprint, null),
-  detailContextBacktrackRecords: readNullableNumber(DEVICE_STORAGE_KEYS.detailContextBacktrackRecords, null),
-  powerCaptureEnabled: readBool(DEVICE_STORAGE_KEYS.powerCaptureEnabled, false),
+  manualDisconnect: initialPreferences.manualDisconnect,
+  autoConnectOnLoad: initialPreferences.autoConnectOnLoad,
+  autoReconnectOnHotplug: initialPreferences.autoReconnectOnHotplug,
+  lastDeviceFingerprint: initialPreferences.lastDeviceFingerprint,
+  detailContextBacktrackRecords: initialPreferences.detailContextBacktrackRecords,
+  powerCaptureEnabled: initialPreferences.powerCaptureEnabled,
   protocolSelectedIndex: null,
   captureBuffer: createCaptureBuffer(),
   powerBuffer: createPowerSamplesBuffer(POWER_BUFFER_CAPACITY),
@@ -149,43 +99,34 @@ const useDeviceStore = create<DeviceState>()((set, get) => ({
   setIsConnecting: (isConnecting) => set({ isConnecting }),
 
   setManualDisconnect: (manualDisconnect) => {
-    writeValue(DEVICE_STORAGE_KEYS.manualDisconnect, String(manualDisconnect))
+    writeManualDisconnect(manualDisconnect)
     set({ manualDisconnect })
   },
 
   setAutoConnectOnLoad: (autoConnectOnLoad) => {
-    writeValue(DEVICE_STORAGE_KEYS.autoConnectOnLoad, String(autoConnectOnLoad))
+    writeAutoConnectOnLoad(autoConnectOnLoad)
     set({ autoConnectOnLoad })
   },
 
   setAutoReconnectOnHotplug: (autoReconnectOnHotplug) => {
-    writeValue(DEVICE_STORAGE_KEYS.autoReconnectOnHotplug, String(autoReconnectOnHotplug))
+    writeAutoReconnectOnHotplug(autoReconnectOnHotplug)
     set({ autoReconnectOnHotplug })
   },
 
   setLastDeviceFingerprint: (lastDeviceFingerprint) => {
-    if (lastDeviceFingerprint === null) {
-      removeValue(DEVICE_STORAGE_KEYS.lastDeviceFingerprint)
-      set({ lastDeviceFingerprint: null })
-      return
-    }
-
-    writeValue(DEVICE_STORAGE_KEYS.lastDeviceFingerprint, lastDeviceFingerprint)
+    writeLastDeviceFingerprint(lastDeviceFingerprint)
     set({ lastDeviceFingerprint })
   },
 
   setDetailContextBacktrackRecords: (detailContextBacktrackRecords) => {
-    writeValue(
-      DEVICE_STORAGE_KEYS.detailContextBacktrackRecords,
-      detailContextBacktrackRecords === null ? 'unlimited' : String(detailContextBacktrackRecords)
-    )
+    writeDetailContextBacktrackRecords(detailContextBacktrackRecords)
     set({ detailContextBacktrackRecords })
   },
 
   setPowerCaptureEnabled: (powerCaptureEnabled) => {
     const { powerUpdateTimer } = get()
 
-    writeValue(DEVICE_STORAGE_KEYS.powerCaptureEnabled, String(powerCaptureEnabled))
+    writePowerCaptureEnabled(powerCaptureEnabled)
 
     if (!powerCaptureEnabled && powerUpdateTimer !== null) {
       clearTimeout(powerUpdateTimer)
