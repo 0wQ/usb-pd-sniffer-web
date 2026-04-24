@@ -10,7 +10,6 @@ import {
 } from "./monitorAdapter.js";
 
 const DEVICE_FILTER = { vendorId: 0x1a86, productId: 0x2333 } as const;
-const UFCS_CHUNK_CACHE_LIMIT = 8;
 
 type HidDeviceLike = {
   readonly vendorId: number;
@@ -47,6 +46,11 @@ type NavigatorWithHid = {
 };
 
 type UfcsDirection = "dp" | "dm";
+
+type PendingUfcsChunks = {
+  dp: MonitorRecord | null;
+  dm: MonitorRecord | null;
+};
 
 export type MonitorRecord = {
   timestamp_us: number;
@@ -263,23 +267,11 @@ function ufcsAssembledEventType(direction: UfcsDirection): number {
   return direction === "dp" ? MONITOR_EVENT.UFCS_DP_SINGLE : MONITOR_EVENT.UFCS_DM_SINGLE;
 }
 
-function ufcsChunkKey(direction: UfcsDirection, recvCounter: number): string {
-  return `${direction}:${recvCounter}`;
-}
-
 function cloneRecord(record: MonitorRecord): MonitorRecord {
   return {
     ...record,
     pd_raw: record.pd_raw.slice(0, record.pd_data_len),
   };
-}
-
-function trimUfcsChunkCache(cache: Map<string, MonitorRecord>): void {
-  while (cache.size > UFCS_CHUNK_CACHE_LIMIT) {
-    const oldestKey = cache.keys().next().value as string | undefined;
-    if (oldestKey === undefined) return;
-    cache.delete(oldestKey);
-  }
 }
 
 function assembleUfcsRecord(chunk0: MonitorRecord, chunk1: MonitorRecord, direction: UfcsDirection): MonitorRecord {
@@ -296,29 +288,48 @@ function assembleUfcsRecord(chunk0: MonitorRecord, chunk1: MonitorRecord, direct
   };
 }
 
+function pendingChunkAsSingle(chunk0: MonitorRecord, direction: UfcsDirection): MonitorRecord {
+  return {
+    ...cloneRecord(chunk0),
+    event_type: ufcsAssembledEventType(direction),
+  };
+}
+
 export function createMonitorRecordNormalizer(): MonitorRecordNormalizer {
-  const ufcsChunk0ByKey = new Map<string, MonitorRecord>();
+  const pending: PendingUfcsChunks = {
+    dp: null,
+    dm: null,
+  };
 
   return {
     push(record: MonitorRecord): MonitorRecord[] {
-      if (ufcsSingleEventType(record.event_type) !== null) {
-        return [record];
+      const singleEventType = ufcsSingleEventType(record.event_type);
+      if (singleEventType !== null) {
+        const direction: UfcsDirection = singleEventType === MONITOR_EVENT.UFCS_DP_SINGLE ? "dp" : "dm";
+        const previous = pending[direction];
+        pending[direction] = null;
+        return previous === null
+          ? [record]
+          : [pendingChunkAsSingle(previous, direction), record];
       }
 
       const chunk0Direction = ufcsChunk0Direction(record.event_type);
       if (chunk0Direction !== null) {
-        ufcsChunk0ByKey.set(ufcsChunkKey(chunk0Direction, record.recv_counter), cloneRecord(record));
-        trimUfcsChunkCache(ufcsChunk0ByKey);
-        return [];
+        const previous = pending[chunk0Direction];
+        pending[chunk0Direction] = cloneRecord(record);
+        return previous === null ? [] : [pendingChunkAsSingle(previous, chunk0Direction)];
       }
 
       const chunk1Direction = ufcsChunk1Direction(record.event_type);
       if (chunk1Direction !== null) {
-        const key = ufcsChunkKey(chunk1Direction, record.recv_counter);
-        const chunk0 = ufcsChunk0ByKey.get(key);
-        ufcsChunk0ByKey.delete(key);
-        if (chunk0 === undefined) {
+        const chunk0 = pending[chunk1Direction];
+        pending[chunk1Direction] = null;
+        if (chunk0 === null) {
           return [];
+        }
+
+        if (chunk0.recv_counter !== record.recv_counter) {
+          return [pendingChunkAsSingle(chunk0, chunk1Direction)];
         }
 
         return [assembleUfcsRecord(chunk0, record, chunk1Direction)];
@@ -327,7 +338,8 @@ export function createMonitorRecordNormalizer(): MonitorRecordNormalizer {
       return isPdMonitorEvent(record.event_type) ? [record] : [];
     },
     reset(): void {
-      ufcsChunk0ByKey.clear();
+      pending.dp = null;
+      pending.dm = null;
     },
   };
 }

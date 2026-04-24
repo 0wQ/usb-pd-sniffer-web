@@ -132,9 +132,11 @@ Current record emission behavior:
 - `HARD_RESET`, `CABLE_RESET`, and `PD_ERROR` are accepted by the monitor path.
 - `POWER_TELEMETRY` emits through `onPowerSample()`, not `onRecord()`.
 - `UFCS_DP_SINGLE` and `UFCS_DM_SINGLE` emit records directly.
-- `UFCS_DP_CHUNK0` / `UFCS_DM_CHUNK0` are cached internally.
-- `UFCS_DP_CHUNK1` / `UFCS_DM_CHUNK1` are assembled with a cached same-direction, same-`recv_counter` chunk0 and emitted as `UFCS_DP_SINGLE` / `UFCS_DM_SINGLE` records.
-- Incomplete or mismatched UFCS chunks are dropped at this layer for now.
+- `UFCS_DP_CHUNK0` and `UFCS_DM_CHUNK0` are cached independently by direction.
+- `UFCS_DP_CHUNK1` and `UFCS_DM_CHUNK1` assemble with the pending same-direction chunk0 only when `recv_counter` matches.
+- If a same-direction single or new chunk0 arrives before the pending chunk1, the pending chunk0 is emitted as `UFCS_*_SINGLE` before the new record is processed.
+- A chunk1 with no pending same-direction chunk0 is dropped.
+- Non-UFCS records and opposite-direction UFCS records do not flush pending chunks.
 
 ## Power Samples
 
