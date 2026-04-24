@@ -171,7 +171,6 @@ class PowerSamplesBuffer {
 
 interface DeviceState {
   // 设备状态
-  device: HIDDevice | null
   isConnected: boolean
   isConnecting: boolean
   manualDisconnect: boolean
@@ -201,7 +200,6 @@ interface DeviceState {
   powerUpdateTimer: number | null
 
   // Actions
-  setDevice: (device: HIDDevice | null) => void
   setIsConnected: (isConnected: boolean) => void
   setIsConnecting: (isConnecting: boolean) => void
   setManualDisconnect: (manualDisconnect: boolean) => void
@@ -230,7 +228,6 @@ const POWER_BATCH_TIMEOUT = 50
 
 const useDeviceStore = create<DeviceState>()((set, get) => ({
   // Initial state
-  device: null,
   isConnected: false,
   isConnecting: false,
   manualDisconnect: readBool(HID_STORAGE_KEYS.manualDisconnect, false),
@@ -252,8 +249,6 @@ const useDeviceStore = create<DeviceState>()((set, get) => ({
   powerCount: 0,
 
   // Actions
-  setDevice: (device) => set({ device }),
-
   setIsConnected: (isConnected) => set({ isConnected }),
 
   setIsConnecting: (isConnecting) => set({ isConnecting }),
@@ -444,7 +439,6 @@ const useDeviceStore = create<DeviceState>()((set, get) => ({
 
     // 只重置设备状态，不清除数据
     set({
-      device: null,
       isConnected: false,
       isConnecting: false,
       updateTimer: null,
