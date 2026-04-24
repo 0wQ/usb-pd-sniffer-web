@@ -50,6 +50,7 @@ export const MONITOR_EVENT = {
 
 export const NATIVE_HID_REPORT_ID = 0x00;
 export const NATIVE_HID_REPORT_BODY_SIZE = 64;
+export const NATIVE_MONITOR_PAYLOAD_MAX_LEN = 34;
 export const NATIVE_TX_PAYLOAD_MAX_LEN = 62;
 
 export const MONITOR_TX_CMD = {
@@ -67,6 +68,34 @@ export type NativeMonitorTxCommand =
   | { opcode: typeof MONITOR_TX_CMD.SEND_RAW_SOP0 | typeof MONITOR_TX_CMD.SEND_RAW_SOP1 | typeof MONITOR_TX_CMD.SEND_RAW_SOP2; payload: Uint8Array }
   | { opcode: typeof MONITOR_TX_CMD.SEND_HARD_RESET | typeof MONITOR_TX_CMD.SEND_CABLE_RESET; payload?: Uint8Array | null }
   | { opcode: typeof MONITOR_TX_CMD.SET_ACTIVE_CC; payload?: Uint8Array | null };
+
+export type NativeMonitorHidReport = {
+  timestampUs: number;
+  recvCount: number;
+  snapshot: MonitorSnapshot;
+  eventType: number;
+  activeCc: number;
+  payloadLen: number;
+  payload: Uint8Array;
+};
+
+function getU16LE(bytes: Uint8Array, offset: number): number {
+  return bytes[offset] | (bytes[offset + 1] << 8);
+}
+
+function getI16LE(bytes: Uint8Array, offset: number): number {
+  const value = getU16LE(bytes, offset);
+  return value & 0x8000 ? value - 0x10000 : value;
+}
+
+function getU32LE(bytes: Uint8Array, offset: number): number {
+  return (
+    bytes[offset] |
+    (bytes[offset + 1] << 8) |
+    (bytes[offset + 2] << 16) |
+    (bytes[offset + 3] << 24)
+  ) >>> 0;
+}
 
 function isPdSopFrameEvent(eventType: number): boolean {
   return (
@@ -159,6 +188,36 @@ export function normalizePdPayloadForMonitorEvent(
   }
 
   return payload;
+}
+
+export function parseNativeMonitorHidReportBody(body: Uint8Array): NativeMonitorHidReport {
+  if (body.length !== NATIVE_HID_REPORT_BODY_SIZE) {
+    throw new Error(
+      `Unexpected native HID input report length ${body.length}; expected ${NATIVE_HID_REPORT_BODY_SIZE}.`
+    );
+  }
+
+  const timestampUsLo = getU32LE(body, 0);
+  const timestampUsHi = getU32LE(body, 4);
+  const timestampUs = (BigInt(timestampUsHi) << 32n) | BigInt(timestampUsLo);
+  const payloadLen = Math.min(body[26] ?? 0, NATIVE_MONITOR_PAYLOAD_MAX_LEN);
+
+  return {
+    timestampUs: Number(timestampUs),
+    recvCount: getU32LE(body, 8),
+    snapshot: {
+      vbusMv: getU16LE(body, 12),
+      ibusMa: getI16LE(body, 14),
+      cc1Mv: getU16LE(body, 16),
+      cc2Mv: getU16LE(body, 18),
+      dpMv: getU16LE(body, 20),
+      dmMv: getU16LE(body, 22)
+    },
+    eventType: body[24] ?? 0,
+    activeCc: body[25] ?? 0,
+    payloadLen,
+    payload: body.slice(27, 27 + payloadLen)
+  };
 }
 
 export function encodeNativeMonitorTxCommandBody(command: NativeMonitorTxCommand): Uint8Array {

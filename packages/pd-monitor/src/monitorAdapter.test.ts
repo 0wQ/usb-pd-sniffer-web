@@ -5,9 +5,11 @@ import {
   MONITOR_EVENT,
   MONITOR_TX_CMD,
   NATIVE_HID_REPORT_BODY_SIZE,
+  NATIVE_MONITOR_PAYLOAD_MAX_LEN,
   normalizePdPayloadForMonitorEvent,
   monitorEventName,
   monitorEventSop,
+  parseNativeMonitorHidReportBody,
   toPdObservedFrameFromMonitorEvent
 } from "./monitorAdapter.js";
 
@@ -68,6 +70,50 @@ describe("pd-monitor adapter", () => {
     expect(Array.from(normalizePdPayloadForMonitorEvent(MONITOR_EVENT.PD_SOP0, oneObjectWithoutCrc))).toEqual([
       0x42, 0x10, 0xaa, 0xbb, 0xcc, 0xdd
     ]);
+  });
+
+  test("parses native HID input report body using the shared ABI layout", () => {
+    const body = new Uint8Array(NATIVE_HID_REPORT_BODY_SIZE);
+    body.set([0x88, 0x77, 0x66, 0x55], 0);
+    body.set([0x44, 0x33, 0x22, 0x11], 4);
+    body.set([0x04, 0x03, 0x02, 0x01], 8);
+    body.set([0x9e, 0x13], 12);
+    body.set([0x38, 0xff], 14);
+    body.set([0x2c, 0x01], 16);
+    body.set([0x58, 0x02], 18);
+    body.set([0x84, 0x03], 20);
+    body.set([0xb0, 0x04], 22);
+    body[24] = MONITOR_EVENT.PD_SOP0;
+    body[25] = 1;
+    body[26] = 4;
+    body.set([0xa1, 0x71, 0x2c, 0x91], 27);
+
+    const report = parseNativeMonitorHidReportBody(body);
+
+    expect(report.timestampUs).toBe(Number(0x1122334455667788n));
+    expect(report.recvCount).toBe(0x01020304);
+    expect(report.snapshot).toEqual({
+      vbusMv: 5022,
+      ibusMa: -200,
+      cc1Mv: 300,
+      cc2Mv: 600,
+      dpMv: 900,
+      dmMv: 1200
+    });
+    expect(report.eventType).toBe(MONITOR_EVENT.PD_SOP0);
+    expect(report.activeCc).toBe(1);
+    expect(report.payloadLen).toBe(4);
+    expect(Array.from(report.payload)).toEqual([0xa1, 0x71, 0x2c, 0x91]);
+  });
+
+  test("clamps native HID payload length to the fixed monitor payload field", () => {
+    const body = new Uint8Array(NATIVE_HID_REPORT_BODY_SIZE);
+    body[26] = 0xff;
+
+    const report = parseNativeMonitorHidReportBody(body);
+
+    expect(report.payloadLen).toBe(NATIVE_MONITOR_PAYLOAD_MAX_LEN);
+    expect(report.payload.length).toBe(NATIVE_MONITOR_PAYLOAD_MAX_LEN);
   });
 
   test("encodes raw SOP command body for native HID OUT", () => {
