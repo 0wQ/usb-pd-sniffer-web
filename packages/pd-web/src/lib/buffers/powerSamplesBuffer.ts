@@ -1,70 +1,76 @@
 import type { PowerSample } from '@/types/pd'
 
-export class PowerSamplesBuffer {
-  private buffer: PowerSample[]
-  private capacity: number
-  private head: number = 0
-  private count: number = 0
-  private version: number = 0
+export type PowerSamplesBuffer = {
+  add(sample: PowerSample): void
+  addBatch(samples: PowerSample[]): void
+  clear(): void
+  getRecent(limit: number): PowerSample[]
+  getLatest(): PowerSample | null
+  readonly length: number
+  readonly currentVersion: number
+}
 
-  constructor(capacity: number) {
-    this.capacity = capacity
-    this.buffer = new Array<PowerSample>(capacity)
-  }
+export function createPowerSamplesBuffer(capacity: number): PowerSamplesBuffer {
+  let buffer = new Array<PowerSample>(capacity)
+  let head = 0
+  let count = 0
+  let version = 0
 
-  add(sample: PowerSample) {
-    this.buffer[this.head] = sample
-    this.head = (this.head + 1) % this.capacity
-    this.count = Math.min(this.count + 1, this.capacity)
-    this.version++
-  }
+  return {
+    add(sample) {
+      buffer[head] = sample
+      head = (head + 1) % capacity
+      count = Math.min(count + 1, capacity)
+      version++
+    },
 
-  addBatch(samples: PowerSample[]) {
-    if (samples.length === 0) return
+    addBatch(samples) {
+      if (samples.length === 0) return
 
-    for (const sample of samples) {
-      this.buffer[this.head] = sample
-      this.head = (this.head + 1) % this.capacity
-      this.count = Math.min(this.count + 1, this.capacity)
-    }
-
-    this.version++
-  }
-
-  clear() {
-    this.buffer = new Array<PowerSample>(this.capacity)
-    this.head = 0
-    this.count = 0
-    this.version++
-  }
-
-  getRecent(limit: number): PowerSample[] {
-    if (this.count === 0 || limit <= 0) return []
-
-    const size = Math.min(limit, this.count)
-    const start = (this.head - size + this.capacity) % this.capacity
-    const result: PowerSample[] = []
-
-    for (let index = 0; index < size; index += 1) {
-      const sample = this.buffer[(start + index) % this.capacity]
-      if (sample) {
-        result.push(sample)
+      for (const sample of samples) {
+        buffer[head] = sample
+        head = (head + 1) % capacity
+        count = Math.min(count + 1, capacity)
       }
-    }
 
-    return result
-  }
+      version++
+    },
 
-  getLatest(): PowerSample | null {
-    if (this.count === 0) return null
-    return this.buffer[(this.head - 1 + this.capacity) % this.capacity] ?? null
-  }
+    clear() {
+      buffer = new Array<PowerSample>(capacity)
+      head = 0
+      count = 0
+      version++
+    },
 
-  get length(): number {
-    return this.count
-  }
+    getRecent(limit) {
+      if (count === 0 || limit <= 0) return []
 
-  get currentVersion(): number {
-    return this.version
+      const size = Math.min(limit, count)
+      const start = (head - size + capacity) % capacity
+      const result: PowerSample[] = []
+
+      for (let index = 0; index < size; index += 1) {
+        const sample = buffer[(start + index) % capacity]
+        if (sample) {
+          result.push(sample)
+        }
+      }
+
+      return result
+    },
+
+    getLatest() {
+      if (count === 0) return null
+      return buffer[(head - 1 + capacity) % capacity] ?? null
+    },
+
+    get length() {
+      return count
+    },
+
+    get currentVersion() {
+      return version
+    },
   }
 }

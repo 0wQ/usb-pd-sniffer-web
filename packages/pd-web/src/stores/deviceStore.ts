@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import { CaptureBuffer } from '@/lib/buffers/captureBuffer'
-import { PowerSamplesBuffer } from '@/lib/buffers/powerSamplesBuffer'
+import { createCaptureBuffer, type CaptureBuffer } from '@/lib/buffers/captureBuffer'
+import { createPowerSamplesBuffer, type PowerSamplesBuffer } from '@/lib/buffers/powerSamplesBuffer'
 import type { CaptureRecord, PowerSample } from '@/types/pd'
 
 const DEVICE_STORAGE_KEYS = {
@@ -132,8 +132,8 @@ const useDeviceStore = create<DeviceState>()((set, get) => ({
   detailContextBacktrackRecords: readNullableNumber(DEVICE_STORAGE_KEYS.detailContextBacktrackRecords, null),
   powerCaptureEnabled: readBool(DEVICE_STORAGE_KEYS.powerCaptureEnabled, false),
   protocolSelectedIndex: null,
-  captureBuffer: new CaptureBuffer(),
-  powerBuffer: new PowerSamplesBuffer(POWER_BUFFER_CAPACITY),
+  captureBuffer: createCaptureBuffer(),
+  powerBuffer: createPowerSamplesBuffer(POWER_BUFFER_CAPACITY),
   captureVersion: 0,
   powerVersion: 0,
   pendingRecords: [],

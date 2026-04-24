@@ -1,39 +1,50 @@
 import type { CaptureRecord } from '@/types/pd'
 
-// Capture records are kept in insertion order for indexed virtual-table access.
-export class CaptureBuffer {
-  private buffer: CaptureRecord[] = []
-  private version: number = 0
+export type CaptureBuffer = {
+  add(record: CaptureRecord): void
+  addBatch(records: CaptureRecord[]): void
+  get(index: number): CaptureRecord | undefined
+  readonly length: number
+  readonly currentVersion: number
+  clear(): void
+  getAll(): CaptureRecord[]
+}
 
-  add(record: CaptureRecord) {
-    this.buffer.push(record)
-    this.version++
-  }
+export function createCaptureBuffer(): CaptureBuffer {
+  let buffer: CaptureRecord[] = []
+  let version = 0
 
-  addBatch(records: CaptureRecord[]) {
-    this.buffer.push(...records)
-    this.version++
-  }
+  return {
+    add(record) {
+      buffer.push(record)
+      version++
+    },
 
-  get(index: number): CaptureRecord | undefined {
-    return this.buffer[index]
-  }
+    addBatch(records) {
+      buffer.push(...records)
+      version++
+    },
 
-  get length(): number {
-    return this.buffer.length
-  }
+    get(index) {
+      return buffer[index]
+    },
 
-  get currentVersion(): number {
-    return this.version
-  }
+    get length() {
+      return buffer.length
+    },
 
-  clear() {
-    this.buffer = []
-    this.version++
-  }
+    get currentVersion() {
+      return version
+    },
 
-  // Return the backing array intentionally; virtualized views use version for invalidation.
-  getAll(): CaptureRecord[] {
-    return this.buffer
+    clear() {
+      buffer = []
+      version++
+    },
+
+    // Return the backing array intentionally; virtualized views use version for invalidation.
+    getAll() {
+      return buffer
+    },
   }
 }
