@@ -61,19 +61,19 @@ const removeValue = (key: string): void => {
   }
 }
 
-// 使用 Map 存储报告数据，按索引访问
-class ReportsBuffer {
+// Capture records are kept in insertion order for indexed virtual-table access.
+class CaptureBuffer {
   private buffer: CaptureRecord[] = []
   private version: number = 0 // 用于触发更新
 
-  add(report: CaptureRecord) {
-    this.buffer.push(report)
+  add(record: CaptureRecord) {
+    this.buffer.push(record)
     this.version++
   }
 
   // 批量添加
-  addBatch(reports: CaptureRecord[]) {
-    this.buffer.push(...reports)
+  addBatch(records: CaptureRecord[]) {
+    this.buffer.push(...records)
     this.version++
   }
 
@@ -184,17 +184,17 @@ interface DeviceState {
   protocolSelectedIndex: number | null
 
   // 数据缓冲区（不可变引用）
-  reportsBuffer: ReportsBuffer
+  captureBuffer: CaptureBuffer
   powerBuffer: PowerSamplesBuffer
   // 用于触发组件更新的版本号
-  reportsVersion: number
+  captureVersion: number
   powerVersion: number
   // 选择器：获取记录数量
-  reportsCount: number
+  captureCount: number
   powerCount: number
 
   // 批量更新相关
-  pendingReports: CaptureRecord[]
+  pendingRecords: CaptureRecord[]
   pendingPowerSamples: PowerSample[]
   updateTimer: number | null
   powerUpdateTimer: number | null
@@ -209,14 +209,14 @@ interface DeviceState {
   setDetailContextBacktrackRecords: (detailContextBacktrackRecords: number | null) => void
   setPowerCaptureEnabled: (powerCaptureEnabled: boolean) => void
   setProtocolSelectedIndex: (protocolSelectedIndex: number | null) => void
-  addReport: (report: CaptureRecord) => void
+  addRecord: (record: CaptureRecord) => void
   addPowerSample: (sample: PowerSample) => void
-  flushPendingReports: () => void
+  flushPendingRecords: () => void
   flushPendingPowerSamples: () => void
-  clearReports: () => void
+  clearRecords: () => void
   clearPowerSamples: () => void
   resetDevice: () => void
-  importReports: (reports: CaptureRecord[], mode: 'replace' | 'append') => void
+  importRecords: (records: CaptureRecord[], mode: 'replace' | 'append') => void
 }
 
 // 批量更新配置
@@ -237,15 +237,15 @@ const useDeviceStore = create<DeviceState>()((set, get) => ({
   detailContextBacktrackRecords: readNullableNumber(DEVICE_STORAGE_KEYS.detailContextBacktrackRecords, null),
   powerCaptureEnabled: readBool(DEVICE_STORAGE_KEYS.powerCaptureEnabled, false),
   protocolSelectedIndex: null,
-  reportsBuffer: new ReportsBuffer(),
+  captureBuffer: new CaptureBuffer(),
   powerBuffer: new PowerSamplesBuffer(POWER_BUFFER_CAPACITY),
-  reportsVersion: 0,
+  captureVersion: 0,
   powerVersion: 0,
-  pendingReports: [],
+  pendingRecords: [],
   pendingPowerSamples: [],
   updateTimer: null,
   powerUpdateTimer: null,
-  reportsCount: 0,
+  captureCount: 0,
   powerCount: 0,
 
   // Actions
@@ -308,20 +308,20 @@ const useDeviceStore = create<DeviceState>()((set, get) => ({
   setProtocolSelectedIndex: (protocolSelectedIndex) => set({ protocolSelectedIndex }),
 
   // 批量更新：收集数据，达到阈值或超时后统一更新
-  addReport: (report) => {
-    const { pendingReports, updateTimer } = get()
+  addRecord: (record) => {
+    const { pendingRecords, updateTimer } = get()
 
     // 添加到待处理队列
-    pendingReports.push(report)
+    pendingRecords.push(record)
 
     // 检查是否达到批量更新阈值
-    if (pendingReports.length >= BATCH_SIZE) {
+    if (pendingRecords.length >= BATCH_SIZE) {
       // 立即刷新
-      get().flushPendingReports()
+      get().flushPendingRecords()
     } else if (updateTimer === null) {
       // 设置新的定时器
       const newTimer = window.setTimeout(() => {
-        get().flushPendingReports()
+        get().flushPendingRecords()
       }, BATCH_TIMEOUT)
 
       set({ updateTimer: newTimer })
@@ -348,27 +348,27 @@ const useDeviceStore = create<DeviceState>()((set, get) => ({
     }
   },
 
-  // 刷新待处理的报告
-  flushPendingReports: () => {
-    const { pendingReports, reportsBuffer, updateTimer } = get()
+  // 刷新待处理的记录
+  flushPendingRecords: () => {
+    const { pendingRecords, captureBuffer, updateTimer } = get()
 
-    if (pendingReports.length === 0) return
+    if (pendingRecords.length === 0) return
 
     // 批量添加到 buffer
-    reportsBuffer.addBatch([...pendingReports])
+    captureBuffer.addBatch([...pendingRecords])
 
     // 清除定时器
     if (updateTimer !== null) {
       clearTimeout(updateTimer)
     }
 
-    const newCount = reportsBuffer.length
+    const newCount = captureBuffer.length
 
     // 更新状态 - 关键：使用对象解构确保只更新必要的字段
     set({
-      reportsVersion: reportsBuffer.currentVersion,
-      reportsCount: newCount, // 直接使用数字，不是对象
-      pendingReports: [],
+      captureVersion: captureBuffer.currentVersion,
+      captureCount: newCount, // 直接使用数字，不是对象
+      pendingRecords: [],
       updateTimer: null
     })
   },
@@ -392,20 +392,20 @@ const useDeviceStore = create<DeviceState>()((set, get) => ({
     })
   },
 
-  clearReports: () => {
-    const { reportsBuffer, updateTimer } = get()
+  clearRecords: () => {
+    const { captureBuffer, updateTimer } = get()
 
     // 清除定时器
     if (updateTimer !== null) {
       clearTimeout(updateTimer)
     }
 
-    reportsBuffer.clear()
+    captureBuffer.clear()
     set({
       protocolSelectedIndex: null,
-      reportsVersion: reportsBuffer.currentVersion,
-      reportsCount: 0,
-      pendingReports: [],
+      captureVersion: captureBuffer.currentVersion,
+      captureCount: 0,
+      pendingRecords: [],
       updateTimer: null
     })
   },
@@ -446,11 +446,11 @@ const useDeviceStore = create<DeviceState>()((set, get) => ({
     })
   },
 
-  importReports: (reports, mode) => {
-    const { reportsBuffer, updateTimer } = get()
+  importRecords: (records, mode) => {
+    const { captureBuffer, updateTimer } = get()
 
-    // Flush any pending reports first
-    get().flushPendingReports()
+    // Flush any pending records first
+    get().flushPendingRecords()
 
     // Clear timer if active
     if (updateTimer !== null) {
@@ -459,25 +459,25 @@ const useDeviceStore = create<DeviceState>()((set, get) => ({
 
     // Replace or append based on mode
     if (mode === 'replace') {
-      reportsBuffer.clear()
+      captureBuffer.clear()
     }
 
-    reportsBuffer.addBatch(reports)
+    captureBuffer.addBatch(records)
 
     set({
       protocolSelectedIndex: mode === 'replace' ? null : get().protocolSelectedIndex,
-      reportsVersion: reportsBuffer.currentVersion,
-      reportsCount: reportsBuffer.length,
-      pendingReports: [],
+      captureVersion: captureBuffer.currentVersion,
+      captureCount: captureBuffer.length,
+      pendingRecords: [],
       updateTimer: null
     })
   }
 }))
 
 // 导出优化的选择器 - 使用浅比较
-export const selectReportsCount = (state: DeviceState) => state.reportsCount
-export const selectReportsVersion = (state: DeviceState) => state.reportsVersion
-export const selectReportsBuffer = (state: DeviceState) => state.reportsBuffer
+export const selectCaptureCount = (state: DeviceState) => state.captureCount
+export const selectCaptureVersion = (state: DeviceState) => state.captureVersion
+export const selectCaptureBuffer = (state: DeviceState) => state.captureBuffer
 export const selectPowerCount = (state: DeviceState) => state.powerCount
 export const selectPowerVersion = (state: DeviceState) => state.powerVersion
 export const selectPowerBuffer = (state: DeviceState) => state.powerBuffer

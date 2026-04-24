@@ -9,21 +9,21 @@ import {
 } from '@usb-pd-sniffer/pd-monitor'
 import type { CaptureRecord } from '@/types/pd'
 
-export function recordToMessagePacket(report: CaptureRecord) {
-  const rawPayload = Uint8Array.from(report.data.slice(0, report.data_len))
+export function recordToMessagePacket(record: CaptureRecord) {
+  const rawPayload = Uint8Array.from(record.data.slice(0, record.data_len))
   return toPdObservedFrameFromMonitorEvent({
-    eventType: report.event_type,
+    eventType: record.event_type,
     payload: rawPayload,
   })
 }
 
-export function decodeSingleRecord(report: CaptureRecord): DecodedPacket | null {
-  const packet = recordToMessagePacket(report)
+export function decodeSingleRecord(record: CaptureRecord): DecodedPacket | null {
+  const packet = recordToMessagePacket(record)
   return packet === null ? null : decodePacket(packet)
 }
 
 function findPreviousChunkedExtendedPackets(
-  reports: readonly CaptureRecord[],
+  records: readonly CaptureRecord[],
   targetIndex: number,
   startIndex: number,
   targetDecoded: DecodedPacket,
@@ -42,13 +42,13 @@ function findPreviousChunkedExtendedPackets(
 
   for (let index = targetIndex - 1; index >= startIndex; index -= 1) {
     if (
-      reports[index]?.event_type === MONITOR_EVENT.HARD_RESET ||
-      reports[index]?.event_type === MONITOR_EVENT.CABLE_RESET
+      records[index]?.event_type === MONITOR_EVENT.HARD_RESET ||
+      records[index]?.event_type === MONITOR_EVENT.CABLE_RESET
     ) {
       break
     }
 
-    const packet = recordToMessagePacket(reports[index])
+    const packet = recordToMessagePacket(records[index])
     if (packet === null) {
       continue
     }
@@ -82,19 +82,19 @@ function findPreviousChunkedExtendedPackets(
 }
 
 function findNearestSourceCapabilitiesFrame(
-  reports: readonly CaptureRecord[],
+  records: readonly CaptureRecord[],
   targetIndex: number,
   startIndex: number,
 ): MessagePacket | undefined {
   for (let index = targetIndex - 1; index >= startIndex; index -= 1) {
     if (
-      reports[index]?.event_type === MONITOR_EVENT.HARD_RESET ||
-      reports[index]?.event_type === MONITOR_EVENT.CABLE_RESET
+      records[index]?.event_type === MONITOR_EVENT.HARD_RESET ||
+      records[index]?.event_type === MONITOR_EVENT.CABLE_RESET
     ) {
       break
     }
 
-    const packet = recordToMessagePacket(reports[index])
+    const packet = recordToMessagePacket(records[index])
     if (packet === null) {
       continue
     }
@@ -109,15 +109,15 @@ function findNearestSourceCapabilitiesFrame(
 }
 
 export function decodeRecordAtIndex(
-  reports: readonly CaptureRecord[],
+  records: readonly CaptureRecord[],
   targetIndex: number,
   backtrackRecords: number | null = null
 ): DecodedPacket | null {
-  if (targetIndex < 0 || targetIndex >= reports.length) {
+  if (targetIndex < 0 || targetIndex >= records.length) {
     return null
   }
 
-  const packet = recordToMessagePacket(reports[targetIndex])
+  const packet = recordToMessagePacket(records[targetIndex])
   if (packet === null) {
     return null
   }
@@ -127,9 +127,9 @@ export function decodeRecordAtIndex(
   const startIndex = backtrackRecords === null
     ? 0
     : Math.max(0, targetIndex - backtrackRecords)
-  const sourceCapabilities = findNearestSourceCapabilitiesFrame(reports, targetIndex, startIndex)
+  const sourceCapabilities = findNearestSourceCapabilitiesFrame(records, targetIndex, startIndex)
   const previousChunkedExtendedPackets = findPreviousChunkedExtendedPackets(
-    reports,
+    records,
     targetIndex,
     startIndex,
     singleFrameDecoded,

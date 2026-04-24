@@ -231,30 +231,30 @@ function SectionView({ section }: SectionViewProps) {
 }
 
 const DecodeCard = ({ className, selectedIndex }: Props) => {
-  const reportsBuffer = useDeviceStore((state) => state.reportsBuffer)
-  const reportsVersion = useDeviceStore((state) => state.reportsVersion)
+  const captureBuffer = useDeviceStore((state) => state.captureBuffer)
+  const captureVersion = useDeviceStore((state) => state.captureVersion)
   const detailContextBacktrackRecords = useDeviceStore((state) => state.detailContextBacktrackRecords)
 
-  const reports = useMemo(() => {
-    void reportsVersion
-    return reportsBuffer.getAll()
-  }, [reportsBuffer, reportsVersion])
+  const records = useMemo(() => {
+    void captureVersion
+    return captureBuffer.getAll()
+  }, [captureBuffer, captureVersion])
 
-  const selectedReport = selectedIndex !== null ? reports[selectedIndex] : null
-  const previousReport = selectedIndex !== null && selectedIndex > 0 ? reports[selectedIndex - 1] : null
+  const selectedRecord = selectedIndex !== null ? records[selectedIndex] : null
+  const previousRecord = selectedIndex !== null && selectedIndex > 0 ? records[selectedIndex - 1] : null
 
   const decodedFrame = useMemo(() => {
     if (selectedIndex === null) return null
-    return decodeRecordAtIndex(reports, selectedIndex, detailContextBacktrackRecords)
-  }, [reports, selectedIndex, detailContextBacktrackRecords])
+    return decodeRecordAtIndex(records, selectedIndex, detailContextBacktrackRecords)
+  }, [records, selectedIndex, detailContextBacktrackRecords])
 
   const decodedWithoutContext = useMemo(() => {
-    if (selectedReport === null) return null
-    return decodeSingleRecord(selectedReport)
-  }, [selectedReport])
+    if (selectedRecord === null) return null
+    return decodeSingleRecord(selectedRecord)
+  }, [selectedRecord])
 
-  const deltaUs = selectedReport && previousReport
-    ? selectedReport.timestamp_us - previousReport.timestamp_us
+  const deltaUs = selectedRecord && previousRecord
+    ? selectedRecord.timestamp_us - previousRecord.timestamp_us
     : null
 
   const contextDifference = useMemo(() => {
@@ -280,7 +280,7 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
           )}
         </div>
 
-        {selectedReport === null ? (
+        {selectedRecord === null ? (
           <div className="text-sm text-base-content/60">Select a row to inspect decoded PD details.</div>
         ) : (
           <>
@@ -288,7 +288,7 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
               <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
                 <div>
                   <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Time</div>
-                  <div className="mt-1 font-mono text-xs">{formatTimestampUs(selectedReport.timestamp_us)}</div>
+                  <div className="mt-1 font-mono text-xs">{formatTimestampUs(selectedRecord.timestamp_us)}</div>
                 </div>
                 <div>
                   <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">ΔTime</div>
@@ -296,11 +296,11 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
                 </div>
                 <div>
                   <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Event</div>
-                  <div className="mt-1 font-mono text-xs">{monitorEventName(selectedReport.event_type)}</div>
+                  <div className="mt-1 font-mono text-xs">{monitorEventName(selectedRecord.event_type)}</div>
                 </div>
                 <div>
                   <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Payload</div>
-                  <div className="mt-1 font-mono text-xs">{selectedReport.data_len} B</div>
+                  <div className="mt-1 font-mono text-xs">{selectedRecord.data_len} B</div>
                 </div>
                 <div>
                   <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Type</div>
@@ -316,7 +316,7 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
             <div className="rounded-xl border border-base-300 bg-base-100/80 p-3">
               <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Raw Packet</div>
               <div className="mt-2 break-all font-mono text-xs leading-5">
-                {hexBytes(decodedFrame?.packet.bytes ?? selectedReport.data.slice(0, selectedReport.data_len))}
+                {hexBytes(decodedFrame?.packet.bytes ?? selectedRecord.data.slice(0, selectedRecord.data_len))}
               </div>
             </div>
 

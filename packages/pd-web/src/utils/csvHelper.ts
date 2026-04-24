@@ -192,19 +192,19 @@ function validateRow(row: Record<string, unknown>, rowIndex: number): Validation
   return errors
 }
 
-export const exportToCsv = (reports: CaptureRecord[]): string => {
-  const data = reports.map(report => ({
-    timestamp_us: report.timestamp_us,
-    recv_counter: report.recv_counter,
-    vbus_mv: report.vbus_mv,
-    ibus_ma: report.ibus_ma ?? 0,
-    cc1_mv: report.cc1_mv,
-    cc2_mv: report.cc2_mv,
-    dp_mv: report.dp_mv ?? 0,
-    dm_mv: report.dm_mv ?? 0,
-    event_type: monitorEventName(report.event_type),
-    active_cc: report.active_cc,
-    data: serializeData(report.data.slice(0, report.data_len)),
+export const exportToCsv = (records: CaptureRecord[]): string => {
+  const data = records.map(record => ({
+    timestamp_us: record.timestamp_us,
+    recv_counter: record.recv_counter,
+    vbus_mv: record.vbus_mv,
+    ibus_ma: record.ibus_ma ?? 0,
+    cc1_mv: record.cc1_mv,
+    cc2_mv: record.cc2_mv,
+    dp_mv: record.dp_mv ?? 0,
+    dm_mv: record.dm_mv ?? 0,
+    event_type: monitorEventName(record.event_type),
+    active_cc: record.active_cc,
+    data: serializeData(record.data.slice(0, record.data_len)),
     note: ''
   }))
 
@@ -218,7 +218,7 @@ export const exportToCsv = (reports: CaptureRecord[]): string => {
 
 export const importFromCsv = (content: string): ImportResult => {
   const errors: ValidationError[] = []
-  const reports: CaptureRecord[] = []
+  const records: CaptureRecord[] = []
 
   const parseResult = Papa.parse<Record<string, string>>(content.replace(/^\uFEFF/, ''), {
     header: true,
@@ -247,7 +247,7 @@ export const importFromCsv = (content: string): ImportResult => {
       value: missingHeaders.join(', '),
       reason: `Missing required headers: ${missingHeaders.join(', ')}`
     })
-    return { reports: [], errors }
+    return { records: [], errors }
   }
 
   parseResult.data.forEach((row, index) => {
@@ -259,7 +259,7 @@ export const importFromCsv = (content: string): ImportResult => {
 
     try {
       const bytes = deserializeData(row.data)
-      reports.push({
+      records.push({
         timestamp_us: Number(row.timestamp_us),
         recv_counter: Number(row.recv_counter),
         vbus_mv: Number(row.vbus_mv),
@@ -283,7 +283,7 @@ export const importFromCsv = (content: string): ImportResult => {
     }
   })
 
-  return { reports, errors }
+  return { records, errors }
 }
 
 export const generateFilename = (): string => {

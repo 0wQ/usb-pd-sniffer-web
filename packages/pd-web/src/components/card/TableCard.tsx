@@ -124,7 +124,7 @@ const CellComponent = memo(({ width, align, children, flex = false, minWidth = n
 CellComponent.displayName = 'CellComponent'
 
 type RowData = {
-  reports: CaptureRecord[]
+  records: CaptureRecord[]
   onRowClick: (index: number) => void
   selectedIndex: number | null
 }
@@ -132,7 +132,7 @@ type RowData = {
 type ColumnKey = typeof COLUMNS[number]['key']
 
 type DerivedRowData = {
-  reportIndex: number
+  recordIndex: number
   cells: Record<ColumnKey, React.ReactNode>
 }
 
@@ -144,12 +144,12 @@ const formatMinutes = (minutes: number): string => {
   return padNumber(minutes, 2)
 }
 
-const formatHexData = (pdRaw: number[], pdDataLen: number): string => {
-  if (pdDataLen <= 0) return ''
+const formatHexData = (data: number[], dataLen: number): string => {
+  if (dataLen <= 0) return ''
 
-  const visibleLen = Math.max(0, Math.min(pdRaw.length, pdDataLen))
+  const visibleLen = Math.max(0, Math.min(data.length, dataLen))
 
-  return pdRaw
+  return data
     .slice(0, visibleLen)
     .map((byte) => byte.toString(16).padStart(2, '0').toUpperCase())
     .join(' ')
@@ -180,25 +180,25 @@ const formatTimestamp = (timestampUs: number | null | undefined): string => {
   ].join(':')
 }
 
-const RowComponentInner = ({ ariaAttributes, index, style, reports, onRowClick, selectedIndex }: RowComponentProps<RowData>) => {
+const RowComponentInner = ({ ariaAttributes, index, style, records, onRowClick, selectedIndex }: RowComponentProps<RowData>) => {
   const rowData = useMemo<DerivedRowData | null>(() => {
-    const reportIndex = index
-    const report = reports[reportIndex]
-    if (!report) return null
+    const recordIndex = index
+    const record = records[recordIndex]
+    if (!record) return null
 
-    const prevReport = reportIndex > 0 ? reports[reportIndex - 1] : null
-    const deltaTime = prevReport ? report.timestamp_us - prevReport.timestamp_us : null
-    const decoded = decodeSingleRecord(report)
-    const timestampText = formatTimestamp(report.timestamp_us)
+    const previousRecord = recordIndex > 0 ? records[recordIndex - 1] : null
+    const deltaTime = previousRecord ? record.timestamp_us - previousRecord.timestamp_us : null
+    const decoded = decodeSingleRecord(record)
+    const timestampText = formatTimestamp(record.timestamp_us)
     const deltaTimeText = formatDeltaTime(deltaTime)
-    const hexData = formatHexData(report.data, report.data_len)
-    const pdLength = report.data_len.toString().padStart(2, '0')
+    const hexData = formatHexData(record.data, record.data_len)
+    const pdLength = record.data_len.toString().padStart(2, '0')
     const versionText = decoded?.header?.specificationRevision ?? ''
     const typeDesc =
       decoded === null
-        ? monitorEventName(report.event_type)
+        ? monitorEventName(record.event_type)
         : (decoded.messageType.name ?? decoded.category)
-    const sopDesc = decoded === null ? monitorEventName(report.event_type) : decoded.frame.sop
+    const sopDesc = decoded === null ? monitorEventName(record.event_type) : decoded.frame.sop
     const dataRole =
       decoded?.header?.portDataRoleMeaning === null || decoded?.header?.portDataRoleMeaning === undefined
         ? ''
@@ -206,13 +206,13 @@ const RowComponentInner = ({ ariaAttributes, index, style, reports, onRowClick, 
     const powerRole = decoded?.header?.portPowerRoleOrCablePlugMeaning ?? ''
 
     const cells: Record<ColumnKey, React.ReactNode> = {
-      seq: report.recv_counter,
+      seq: record.recv_counter,
       time: timestampText,
       deltaTime: deltaTimeText,
-      vbus: report.vbus_mv,
-      ibus: report.ibus_ma ?? '',
-      CC1: report.cc1_mv,
-      CC2: report.cc2_mv,
+      vbus: record.vbus_mv,
+      ibus: record.ibus_ma ?? '',
+      CC1: record.cc1_mv,
+      CC2: record.cc2_mv,
       sop: sopDesc,
       drole: dataRole,
       prole: powerRole,
@@ -223,14 +223,14 @@ const RowComponentInner = ({ ariaAttributes, index, style, reports, onRowClick, 
       data: `(${pdLength}) ${hexData}`,
     }
 
-    return { reportIndex, cells }
-  }, [index, reports])
+    return { recordIndex, cells }
+  }, [index, records])
 
   const rowStyle = useMemo(() => ({ ...style, display: 'flex', alignItems: 'center' }), [style])
-  const isSelected = rowData !== null && selectedIndex === rowData.reportIndex
+  const isSelected = rowData !== null && selectedIndex === rowData.recordIndex
   const handleClick = useCallback(() => {
     if (rowData !== null) {
-      onRowClick(rowData.reportIndex)
+      onRowClick(rowData.recordIndex)
     }
   }, [onRowClick, rowData])
 
@@ -294,38 +294,38 @@ const TableComponent = memo(({
   selectedIndex,
   scrollRequest,
 }: TableComponentProps) => {
-  const reportsBuffer = useDeviceStore((state) => state.reportsBuffer)
-  const reportsVersion = useDeviceStore((state) => state.reportsVersion)
-  const reportsCount = useDeviceStore((state) => state.reportsCount)
+  const captureBuffer = useDeviceStore((state) => state.captureBuffer)
+  const captureVersion = useDeviceStore((state) => state.captureVersion)
+  const captureCount = useDeviceStore((state) => state.captureCount)
 
   const [list, setList] = useListCallbackRef()
   const lastScrollRequest = useRef(0)
   const isProgrammaticScroll = useRef(false)
   const lastScrollTop = useRef(0)
 
-  const reports = reportsBuffer.getAll()
-  const reportCount = reportsCount
+  const records = captureBuffer.getAll()
+  const recordCount = captureCount
 
   useEffect(() => {
-    if (autoScroll && reportCount > 1) {
+    if (autoScroll && recordCount > 1) {
       isProgrammaticScroll.current = true
       list?.scrollToRow({
         behavior: 'smooth',
-        index: reportCount - 1,
+        index: recordCount - 1,
       })
       // Reset flag after a short delay to allow scroll to complete
       setTimeout(() => {
         isProgrammaticScroll.current = false
       }, 100)
     }
-  }, [reportCount, list, autoScroll])
+  }, [recordCount, list, autoScroll])
 
   useEffect(() => {
     if (scrollRequest === 0) return
     if (scrollRequest === lastScrollRequest.current) return
     if (selectedIndex === null) return
     if (!list) return
-    if (selectedIndex < 0 || selectedIndex >= reportCount) return
+    if (selectedIndex < 0 || selectedIndex >= recordCount) return
     isProgrammaticScroll.current = true
     list.scrollToRow({
       behavior: 'smooth',
@@ -336,7 +336,7 @@ const TableComponent = memo(({
     setTimeout(() => {
       isProgrammaticScroll.current = false
     }, 100)
-  }, [scrollRequest, selectedIndex, list, reportCount])
+  }, [scrollRequest, selectedIndex, list, recordCount])
 
   const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
     if (isProgrammaticScroll.current) return
@@ -365,9 +365,9 @@ const TableComponent = memo(({
   }, [autoScroll, setAutoScroll])
 
   const rowProps = useMemo<RowData>(
-    () => ({ reports, onRowClick, selectedIndex }),
+    () => ({ records, onRowClick, selectedIndex }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [reportsVersion, onRowClick, selectedIndex]
+    [captureVersion, onRowClick, selectedIndex]
   )
 
   return (
@@ -384,7 +384,7 @@ const TableComponent = memo(({
           </div>
 
           <div className="flex-1 min-h-0">
-            {reportCount === 0 ? (
+            {recordCount === 0 ? (
               <div className="grid h-full place-items-center px-6 text-center text-xs text-base-content/55">
                 No records yet.
               </div>
@@ -392,7 +392,7 @@ const TableComponent = memo(({
               <List
                 listRef={setList}
                 rowComponent={RowComponentInner}
-                rowCount={reportCount}
+                rowCount={recordCount}
                 rowHeight={ROW_HEIGHT}
                 rowProps={rowProps}
                 onScroll={handleScroll}
@@ -408,17 +408,17 @@ const TableComponent = memo(({
 TableComponent.displayName = 'TableComponent'
 
 const RecordCounterComponent = memo(() => {
-  const reportsCount = useDeviceStore((state) => state.reportsCount)
-  const reportsBuffer = useDeviceStore((state) => state.reportsBuffer)
+  const captureCount = useDeviceStore((state) => state.captureCount)
+  const captureBuffer = useDeviceStore((state) => state.captureBuffer)
 
-  const lastReport = reportsCount > 0 ? reportsBuffer.get(reportsCount - 1) : null
-  const dropCount = lastReport?.drop_count
+  const lastRecord = captureCount > 0 ? captureBuffer.get(captureCount - 1) : null
+  const dropCount = lastRecord?.drop_count
   const hasDropCount = typeof dropCount === 'number'
   const dropText = hasDropCount ? dropCount.toLocaleString() : ''
 
   return (
     <div className="btn btn-sm rounded-full gap-1.5 border-base-300 bg-base-100 px-3 font-mono font-normal normal-case text-base-content/65 pointer-events-none cursor-default hover:bg-base-100">
-      <span className="font-semibold text-base-content/80">{reportsCount.toLocaleString()}</span>
+      <span className="font-semibold text-base-content/80">{captureCount.toLocaleString()}</span>
       <span>records</span>
       {hasDropCount && (
         <>
@@ -482,20 +482,20 @@ const Card = memo(({
   const [isProcessing, setIsProcessing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const clearReports = useDeviceStore((state) => state.clearReports)
-  const reportsBuffer = useDeviceStore((state) => state.reportsBuffer)
-  const reportsCount = useDeviceStore((state) => state.reportsCount)
-  const importReports = useDeviceStore((state) => state.importReports)
+  const clearRecords = useDeviceStore((state) => state.clearRecords)
+  const captureBuffer = useDeviceStore((state) => state.captureBuffer)
+  const captureCount = useDeviceStore((state) => state.captureCount)
+  const importRecords = useDeviceStore((state) => state.importRecords)
   const detailContextBacktrackRecords = useDeviceStore((state) => state.detailContextBacktrackRecords)
   const setDetailContextBacktrackRecords = useDeviceStore((state) => state.setDetailContextBacktrackRecords)
-  const selectedReport = selectedIndex === null ? null : (reportsBuffer.get(selectedIndex) ?? null)
+  const selectedRecord = selectedIndex === null ? null : (captureBuffer.get(selectedIndex) ?? null)
   const selectedFrameForTx = useMemo(() => {
-    if (selectedReport === null) {
+    if (selectedRecord === null) {
       return null
     }
 
-    return recordToMessagePacket(selectedReport)
-  }, [selectedReport])
+    return recordToMessagePacket(selectedRecord)
+  }, [selectedRecord])
 
   const handleRowClick = useCallback((index: number) => {
     if (AUTO_SCROLL_CONFIG.STOP_ON_ROW_CLICK) {
@@ -515,17 +515,17 @@ const Card = memo(({
   const handleExportCsv = useCallback(() => {
     try {
       setIsProcessing(true)
-      const reports = reportsBuffer.getAll()
-      const csvContent = exportToCsv(reports)
+      const records = captureBuffer.getAll()
+      const csvContent = exportToCsv(records)
       const filename = generateFilename()
       downloadCsv(csvContent, filename)
-      toast.success(`Exported ${reports.length.toLocaleString()} records to ${filename}`)
+      toast.success(`Exported ${records.length.toLocaleString()} records to ${filename}`)
     } catch (error) {
       toast.error(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsProcessing(false)
     }
-  }, [reportsBuffer])
+  }, [captureBuffer])
 
   const handleImportCsv = useCallback(() => {
     fileInputRef.current?.click()
@@ -538,7 +538,7 @@ const Card = memo(({
     try {
       setIsProcessing(true)
       const content = await readFile(file)
-      const { reports, errors } = importFromCsv(content)
+      const { records, errors } = importFromCsv(content)
 
       if (errors.length > 0) {
         const errorMessage = errors.slice(0, 5).map(err =>
@@ -551,12 +551,12 @@ const Card = memo(({
         return
       }
 
-      if (reports.length === 0) {
+      if (records.length === 0) {
         toast.error('No valid records found in CSV file')
         return
       }
 
-      setPendingImportData(reports)
+      setPendingImportData(records)
       setImportDialogOpen(true)
     } catch (error) {
       toast.error(`Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
@@ -573,7 +573,7 @@ const Card = memo(({
     if (!pendingImportData) return
 
     try {
-      importReports(pendingImportData, mode)
+      importRecords(pendingImportData, mode)
       toast.success(`Imported ${pendingImportData.length.toLocaleString()} records (${mode} mode)`)
     } catch (error) {
       toast.error(`Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
@@ -581,7 +581,7 @@ const Card = memo(({
       setImportDialogOpen(false)
       setPendingImportData(null)
     }
-  }, [pendingImportData, importReports])
+  }, [pendingImportData, importRecords])
 
   const handleImportDialogClose = useCallback(() => {
     setImportDialogOpen(false)
@@ -806,7 +806,7 @@ const Card = memo(({
               <button
                 className={TOOLBAR_ICON_BUTTON_CLASS}
                 onClick={handleExportCsv}
-                disabled={reportsCount === 0 || isProcessing}
+                disabled={captureCount === 0 || isProcessing}
                 aria-label="Export to CSV"
               >
                 <svg
@@ -847,7 +847,7 @@ const Card = memo(({
               </button>
               <button
                 className={TOOLBAR_ICON_BUTTON_CLASS}
-                onClick={clearReports}
+                onClick={clearRecords}
                 aria-label="Clear"
               >
                 <svg

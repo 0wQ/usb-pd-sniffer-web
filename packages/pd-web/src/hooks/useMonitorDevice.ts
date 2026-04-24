@@ -25,7 +25,7 @@ export function useMonitorDevice() {
   const autoReconnectOnHotplug = useDeviceStore((state) => state.autoReconnectOnHotplug)
   const lastDeviceFingerprint = useDeviceStore((state) => state.lastDeviceFingerprint)
   const setLastDeviceFingerprint = useDeviceStore((state) => state.setLastDeviceFingerprint)
-  const addReport = useDeviceStore((state) => state.addReport)
+  const addRecord = useDeviceStore((state) => state.addRecord)
   const addPowerSample = useDeviceStore((state) => state.addPowerSample)
   const powerCaptureEnabled = useDeviceStore((state) => state.powerCaptureEnabled)
   const resetDevice = useDeviceStore((state) => state.resetDevice)
@@ -53,8 +53,8 @@ export function useMonitorDevice() {
     deviceRef.current = monitorDevice
     monitorDevice.setAutoReconnect(latestAutoReconnect.current, latestFingerprint.current)
 
-    const offRecord = monitorDevice.onRecord((report) => {
-      addReport(report)
+    const offRecord = monitorDevice.onRecord((record) => {
+      addRecord(record)
     })
 
     const offPowerSample = monitorDevice.onPowerSample((sample) => {
@@ -88,7 +88,7 @@ export function useMonitorDevice() {
       monitorDevice.dispose()
       deviceRef.current = null
     }
-  }, [addPowerSample, addReport, resetDevice, setIsConnected, setIsConnecting, setLastDeviceFingerprint])
+  }, [addPowerSample, addRecord, resetDevice, setIsConnected, setIsConnecting, setLastDeviceFingerprint])
 
   const tryAutoConnectAuthorizedDevice = useCallback(async () => {
     if (manualDisconnect) return

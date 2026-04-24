@@ -58,7 +58,7 @@ const PowerPage = ({
   onViewChange,
 }: Props) => {
   const [windowSize, setWindowSize] = useState<number>(10000)
-  const reportsCount = useDeviceStore((state) => state.reportsCount)
+  const captureCount = useDeviceStore((state) => state.captureCount)
   const powerBuffer = useDeviceStore((state) => state.powerBuffer)
   const powerVersion = useDeviceStore((state) => state.powerVersion)
   const powerCount = useDeviceStore((state) => state.powerCount)
@@ -113,7 +113,7 @@ const PowerPage = ({
               )}
 
               <div className="btn btn-sm rounded-full gap-1.5 border-base-300 bg-base-100 px-3 font-mono font-normal normal-case text-base-content/65 pointer-events-none cursor-default hover:bg-base-100">
-                <span className="font-semibold text-base-content/80">{reportsCount.toLocaleString()}</span>
+                <span className="font-semibold text-base-content/80">{captureCount.toLocaleString()}</span>
                 <span>protocol records</span>
               </div>
               <div className="btn btn-sm rounded-full gap-1.5 border-base-300 bg-base-100 px-3 font-mono font-normal normal-case text-base-content/65 pointer-events-none cursor-default hover:bg-base-100">

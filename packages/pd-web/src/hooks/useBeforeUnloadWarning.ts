@@ -6,12 +6,12 @@ import useDeviceStore from '@/stores/deviceStore'
  * 当有数据记录时，用户刷新或关闭页面会收到提示
  */
 export function useBeforeUnloadWarning() {
-  const reportsCount = useDeviceStore((state) => state.reportsCount)
+  const captureCount = useDeviceStore((state) => state.captureCount)
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       // 只有当有数据记录时才显示警告
-      if (reportsCount > 0) {
+      if (captureCount > 0) {
         // 标准方式
         event.preventDefault()
         
@@ -30,7 +30,7 @@ export function useBeforeUnloadWarning() {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
     }
-  }, [reportsCount])
+  }, [captureCount])
 }
 
 export default useBeforeUnloadWarning
