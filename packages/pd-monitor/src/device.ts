@@ -231,6 +231,16 @@ function recordToPowerSample(record: MonitorRecord): MonitorPowerSample {
   };
 }
 
+function isPassthroughMonitorRecordEvent(eventType: number): boolean {
+  return (
+    isPdMonitorEvent(eventType) ||
+    eventType === MONITOR_EVENT.DISCONNECT ||
+    eventType === MONITOR_EVENT.CC1_CONNECT ||
+    eventType === MONITOR_EVENT.CC2_CONNECT ||
+    eventType === MONITOR_EVENT.BUFFER_OVERFLOW
+  );
+}
+
 function ufcsSingleEventType(eventType: number): number | null {
   switch (eventType) {
     case MONITOR_EVENT.UFCS_DP_SINGLE:
@@ -335,7 +345,7 @@ export function createMonitorRecordNormalizer(): MonitorRecordNormalizer {
         return [assembleUfcsRecord(chunk0, record, chunk1Direction)];
       }
 
-      return isPdMonitorEvent(record.event_type) ? [record] : [];
+      return isPassthroughMonitorRecordEvent(record.event_type) ? [record] : [];
     },
     reset(): void {
       pending.dp = null;

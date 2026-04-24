@@ -23,6 +23,25 @@ function record(eventType: number, recvCounter: number, pdRaw: number[]): Monito
 }
 
 describe("monitor record normalizer", () => {
+  test("passes connection and monitor status records through unchanged", () => {
+    const normalizer = createMonitorRecordNormalizer();
+    const disconnect = record(MONITOR_EVENT.DISCONNECT, 1, []);
+    const cc1 = record(MONITOR_EVENT.CC1_CONNECT, 2, []);
+    const cc2 = record(MONITOR_EVENT.CC2_CONNECT, 3, []);
+    const overflow = record(MONITOR_EVENT.BUFFER_OVERFLOW, 4, []);
+
+    expect(normalizer.push(disconnect)).toEqual([disconnect]);
+    expect(normalizer.push(cc1)).toEqual([cc1]);
+    expect(normalizer.push(cc2)).toEqual([cc2]);
+    expect(normalizer.push(overflow)).toEqual([overflow]);
+  });
+
+  test("keeps power telemetry outside capture records", () => {
+    const normalizer = createMonitorRecordNormalizer();
+
+    expect(normalizer.push(record(MONITOR_EVENT.POWER_TELEMETRY, 5, []))).toEqual([]);
+  });
+
   test("passes UFCS single records through unchanged", () => {
     const normalizer = createMonitorRecordNormalizer();
     const input = record(MONITOR_EVENT.UFCS_DP_SINGLE, 7, [1, 2, 3]);
