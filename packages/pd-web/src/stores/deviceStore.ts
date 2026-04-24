@@ -1,4 +1,6 @@
 import { create } from 'zustand'
+import { CaptureBuffer } from '@/lib/buffers/captureBuffer'
+import { PowerSamplesBuffer } from '@/lib/buffers/powerSamplesBuffer'
 import type { CaptureRecord, PowerSample } from '@/types/pd'
 
 const DEVICE_STORAGE_KEYS = {
@@ -61,113 +63,6 @@ const removeValue = (key: string): void => {
   }
 }
 
-// Capture records are kept in insertion order for indexed virtual-table access.
-class CaptureBuffer {
-  private buffer: CaptureRecord[] = []
-  private version: number = 0 // 用于触发更新
-
-  add(record: CaptureRecord) {
-    this.buffer.push(record)
-    this.version++
-  }
-
-  // 批量添加
-  addBatch(records: CaptureRecord[]) {
-    this.buffer.push(...records)
-    this.version++
-  }
-
-  get(index: number): CaptureRecord | undefined {
-    return this.buffer[index]
-  }
-
-  get length(): number {
-    return this.buffer.length
-  }
-
-  get currentVersion(): number {
-    return this.version
-  }
-
-  clear() {
-    this.buffer = []
-    this.version++
-  }
-
-  // 获取所有数据的引用（注意：直接返回内部数组，不拷贝）
-  getAll(): CaptureRecord[] {
-    return this.buffer
-  }
-}
-
-class PowerSamplesBuffer {
-  private buffer: PowerSample[]
-  private capacity: number
-  private head: number = 0
-  private count: number = 0
-  private version: number = 0
-
-  constructor(capacity: number) {
-    this.capacity = capacity
-    this.buffer = new Array<PowerSample>(capacity)
-  }
-
-  add(sample: PowerSample) {
-    this.buffer[this.head] = sample
-    this.head = (this.head + 1) % this.capacity
-    this.count = Math.min(this.count + 1, this.capacity)
-    this.version++
-  }
-
-  addBatch(samples: PowerSample[]) {
-    if (samples.length === 0) return
-
-    for (const sample of samples) {
-      this.buffer[this.head] = sample
-      this.head = (this.head + 1) % this.capacity
-      this.count = Math.min(this.count + 1, this.capacity)
-    }
-
-    this.version++
-  }
-
-  clear() {
-    this.buffer = new Array<PowerSample>(this.capacity)
-    this.head = 0
-    this.count = 0
-    this.version++
-  }
-
-  getRecent(limit: number): PowerSample[] {
-    if (this.count === 0 || limit <= 0) return []
-
-    const size = Math.min(limit, this.count)
-    const start = (this.head - size + this.capacity) % this.capacity
-    const result: PowerSample[] = []
-
-    for (let index = 0; index < size; index += 1) {
-      const sample = this.buffer[(start + index) % this.capacity]
-      if (sample) {
-        result.push(sample)
-      }
-    }
-
-    return result
-  }
-
-  getLatest(): PowerSample | null {
-    if (this.count === 0) return null
-    return this.buffer[(this.head - 1 + this.capacity) % this.capacity] ?? null
-  }
-
-  get length(): number {
-    return this.count
-  }
-
-  get currentVersion(): number {
-    return this.version
-  }
-}
 
 interface DeviceState {
   // 设备状态
