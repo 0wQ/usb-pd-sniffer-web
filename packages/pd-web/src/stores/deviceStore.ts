@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { PDReport, PowerSample } from '@/types/pd'
+import type { CaptureRecord, PowerSample } from '@/types/pd'
 
 const HID_STORAGE_KEYS = {
   autoConnectOnLoad: 'usb-pd-hid-autoConnectOnLoad',
@@ -63,21 +63,21 @@ const removeValue = (key: string): void => {
 
 // 使用 Map 存储报告数据，按索引访问
 class ReportsBuffer {
-  private buffer: PDReport[] = []
+  private buffer: CaptureRecord[] = []
   private version: number = 0 // 用于触发更新
 
-  add(report: PDReport) {
+  add(report: CaptureRecord) {
     this.buffer.push(report)
     this.version++
   }
 
   // 批量添加
-  addBatch(reports: PDReport[]) {
+  addBatch(reports: CaptureRecord[]) {
     this.buffer.push(...reports)
     this.version++
   }
 
-  get(index: number): PDReport | undefined {
+  get(index: number): CaptureRecord | undefined {
     return this.buffer[index]
   }
 
@@ -95,7 +95,7 @@ class ReportsBuffer {
   }
 
   // 获取所有数据的引用（注意：直接返回内部数组，不拷贝）
-  getAll(): PDReport[] {
+  getAll(): CaptureRecord[] {
     return this.buffer
   }
 }
@@ -194,7 +194,7 @@ interface DeviceState {
   powerCount: number
 
   // 批量更新相关
-  pendingReports: PDReport[]
+  pendingReports: CaptureRecord[]
   pendingPowerSamples: PowerSample[]
   updateTimer: number | null
   powerUpdateTimer: number | null
@@ -209,14 +209,14 @@ interface DeviceState {
   setDetailContextBacktrackRecords: (detailContextBacktrackRecords: number | null) => void
   setPowerCaptureEnabled: (powerCaptureEnabled: boolean) => void
   setProtocolSelectedIndex: (protocolSelectedIndex: number | null) => void
-  addReport: (report: PDReport) => void
+  addReport: (report: CaptureRecord) => void
   addPowerSample: (sample: PowerSample) => void
   flushPendingReports: () => void
   flushPendingPowerSamples: () => void
   clearReports: () => void
   clearPowerSamples: () => void
   resetDevice: () => void
-  importReports: (reports: PDReport[], mode: 'replace' | 'append') => void
+  importReports: (reports: CaptureRecord[], mode: 'replace' | 'append') => void
 }
 
 // 批量更新配置

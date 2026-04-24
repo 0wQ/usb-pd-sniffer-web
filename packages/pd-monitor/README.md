@@ -119,12 +119,10 @@ type MonitorRecord = {
   dm_mv: number
   event_type: number
   active_cc: number
-  pd_data_len: number
-  pd_raw: number[]
+  data_len: number
+  data: number[]
 }
 ```
-
-`pd_data_len` and `pd_raw` are legacy field names preserved for the current `pd-web` store. They should be renamed to `data_len` and `data` in a later web-wide record cleanup.
 
 Current record emission behavior:
 
@@ -203,5 +201,4 @@ These exports remain available for tests and tooling, but `pd-web` should prefer
 
 ## Known Follow-Ups
 
-- Rename `MonitorRecord.pd_raw` / `MonitorRecord.pd_data_len` to `data` / `data_len` after the web store and CSV paths are migrated.
 - Add tests around `createMonitorDevice()` with a fake WebHID object before extending transport behavior further.

@@ -2,7 +2,7 @@ Current `pd-web` analyzer mainline:
 
 1. Native monitor device support -> `@usb-pd-sniffer/pd-monitor`
 2. Device subscriptions -> `src/hooks/useWebHid.ts`
-3. `PDReport` -> `PdObservedFrame`/`pd-core` -> `src/lib/live/pdCore.ts`
+3. `CaptureRecord` -> `PdObservedFrame`/`pd-core` -> `src/lib/live/pdCore.ts`
 4. UI rendering -> `src/components/card/TableCard.tsx`, `src/components/card/DecodeCard.tsx`, and `src/components/pages/PowerPage.tsx`
 
 `pd-web` must not parse HID report bodies or hold `HIDDevice` directly. Device

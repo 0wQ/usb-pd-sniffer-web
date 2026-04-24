@@ -17,8 +17,8 @@ function record(eventType: number, recvCounter: number, pdRaw: number[]): Monito
     dm_mv: 0,
     event_type: eventType,
     active_cc: 1,
-    pd_data_len: pdRaw.length,
-    pd_raw: pdRaw,
+    data_len: pdRaw.length,
+    data: pdRaw,
   };
 }
 
@@ -42,8 +42,8 @@ describe("monitor record normalizer", () => {
     expect(output[0]).toMatchObject({
       event_type: MONITOR_EVENT.UFCS_DP_SINGLE,
       recv_counter: 10,
-      pd_data_len: 5,
-      pd_raw: [1, 2, 3, 4, 5],
+      data_len: 5,
+      data: [1, 2, 3, 4, 5],
     });
   });
 
@@ -56,8 +56,8 @@ describe("monitor record normalizer", () => {
       {
         event_type: MONITOR_EVENT.UFCS_DP_SINGLE,
         recv_counter: 10,
-        pd_data_len: 2,
-        pd_raw: [1, 2],
+        data_len: 2,
+        data: [1, 2],
       }
     ]);
   });
@@ -72,8 +72,8 @@ describe("monitor record normalizer", () => {
       {
         event_type: MONITOR_EVENT.UFCS_DP_SINGLE,
         recv_counter: 20,
-        pd_data_len: 3,
-        pd_raw: [1, 2, 3],
+        data_len: 3,
+        data: [1, 2, 3],
       }
     ]);
 
@@ -81,8 +81,8 @@ describe("monitor record normalizer", () => {
       {
         event_type: MONITOR_EVENT.UFCS_DM_SINGLE,
         recv_counter: 21,
-        pd_data_len: 3,
-        pd_raw: [9, 10, 11],
+        data_len: 3,
+        data: [9, 10, 11],
       }
     ]);
   });
@@ -95,14 +95,14 @@ describe("monitor record normalizer", () => {
       {
         event_type: MONITOR_EVENT.UFCS_DP_SINGLE,
         recv_counter: 30,
-        pd_data_len: 2,
-        pd_raw: [1, 2],
+        data_len: 2,
+        data: [1, 2],
       },
       {
         event_type: MONITOR_EVENT.UFCS_DP_SINGLE,
         recv_counter: 31,
-        pd_data_len: 2,
-        pd_raw: [3, 4],
+        data_len: 2,
+        data: [3, 4],
       }
     ]);
   });
@@ -115,16 +115,16 @@ describe("monitor record normalizer", () => {
       {
         event_type: MONITOR_EVENT.UFCS_DM_SINGLE,
         recv_counter: 40,
-        pd_data_len: 1,
-        pd_raw: [1],
+        data_len: 1,
+        data: [1],
       }
     ]);
     expect(normalizer.push(record(MONITOR_EVENT.UFCS_DM_CHUNK1, 41, [4]))).toMatchObject([
       {
         event_type: MONITOR_EVENT.UFCS_DM_SINGLE,
         recv_counter: 41,
-        pd_data_len: 3,
-        pd_raw: [2, 3, 4],
+        data_len: 3,
+        data: [2, 3, 4],
       }
     ]);
   });

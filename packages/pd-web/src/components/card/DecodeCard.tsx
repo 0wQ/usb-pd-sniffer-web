@@ -299,7 +299,7 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
                 </div>
                 <div>
                   <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Payload</div>
-                  <div className="mt-1 font-mono text-xs">{selectedReport.pd_data_len} B</div>
+                  <div className="mt-1 font-mono text-xs">{selectedReport.data_len} B</div>
                 </div>
                 <div>
                   <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Type</div>
@@ -315,7 +315,7 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
             <div className="rounded-xl border border-base-300 bg-base-100/80 p-3">
               <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Raw Packet</div>
               <div className="mt-2 break-all font-mono text-xs leading-5">
-                {hexBytes(decodedFrame?.packet.bytes ?? selectedReport.pd_raw.slice(0, selectedReport.pd_data_len))}
+                {hexBytes(decodedFrame?.packet.bytes ?? selectedReport.data.slice(0, selectedReport.data_len))}
               </div>
             </div>
 

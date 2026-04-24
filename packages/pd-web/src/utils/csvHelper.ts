@@ -1,5 +1,5 @@
 import Papa from 'papaparse'
-import type { PDReport } from '@/types/pd'
+import type { CaptureRecord } from '@/types/pd'
 import type { ValidationError, ImportResult } from '@/types/csv'
 import { MONITOR_EVENT, monitorEventName } from '@/lib/live/pdCore'
 
@@ -192,7 +192,7 @@ function validateRow(row: Record<string, unknown>, rowIndex: number): Validation
   return errors
 }
 
-export const exportToCsv = (reports: PDReport[]): string => {
+export const exportToCsv = (reports: CaptureRecord[]): string => {
   const data = reports.map(report => ({
     timestamp_us: report.timestamp_us,
     recv_counter: report.recv_counter,
@@ -204,7 +204,7 @@ export const exportToCsv = (reports: PDReport[]): string => {
     dm_mv: report.dm_mv ?? 0,
     event_type: monitorEventName(report.event_type),
     active_cc: report.active_cc,
-    data: serializeData(report.pd_raw.slice(0, report.pd_data_len)),
+    data: serializeData(report.data.slice(0, report.data_len)),
     note: ''
   }))
 
@@ -218,7 +218,7 @@ export const exportToCsv = (reports: PDReport[]): string => {
 
 export const importFromCsv = (content: string): ImportResult => {
   const errors: ValidationError[] = []
-  const reports: PDReport[] = []
+  const reports: CaptureRecord[] = []
 
   const parseResult = Papa.parse<Record<string, string>>(content.replace(/^\uFEFF/, ''), {
     header: true,
@@ -270,8 +270,8 @@ export const importFromCsv = (content: string): ImportResult => {
         dm_mv: Number(row.dm_mv),
         event_type: parseCaptureEventName(row.event_type),
         active_cc: Number(row.active_cc),
-        pd_data_len: bytes.length,
-        pd_raw: bytes,
+        data_len: bytes.length,
+        data: bytes,
       })
     } catch (error) {
       errors.push({

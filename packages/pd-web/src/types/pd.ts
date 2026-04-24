@@ -1,4 +1,4 @@
-export interface PDReport {
+export interface CaptureRecord {
   timestamp_us: number
   recv_counter: number
   drop_count?: number
@@ -10,8 +10,8 @@ export interface PDReport {
   dm_mv?: number
   event_type: number
   active_cc: number
-  pd_data_len: number
-  pd_raw: number[]
+  data_len: number
+  data: number[]
 }
 
 export interface PowerSample {

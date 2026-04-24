@@ -11,7 +11,7 @@ import {
   type FirmwareMeta,
   type MonitorSnapshot,
 } from '@usb-pd-sniffer/pd-monitor'
-import type { PDReport } from '@/types/pd'
+import type { CaptureRecord } from '@/types/pd'
 
 export {
   MONITOR_EVENT,
@@ -23,21 +23,21 @@ export type {
   MonitorSnapshot,
 }
 
-export function reportToObservedFrame(report: PDReport) {
-  const rawPayload = Uint8Array.from(report.pd_raw)
+export function reportToObservedFrame(report: CaptureRecord) {
+  const rawPayload = Uint8Array.from(report.data.slice(0, report.data_len))
   return toPdObservedFrameFromMonitorEvent({
     eventType: report.event_type,
     payload: rawPayload,
   })
 }
 
-export function decodeSingleReport(report: PDReport): DecodedPacket | null {
+export function decodeSingleReport(report: CaptureRecord): DecodedPacket | null {
   const packet = reportToObservedFrame(report)
   return packet === null ? null : decodePacket(packet)
 }
 
 function findPreviousChunkedExtendedPackets(
-  reports: readonly PDReport[],
+  reports: readonly CaptureRecord[],
   targetIndex: number,
   startIndex: number,
   targetDecoded: DecodedPacket,
@@ -96,7 +96,7 @@ function findPreviousChunkedExtendedPackets(
 }
 
 function findNearestSourceCapabilitiesFrame(
-  reports: readonly PDReport[],
+  reports: readonly CaptureRecord[],
   targetIndex: number,
   startIndex: number,
 ): MessagePacket | undefined {
@@ -123,7 +123,7 @@ function findNearestSourceCapabilitiesFrame(
 }
 
 export function decodeReportAtIndex(
-  reports: readonly PDReport[],
+  reports: readonly CaptureRecord[],
   targetIndex: number,
   backtrackRecords: number | null = null
 ): DecodedPacket | null {

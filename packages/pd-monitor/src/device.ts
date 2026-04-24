@@ -64,8 +64,8 @@ export type MonitorRecord = {
   dm_mv: number;
   event_type: number;
   active_cc: number;
-  pd_data_len: number;
-  pd_raw: number[];
+  data_len: number;
+  data: number[];
 };
 
 export type MonitorPowerSample = {
@@ -211,8 +211,8 @@ function reportToRecord(reportId: number, data: DataView): MonitorRecord {
     dm_mv: report.snapshot.dmMv,
     event_type: report.eventType,
     active_cc: report.activeCc,
-    pd_data_len: report.payloadLen,
-    pd_raw: Array.from(report.payload),
+    data_len: report.payloadLen,
+    data: Array.from(report.payload),
   };
 }
 
@@ -270,21 +270,21 @@ function ufcsAssembledEventType(direction: UfcsDirection): number {
 function cloneRecord(record: MonitorRecord): MonitorRecord {
   return {
     ...record,
-    pd_raw: record.pd_raw.slice(0, record.pd_data_len),
+    data: record.data.slice(0, record.data_len),
   };
 }
 
 function assembleUfcsRecord(chunk0: MonitorRecord, chunk1: MonitorRecord, direction: UfcsDirection): MonitorRecord {
   const data = [
-    ...chunk0.pd_raw.slice(0, chunk0.pd_data_len),
-    ...chunk1.pd_raw.slice(0, chunk1.pd_data_len),
+    ...chunk0.data.slice(0, chunk0.data_len),
+    ...chunk1.data.slice(0, chunk1.data_len),
   ];
 
   return {
     ...chunk0,
     event_type: ufcsAssembledEventType(direction),
-    pd_data_len: data.length,
-    pd_raw: data,
+    data_len: data.length,
+    data: data,
   };
 }
 

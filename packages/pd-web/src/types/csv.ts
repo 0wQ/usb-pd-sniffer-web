@@ -6,7 +6,7 @@ export interface ValidationError {
 }
 
 export interface ImportResult {
-  reports: import('./pd').PDReport[]
+  reports: import('./pd').CaptureRecord[]
   errors: ValidationError[]
 }
 

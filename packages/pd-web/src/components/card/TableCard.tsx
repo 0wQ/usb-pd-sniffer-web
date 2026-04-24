@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, memo, useCallback, useRef } from 'react'
 import { List, useListCallbackRef, type RowComponentProps } from 'react-window'
 import { toast } from 'sonner'
 import useDeviceStore from '@/stores/deviceStore'
-import type { PDReport } from '@/types/pd'
+import type { CaptureRecord } from '@/types/pd'
 import type { ImportMode } from '@/types/csv'
 import { exportToCsv, importFromCsv, generateFilename, downloadCsv, readFile } from '@/utils/csvHelper'
 import ImportDialog from '@/components/common/ImportDialog'
@@ -124,7 +124,7 @@ const CellComponent = memo(({ width, align, children, flex = false, minWidth = n
 CellComponent.displayName = 'CellComponent'
 
 type RowData = {
-  reports: PDReport[]
+  reports: CaptureRecord[]
   onRowClick: (index: number) => void
   selectedIndex: number | null
 }
@@ -191,8 +191,8 @@ const RowComponentInner = ({ ariaAttributes, index, style, reports, onRowClick, 
     const decoded = decodeSingleReport(report)
     const timestampText = formatTimestamp(report.timestamp_us)
     const deltaTimeText = formatDeltaTime(deltaTime)
-    const hexData = formatHexData(report.pd_raw, report.pd_data_len)
-    const pdLength = report.pd_data_len.toString().padStart(2, '0')
+    const hexData = formatHexData(report.data, report.data_len)
+    const pdLength = report.data_len.toString().padStart(2, '0')
     const versionText = decoded?.header?.specificationRevision ?? ''
     const typeDesc =
       decoded === null
@@ -478,7 +478,7 @@ const Card = memo(({
   const [scrollRequest, setScrollRequest] = useState(0)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [txDialogOpen, setTxDialogOpen] = useState(false)
-  const [pendingImportData, setPendingImportData] = useState<PDReport[] | null>(null)
+  const [pendingImportData, setPendingImportData] = useState<CaptureRecord[] | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
