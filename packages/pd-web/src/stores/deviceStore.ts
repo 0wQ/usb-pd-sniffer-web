@@ -13,7 +13,6 @@ import {
 import type { CaptureRecord, PowerSample } from '@/types/pd'
 
 interface DeviceState {
-  // 设备状态
   isConnected: boolean
   isConnecting: boolean
   manualDisconnect: boolean
@@ -26,23 +25,18 @@ interface DeviceState {
   powerCaptureEnabled: boolean
   protocolSelectedIndex: number | null
 
-  // 数据缓冲区（不可变引用）
   captureBuffer: CaptureBuffer
   powerBuffer: PowerSamplesBuffer
-  // 用于触发组件更新的版本号
   captureVersion: number
   powerVersion: number
-  // 选择器：获取记录数量
   captureCount: number
   powerCount: number
 
-  // 批量更新相关
   pendingRecords: CaptureRecord[]
   pendingPowerSamples: PowerSample[]
-  updateTimer: number | null
+  captureUpdateTimer: number | null
   powerUpdateTimer: number | null
 
-  // Actions
   setIsConnected: (isConnected: boolean) => void
   setIsConnecting: (isConnecting: boolean) => void
   setManualDisconnect: (manualDisconnect: boolean) => void
@@ -62,9 +56,8 @@ interface DeviceState {
   importRecords: (records: CaptureRecord[], mode: 'replace' | 'append') => void
 }
 
-// 批量更新配置
-const BATCH_SIZE = 1000 // 累积多少条数据触发更新
-const BATCH_TIMEOUT = 50 // 多少毫秒触发更新
+const CAPTURE_BATCH_SIZE = 1000
+const CAPTURE_BATCH_TIMEOUT = 50
 const POWER_BUFFER_CAPACITY = 50_000
 const POWER_BATCH_SIZE = 200
 const POWER_BATCH_TIMEOUT = 50
@@ -72,7 +65,6 @@ const POWER_BATCH_TIMEOUT = 50
 const initialPreferences = readDevicePreferences()
 
 const useDeviceStore = create<DeviceState>()((set, get) => ({
-  // Initial state
   isConnected: false,
   isConnecting: false,
   manualDisconnect: initialPreferences.manualDisconnect,
@@ -88,12 +80,11 @@ const useDeviceStore = create<DeviceState>()((set, get) => ({
   powerVersion: 0,
   pendingRecords: [],
   pendingPowerSamples: [],
-  updateTimer: null,
+  captureUpdateTimer: null,
   powerUpdateTimer: null,
   captureCount: 0,
   powerCount: 0,
 
-  // Actions
   setIsConnected: (isConnected) => set({ isConnected }),
 
   setIsConnecting: (isConnecting) => set({ isConnecting }),
@@ -143,24 +134,19 @@ const useDeviceStore = create<DeviceState>()((set, get) => ({
 
   setProtocolSelectedIndex: (protocolSelectedIndex) => set({ protocolSelectedIndex }),
 
-  // 批量更新：收集数据，达到阈值或超时后统一更新
   addRecord: (record) => {
-    const { pendingRecords, updateTimer } = get()
+    const { pendingRecords, captureUpdateTimer } = get()
 
-    // 添加到待处理队列
     pendingRecords.push(record)
 
-    // 检查是否达到批量更新阈值
-    if (pendingRecords.length >= BATCH_SIZE) {
-      // 立即刷新
+    if (pendingRecords.length >= CAPTURE_BATCH_SIZE) {
       get().flushPendingRecords()
-    } else if (updateTimer === null) {
-      // 设置新的定时器
+    } else if (captureUpdateTimer === null) {
       const newTimer = window.setTimeout(() => {
         get().flushPendingRecords()
-      }, BATCH_TIMEOUT)
+      }, CAPTURE_BATCH_TIMEOUT)
 
-      set({ updateTimer: newTimer })
+      set({ captureUpdateTimer: newTimer })
     }
   },
 
@@ -184,28 +170,24 @@ const useDeviceStore = create<DeviceState>()((set, get) => ({
     }
   },
 
-  // 刷新待处理的记录
   flushPendingRecords: () => {
-    const { pendingRecords, captureBuffer, updateTimer } = get()
+    const { pendingRecords, captureBuffer, captureUpdateTimer } = get()
 
     if (pendingRecords.length === 0) return
 
-    // 批量添加到 buffer
     captureBuffer.addBatch([...pendingRecords])
 
-    // 清除定时器
-    if (updateTimer !== null) {
-      clearTimeout(updateTimer)
+    if (captureUpdateTimer !== null) {
+      clearTimeout(captureUpdateTimer)
     }
 
     const newCount = captureBuffer.length
 
-    // 更新状态 - 关键：使用对象解构确保只更新必要的字段
     set({
       captureVersion: captureBuffer.currentVersion,
-      captureCount: newCount, // 直接使用数字，不是对象
+      captureCount: newCount,
       pendingRecords: [],
-      updateTimer: null
+      captureUpdateTimer: null
     })
   },
 
@@ -229,11 +211,10 @@ const useDeviceStore = create<DeviceState>()((set, get) => ({
   },
 
   clearRecords: () => {
-    const { captureBuffer, updateTimer } = get()
+    const { captureBuffer, captureUpdateTimer } = get()
 
-    // 清除定时器
-    if (updateTimer !== null) {
-      clearTimeout(updateTimer)
+    if (captureUpdateTimer !== null) {
+      clearTimeout(captureUpdateTimer)
     }
 
     captureBuffer.clear()
@@ -242,7 +223,7 @@ const useDeviceStore = create<DeviceState>()((set, get) => ({
       captureVersion: captureBuffer.currentVersion,
       captureCount: 0,
       pendingRecords: [],
-      updateTimer: null
+      captureUpdateTimer: null
     })
   },
 
@@ -263,37 +244,33 @@ const useDeviceStore = create<DeviceState>()((set, get) => ({
   },
 
   resetDevice: () => {
-    const { updateTimer, powerUpdateTimer } = get()
+    const { captureUpdateTimer, powerUpdateTimer } = get()
 
-    // 清除定时器
-    if (updateTimer !== null) {
-      clearTimeout(updateTimer)
+    if (captureUpdateTimer !== null) {
+      clearTimeout(captureUpdateTimer)
     }
     if (powerUpdateTimer !== null) {
       clearTimeout(powerUpdateTimer)
     }
 
-    // 只重置设备状态，不清除数据
     set({
       isConnected: false,
       isConnecting: false,
-      updateTimer: null,
+      captureUpdateTimer: null,
       powerUpdateTimer: null,
     })
   },
 
   importRecords: (records, mode) => {
-    const { captureBuffer, updateTimer } = get()
+    const { captureBuffer, captureUpdateTimer } = get()
 
     // Flush any pending records first
     get().flushPendingRecords()
 
-    // Clear timer if active
-    if (updateTimer !== null) {
-      clearTimeout(updateTimer)
+    if (captureUpdateTimer !== null) {
+      clearTimeout(captureUpdateTimer)
     }
 
-    // Replace or append based on mode
     if (mode === 'replace') {
       captureBuffer.clear()
     }
@@ -305,12 +282,11 @@ const useDeviceStore = create<DeviceState>()((set, get) => ({
       captureVersion: captureBuffer.currentVersion,
       captureCount: captureBuffer.length,
       pendingRecords: [],
-      updateTimer: null
+      captureUpdateTimer: null
     })
   }
 }))
 
-// 导出优化的选择器 - 使用浅比较
 export const selectCaptureCount = (state: DeviceState) => state.captureCount
 export const selectCaptureVersion = (state: DeviceState) => state.captureVersion
 export const selectCaptureBuffer = (state: DeviceState) => state.captureBuffer
