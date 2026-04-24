@@ -1,6 +1,6 @@
 import clsx from 'clsx'
 import { useMemo } from 'react'
-import type { BitField, DecodedMessage, DecodeIssue, Section } from '@usb-pd-sniffer/pd-core'
+import type { BitField, DecodedPacket, DecodeIssue, Section } from '@usb-pd-sniffer/pd-core'
 import useDeviceStore from '@/stores/deviceStore'
 import { decodeReportAtIndex, decodeSingleReport, monitorEventName } from '@/lib/live/pdCore'
 
@@ -84,7 +84,7 @@ function issueTone(issue: DecodeIssue): string {
   }
 }
 
-function contextDiffSummary(withContext: DecodedMessage, withoutContext: DecodedMessage): string | null {
+function contextDiffSummary(withContext: DecodedPacket, withoutContext: DecodedPacket): string | null {
   const differences: string[] = []
 
   if (withContext.messageType.name !== withoutContext.messageType.name) {
@@ -156,11 +156,10 @@ type SectionViewProps = {
 }
 
 function SectionView({ section }: SectionViewProps) {
+  const showEmptyState = section.fields.length === 0
+
   return (
-    <div
-      className="rounded-xl border border-base-300 bg-base-100/80"
-      style={{ marginLeft: `${section.depth * 14}px` }}
-    >
+    <div className="rounded-xl border border-base-300 bg-base-100/80">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-base-300/80 px-3 py-3">
         <div className="min-w-0">
           <div className="text-sm font-semibold text-base-content">{section.title}</div>
@@ -220,11 +219,11 @@ function SectionView({ section }: SectionViewProps) {
               />
             ))}
           </div>
-        ) : (
+        ) : showEmptyState ? (
           <div className="mt-3 rounded-lg border border-dashed border-base-300/80 bg-base-200/35 px-3 py-3 text-xs text-base-content/55">
             No decoded fields yet.
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   )
@@ -314,9 +313,9 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
             </div>
 
             <div className="rounded-xl border border-base-300 bg-base-100/80 p-3">
-              <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Raw Payload</div>
+              <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Raw Packet</div>
               <div className="mt-2 break-all font-mono text-xs leading-5">
-                {hexBytes(decodedFrame?.frame.bytes ?? selectedReport.pd_raw.slice(0, selectedReport.pd_data_len))}
+                {hexBytes(decodedFrame?.packet.bytes ?? selectedReport.pd_raw.slice(0, selectedReport.pd_data_len))}
               </div>
             </div>
 
@@ -359,7 +358,10 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
                 </div>
               ) : (
                 decodedFrame.sections.map((section) => (
-                  <SectionView key={section.key} section={section} />
+                  <SectionView
+                    key={section.key}
+                    section={section}
+                  />
                 ))
               )}
             </div>

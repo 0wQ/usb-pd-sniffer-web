@@ -1,13 +1,13 @@
-import { decodeMessage } from "../decode/message.js";
-import type { MessageFrame, SequenceDecoder } from "../types.js";
+import { decodePacket } from "../decode/message.js";
+import type { DecodeContext, MessagePacket, SequenceDecoder } from "../types.js";
 
 export function createSequenceDecoder(): SequenceDecoder {
   return {
-    push(frame: MessageFrame) {
-      return decodeMessage(frame);
+    push(packet: MessagePacket, context?: DecodeContext) {
+      return decodePacket(packet, context);
     },
     reset() {
-      // Context-aware request/extended replay will be added after the core schema settles.
+      // The decoder is currently stateless; multi-frame helpers remain outside this wrapper.
     },
   };
 }

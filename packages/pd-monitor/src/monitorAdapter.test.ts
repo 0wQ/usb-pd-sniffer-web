@@ -58,11 +58,13 @@ describe("pd-monitor adapter", () => {
     ).toBeNull();
   });
 
-  test("strips CRC only when payload length matches header-derived frame+crc length", () => {
+  test("keeps PD payload bytes unchanged for SOP frame events", () => {
     const zeroObjectWithCrc = Uint8Array.from([0x42, 0x00, 0xaa, 0xbb, 0xcc, 0xdd]);
     const oneObjectWithoutCrc = Uint8Array.from([0x42, 0x10, 0xaa, 0xbb, 0xcc, 0xdd]);
 
-    expect(Array.from(normalizePdPayloadForMonitorEvent(MONITOR_EVENT.PD_SOP0, zeroObjectWithCrc))).toEqual([0x42, 0x00]);
+    expect(Array.from(normalizePdPayloadForMonitorEvent(MONITOR_EVENT.PD_SOP0, zeroObjectWithCrc))).toEqual(
+      Array.from(zeroObjectWithCrc)
+    );
     expect(Array.from(normalizePdPayloadForMonitorEvent(MONITOR_EVENT.PD_SOP0, oneObjectWithoutCrc))).toEqual([
       0x42, 0x10, 0xaa, 0xbb, 0xcc, 0xdd
     ]);

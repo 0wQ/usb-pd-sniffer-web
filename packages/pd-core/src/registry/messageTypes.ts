@@ -2,8 +2,10 @@ import type { MessageCategory } from "../types.js";
 
 const CONTROL_MESSAGE_TYPES = new Map<number, string>([
   [0x01, "GoodCRC"],
+  [0x02, "GotoMin"],
   [0x03, "Accept"],
   [0x04, "Reject"],
+  [0x05, "Ping"],
   [0x06, "PS_RDY"],
   [0x07, "Get_Source_Cap"],
   [0x08, "Get_Sink_Cap"],
@@ -12,6 +14,8 @@ const CONTROL_MESSAGE_TYPES = new Map<number, string>([
   [0x0b, "VCONN_Swap"],
   [0x0c, "Wait"],
   [0x0d, "Soft_Reset"],
+  [0x0e, "Data_Reset"],
+  [0x0f, "Data_Reset_Complete"],
   [0x10, "Not_Supported"],
   [0x11, "Get_Source_Cap_Extended"],
   [0x12, "Get_Status"],

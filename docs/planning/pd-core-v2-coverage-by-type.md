@@ -21,8 +21,8 @@ These apply to all messages before per-type decode:
 | --- | --- | --- |
 | Message Header | Done | Dedicated section with SOP-sensitive bit meaning and message type naming |
 | Extended Message Header | Done | Dedicated section with reserved-bit issue reporting |
-| Data Message Payload container | Done | Generic payload section exists for all data messages |
-| Extended Message Payload container | Done | Generic payload section + raw data block section exist |
+| Data message payload exposure | Done | No generic payload container is emitted; payload bytes are surfaced directly as final object sections or generic raw 32-bit object sections |
+| Extended message payload exposure | Done | Supported families emit dedicated data-block sections, and unsupported extended families fall back to generic raw data-block sections |
 | ET240-style web renderer | Done | `DecodeCard` now renders `sections[]` / `fields[]` / `issues[]` directly |
 
 ## Control Messages
@@ -31,9 +31,10 @@ At this stage control messages are mostly header-only, which is acceptable becau
 
 | Branch | Status | Notes |
 | --- | --- | --- |
-| All control message identification | Done | Name lookup from Message Header works |
+| All control message identification | Done | Name lookup now covers every spec-defined control code from GoodCRC through Get_Revision; reserved codes remain unnamed |
 | GoodCRC / Accept / Reject / PS_RDY / Wait / Soft_Reset / Not_Supported | Done | Header-level decode is sufficient |
 | Get_Source_Cap / Get_Sink_Cap / DR_Swap / PR_Swap / VCONN_Swap / FR_Swap / Get_Status / Get_PPS_Status / Get_Source_Info / Get_Revision / Get_*_Extended | Done | Header-only by protocol shape |
+| GotoMin / Ping / Data_Reset / Data_Reset_Complete | Done | Deprecated/header-only control messages are now registered by their spec names |
 
 ## Data Messages
 
@@ -41,7 +42,7 @@ At this stage control messages are mostly header-only, which is acceptable becau
 | --- | --- | --- |
 | Source_Capabilities | Done | Fixed / Battery / Variable / SPR PPS / SPR AVS / EPR AVS split into dedicated PDO/APDO sections |
 | Sink_Capabilities | Done | Same family coverage as Source_Capabilities with sink-side bit meanings |
-| Request | Partial | Common RDO bits plus Fixed/Variable, Battery, PPS, AVS candidate interpretations; still needs prior `Source_Capabilities` context to select one true branch |
+| Request | Done | Without context it stays on `RDO - Common`; with explicit `Source_Capabilities` context it resolves to one concrete RDO branch |
 | EPR_Request | Done | DO0 RDO is resolved directly from DO1 `Copy of Requested Power Data Object`, so no external frame context is required |
 | Vendor_Defined | Partial | VDM Header plus standard Structured VDM branches are decoded; deeper SVID-specific payloads still fall back to generic raw VDO sections |
 | BIST | Done | BIST Data Object now exposes mode, reserved bits, object-count rules, and test-data payload objects are surfaced explicitly |
@@ -81,7 +82,7 @@ This is the next major branch to complete deeply.
 | Branch | Status | Notes |
 | --- | --- | --- |
 | Extended message identification | Done | Message type lookup works |
-| Raw extended payload exposure | Done | Payload section + data block section always visible |
+| Raw extended payload exposure | Done | Supported branches emit dedicated data-block sections, and unsupported or raw-only extended branches now fall back to generic raw data-block sections |
 | Source_Capabilities_Extended | Done | SCEDB now exposes fixed fields, Voltage Regulation, Compliance, Touch Current, Peak Current blocks, Source Inputs, battery counts, and PDP ratings with reserved checks |
 | Status | Done | SOP and SOP'/SOP'' Status Data Blocks now expose dedicated fields plus reserved/data-size checks |
 | Get_Battery_Cap | Done | Get Battery Cap Data Block now exposes Battery Cap Ref plus reserved/data-size issues |
@@ -89,18 +90,18 @@ This is the next major branch to complete deeply.
 | Battery_Capabilities | Done | Battery Capabilities Data Block now exposes VID/PID/capacity fields plus invalid-reference and reserved checks |
 | Get_Manufacturer_Info | Done | Get Manufacturer Info Data Block now exposes target/reference semantics plus reserved/data-size issues |
 | Manufacturer_Info | Done | Manufacturer Info Data Block now exposes VID/PID/string fields plus PID/VID consistency checks |
-| Security_Request | Skeleton | Still raw data block only |
-| Security_Response | Skeleton | Still raw data block only |
-| Firmware_Update_Request | Skeleton | Still raw data block only |
-| Firmware_Update_Response | Skeleton | Still raw data block only |
+| Security_Request | Done | Current frame or chunk payload is surfaced directly as `Security Request Data Block (SRQDB)` raw bytes without requiring assemble |
+| Security_Response | Done | Current frame or chunk payload is surfaced directly as `Security Response Data Block (SRPDB)` raw bytes without requiring assemble |
+| Firmware_Update_Request | Done | Current frame or chunk payload is surfaced directly as `Firmware Update Request Data Block (FRQDB)` raw bytes without requiring assemble |
+| Firmware_Update_Response | Done | Current frame or chunk payload is surfaced directly as `Firmware Update Response Data Block (FRPDB)` raw bytes without requiring assemble |
 | PPS_Status | Done | PPS Status Data Block now exposes output voltage/current and Real Time Flags with reserved-bit checks |
 | Country_Info | Done | Country Info Data Block now exposes country code, reserved bytes, and country-specific data |
 | Country_Codes | Done | Country Codes Data Block now exposes Length/header bytes and parsed Alpha-2 country-code entries |
 | Sink_Capabilities_Extended | Done | SKEDB now exposes version/load-step/load-characteristics/compliance/touch-temp/battery-info/sink-modes/PDP fields with reserved and ordering checks |
 | Extended_Control | Done | Extended Control Data Block now exposes Type/Data semantics plus reserved/data-size issues |
-| EPR_Source_Capabilities | Skeleton | Still raw data block only |
-| EPR_Sink_Capabilities | Skeleton | Still raw data block only |
-| Vendor_Defined_Extended | Skeleton | Still raw data block only |
+| EPR_Source_Capabilities | Done | Chunk 0 and assembled prefixes share the common PDO decode path with Source_Capabilities while exposing SPR/EPR position-aware titles; all-zero capability objects display as `Empty PDO`; incomplete tail bytes intentionally remain surfaced as `Trailing Raw Payload` |
+| EPR_Sink_Capabilities | Done | Chunk 0 and assembled prefixes share the common PDO decode path with Sink_Capabilities while exposing SPR/EPR position-aware titles; all-zero capability objects display as `Empty PDO`; incomplete tail bytes intentionally remain surfaced as `Trailing Raw Payload` |
+| Vendor_Defined_Extended | Partial | Raw data block fallback exists; semantic decode still requires complete assemble and dedicated branch work |
 
 ## Recommended Execution Order
 
@@ -108,14 +109,8 @@ Do not shallow-fill every branch. Work one branch to completion before switching
 
 Suggested order:
 
-1. `Structured VDM / Discover Identity`
-2. `Structured VDM / Discover SVIDs`
-3. `Structured VDM / Discover Modes`
-4. `Request` context resolution
-5. `Battery_Status`
-6. `Alert`
-7. `Enter_USB`
-8. Extended message families, one branch at a time
+1. `Vendor_Defined_Extended`
+2. Remaining SVID-specific command payloads
 
 ## Definition Of “Complete Enough”
 

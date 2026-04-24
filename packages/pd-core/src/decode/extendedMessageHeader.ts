@@ -44,7 +44,6 @@ export function explainExtendedMessageHeader(
     key: "extended-message-header",
     kind: "extended_message_header",
     title: "Extended Message Header",
-    depth: 0,
     byteOffset: 2,
     byteLength: 2,
     rawBytes: bytes.slice(0, 2),

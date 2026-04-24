@@ -25,6 +25,7 @@
 
 另见：
 - [docs/planning/pd-core-v2-reference-policy.md](/Users/sora/project/usb-pd-sniffer-v4/usb-pd-sniffer-web-v2/docs/planning/pd-core-v2-reference-policy.md)
+- [docs/planning/pd-core-v2-context-and-assemble-policy.md](/Users/sora/project/usb-pd-sniffer-v4/usb-pd-sniffer-web-v2/docs/planning/pd-core-v2-context-and-assemble-policy.md)
 
 ## 2.1) 规范载体使用规则
 

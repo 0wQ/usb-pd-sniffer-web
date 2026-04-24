@@ -1,3 +1,4 @@
+import { explainDataObjects } from "./dataObjects.js";
 import type { BitField, DecodeIssue, ExtendedMessageHeader, MessageTypeInfo, Section, StartOfPacket } from "../types.js";
 
 type BuiltSection = {
@@ -54,8 +55,6 @@ function createDataBlockSection(
   key: string,
   title: string,
   semanticKind: string,
-  parentSectionKey: string,
-  depth: number,
   byteOffset: number,
   rawBytes: Uint8Array,
   fields: BitField[],
@@ -66,13 +65,70 @@ function createDataBlockSection(
     kind: "data_block",
     title,
     semanticKind,
-    parentSectionKey,
-    depth,
     byteOffset,
     byteLength: rawBytes.length,
     rawBytes,
     fields,
     issues,
+  };
+}
+
+function rawExtendedDataBlockInfo(messageTypeName: string | null): {
+  title: string;
+  semanticKind: string;
+} {
+  switch (messageTypeName) {
+    case "Security_Request":
+      return {
+        title: "Security Request Data Block (SRQDB)",
+        semanticKind: "security_request_data_block_raw",
+      };
+    case "Security_Response":
+      return {
+        title: "Security Response Data Block (SRPDB)",
+        semanticKind: "security_response_data_block_raw",
+      };
+    case "Firmware_Update_Request":
+      return {
+        title: "Firmware Update Request Data Block (FRQDB)",
+        semanticKind: "firmware_update_request_data_block_raw",
+      };
+    case "Firmware_Update_Response":
+      return {
+        title: "Firmware Update Response Data Block (FRPDB)",
+        semanticKind: "firmware_update_response_data_block_raw",
+      };
+    case null:
+      return {
+        title: "Unknown Extended Data Block",
+        semanticKind: "raw_extended_data_block",
+      };
+    default:
+      return {
+        title: `${messageTypeName} Data Block`,
+        semanticKind: `${messageTypeName.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_data_block_raw`,
+      };
+  }
+}
+
+function buildRawExtendedDataBlock(
+  bytes: Uint8Array,
+  messageTypeName: string | null,
+  parentSectionKey: string,
+  byteOffset: number,
+): BuiltSection {
+  const info = rawExtendedDataBlockInfo(messageTypeName);
+
+  return {
+    section: createDataBlockSection(
+      `${parentSectionKey}:${info.semanticKind}`,
+      info.title,
+      info.semanticKind,
+      byteOffset,
+      bytes,
+      [],
+      [],
+    ),
   };
 }
 
@@ -382,8 +438,6 @@ function buildStatusDataBlock(
         `${parentSectionKey}:status-sop`,
         "SOP Status Data Block",
         "sop_status_data_block",
-        parentSectionKey,
-        1,
         byteOffset,
         bytes.subarray(0, Math.min(bytes.length, 7)),
         [
@@ -496,9 +550,7 @@ function buildStatusDataBlock(
       `${parentSectionKey}:status-cable-plug`,
       "Cable Plug Status Data Block",
       "cable_plug_status_data_block",
-      parentSectionKey,
-      1,
-      byteOffset,
+        byteOffset,
       bytes.subarray(0, Math.min(bytes.length, 2)),
       [
         field("internal_temp", "Internal Temp", 0, 8, internalTemp, internalTemp, {
@@ -724,9 +776,7 @@ function buildSourceCapabilitiesExtendedDataBlock(
       `${parentSectionKey}:source-capabilities-extended`,
       "Source Capabilities Extended Data Block",
       "source_capabilities_extended_data_block",
-      parentSectionKey,
-      1,
-      byteOffset,
+        byteOffset,
       bytes.subarray(0, Math.min(bytes.length, 25)),
       fields,
       issues,
@@ -841,9 +891,7 @@ function buildSinkCapabilitiesExtendedDataBlock(
       `${parentSectionKey}:sink-capabilities-extended`,
       "Sink Capabilities Extended Data Block",
       "sink_capabilities_extended_data_block",
-      parentSectionKey,
-      1,
-      byteOffset,
+        byteOffset,
       bytes.subarray(0, Math.min(bytes.length, 24)),
       [
         field("vid", "VID", 0, 16, vid, vid, {
@@ -978,9 +1026,7 @@ function buildGetBatteryCapDataBlock(
       `${parentSectionKey}:get-battery-cap`,
       "Get Battery Cap Data Block",
       "get_battery_cap_data_block",
-      parentSectionKey,
-      1,
-      byteOffset,
+        byteOffset,
       bytes.subarray(0, Math.min(bytes.length, 1)),
       [
         field("battery_cap_ref", "Battery Cap Ref", 0, 8, batteryCapRef, batteryCapRef, {
@@ -1010,9 +1056,7 @@ function buildGetBatteryStatusDataBlock(
       `${parentSectionKey}:get-battery-status`,
       "Get Battery Status Data Block",
       "get_battery_status_data_block",
-      parentSectionKey,
-      1,
-      byteOffset,
+        byteOffset,
       bytes.subarray(0, Math.min(bytes.length, 1)),
       [
         field("battery_status_ref", "Battery Status Ref", 0, 8, batteryStatusRef, batteryStatusRef, {
@@ -1064,9 +1108,7 @@ function buildBatteryCapabilitiesDataBlock(
       `${parentSectionKey}:battery-capabilities`,
       "Battery Capabilities Data Block",
       "battery_capabilities_data_block",
-      parentSectionKey,
-      1,
-      byteOffset,
+        byteOffset,
       bytes.subarray(0, Math.min(bytes.length, 9)),
       [
         field("vid", "VID", 0, 16, vid, vid, {
@@ -1122,9 +1164,7 @@ function buildGetManufacturerInfoDataBlock(
       `${parentSectionKey}:get-manufacturer-info`,
       "Get Manufacturer Info Data Block",
       "get_manufacturer_info_data_block",
-      parentSectionKey,
-      1,
-      byteOffset,
+        byteOffset,
       bytes.subarray(0, Math.min(bytes.length, 2)),
       [
         field("manufacturer_info_target", "Manufacturer Info Target", 0, 8, target, target, {
@@ -1171,9 +1211,7 @@ function buildManufacturerInfoDataBlock(
       `${parentSectionKey}:manufacturer-info`,
       "Manufacturer Info Data Block",
       "manufacturer_info_data_block",
-      parentSectionKey,
-      1,
-      byteOffset,
+        byteOffset,
       decodeBytes,
       [
         field("vid", "VID", 0, 16, vid, vid, {
@@ -1216,9 +1254,7 @@ function buildPpsStatusDataBlock(
       `${parentSectionKey}:pps-status`,
       "PPS Status Data Block",
       "pps_status_data_block",
-      parentSectionKey,
-      1,
-      byteOffset,
+        byteOffset,
       bytes.subarray(0, Math.min(bytes.length, 4)),
       [
         field("output_voltage", "Output Voltage", 0, 16, outputVoltage, outputVoltage, {
@@ -1309,9 +1345,7 @@ function buildCountryCodesDataBlock(
       `${parentSectionKey}:country-codes`,
       "Country Codes Data Block",
       "country_codes_data_block",
-      parentSectionKey,
-      1,
-      byteOffset,
+        byteOffset,
       decodeBytes,
       fields,
       issues,
@@ -1352,9 +1386,7 @@ function buildCountryInfoDataBlock(
       `${parentSectionKey}:country-info`,
       "Country Info Data Block",
       "country_info_data_block",
-      parentSectionKey,
-      1,
-      byteOffset,
+        byteOffset,
       decodeBytes,
       [
         field("first_character", "First Character of Country Code", 0, 8, firstCharacter, firstCharacter, {
@@ -1399,9 +1431,7 @@ function buildExtendedControlDataBlock(
       `${parentSectionKey}:extended-control`,
       "Extended Control Data Block",
       "extended_control_data_block",
-      parentSectionKey,
-      1,
-      byteOffset,
+        byteOffset,
       bytes.subarray(0, Math.min(bytes.length, 2)),
       [
         field("type", "Type", 0, 8, type, type, {
@@ -1424,14 +1454,26 @@ export function explainExtendedDataBlocks(
   sop: StartOfPacket,
   payloadSectionKey: string,
   payloadByteOffset: number,
+  options: {
+    rawOnly?: boolean;
+  } = {},
 ): Section[] {
   const declaredDataSize = extendedHeader.dataSize;
   const decodeLength = Math.min(payloadBytes.length, declaredDataSize);
   const decodeBytes = payloadBytes.subarray(0, decodeLength);
 
+  if (options.rawOnly) {
+    return [
+      buildRawExtendedDataBlock(decodeBytes, messageType.name, payloadSectionKey, payloadByteOffset).section,
+    ];
+  }
+
   let built: BuiltSection | null = null;
 
   switch (messageType.name) {
+    case "EPR_Source_Capabilities":
+    case "EPR_Sink_Capabilities":
+      return explainDataObjects(decodeBytes, sop, messageType, payloadSectionKey, payloadByteOffset);
     case "Status":
       built = buildStatusDataBlock(decodeBytes, declaredDataSize, sop, payloadSectionKey, payloadByteOffset);
       break;
@@ -1469,7 +1511,9 @@ export function explainExtendedDataBlocks(
       built = buildExtendedControlDataBlock(decodeBytes, declaredDataSize, payloadSectionKey, payloadByteOffset);
       break;
     default:
-      return [];
+      return [
+        buildRawExtendedDataBlock(decodeBytes, messageType.name, payloadSectionKey, payloadByteOffset).section,
+      ];
   }
 
   const sections = [built.section];

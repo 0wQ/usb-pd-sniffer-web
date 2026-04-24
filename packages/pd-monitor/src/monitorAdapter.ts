@@ -1,5 +1,5 @@
 import type {
-  MessageFrame,
+  MessagePacket,
   StartOfPacket
 } from "@usb-pd-sniffer/pd-core";
 
@@ -88,46 +88,6 @@ function isPdResetOrErrorEvent(eventType: number): boolean {
   );
 }
 
-function isExtendedHeaderPresent(rawHeader: number): boolean {
-  return ((rawHeader >>> 15) & 0x1) === 0x1;
-}
-
-function headerNumDataObjects(rawHeader: number): number {
-  return (rawHeader >>> 12) & 0x7;
-}
-
-function expectedPdLengthWithoutCrc(payload: Uint8Array): number | null {
-  if (payload.length < 2) {
-    return null;
-  }
-
-  const rawHeader = payload[0] | (payload[1] << 8);
-  if (!isExtendedHeaderPresent(rawHeader)) {
-    return 2 + headerNumDataObjects(rawHeader) * 4;
-  }
-
-  if (payload.length < 4) {
-    return null;
-  }
-
-  const extendedHeader = payload[2] | (payload[3] << 8);
-  const dataSize = extendedHeader & 0x1ff;
-  return 4 + dataSize;
-}
-
-function normalizePdPayloadBytes(payload: Uint8Array): Uint8Array {
-  const expectedLength = expectedPdLengthWithoutCrc(payload);
-  if (expectedLength === null) {
-    return payload;
-  }
-
-  if (payload.length === expectedLength + 4) {
-    return payload.subarray(0, expectedLength);
-  }
-
-  return payload;
-}
-
 export function monitorEventName(eventType: number): string {
   switch (eventType) {
     case MONITOR_EVENT.DISCONNECT:
@@ -200,7 +160,7 @@ export function normalizePdPayloadForMonitorEvent(
     return payload;
   }
 
-  return normalizePdPayloadBytes(payload);
+  return payload;
 }
 
 export function encodeNativeMonitorTxCommandBody(command: NativeMonitorTxCommand): Uint8Array {
@@ -235,7 +195,7 @@ export function encodeNativeMonitorTxCommandBody(command: NativeMonitorTxCommand
 
 export function toPdObservedFrameFromMonitorEvent(
   input: MonitorFrameInput
-): MessageFrame | null {
+): MessagePacket | null {
   if (!isPdSopFrameEvent(input.eventType)) {
     return null;
   }

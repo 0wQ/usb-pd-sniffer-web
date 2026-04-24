@@ -41,7 +41,7 @@ type BuiltSvidVdoSection = {
   hasInvalidZeroPattern: boolean;
 };
 
-type RequestInterpretationKind =
+export type RdoKind =
   | "fixed_variable"
   | "battery"
   | "pps"
@@ -129,8 +129,8 @@ function createSection(
   kind: Section["kind"],
   title: string,
   semanticKind: string,
-  parentSectionKey: string,
-  depth: number,
+  _parentSectionKey: string,
+  _depth: number,
   byteOffset: number,
   raw32: number,
   fields: BitField[],
@@ -143,8 +143,6 @@ function createSection(
     title,
     index,
     semanticKind,
-    parentSectionKey,
-    depth,
     byteOffset,
     byteLength: 4,
     rawBytes: raw32Bytes(raw32),
@@ -152,6 +150,23 @@ function createSection(
     fields,
     issues,
   };
+}
+
+function powerObjectTitle(titleBase: string | undefined, index: number, suffix: string): string {
+  return `${titleBase ?? `PDO ${index + 1}`} - ${suffix}`;
+}
+
+function capabilityObjectTitle(messageTypeName: string | null, index: number): string | null {
+  switch (messageTypeName) {
+    case "Source_Capabilities":
+    case "Sink_Capabilities":
+      return `PDO ${index + 1}`;
+    case "EPR_Source_Capabilities":
+    case "EPR_Sink_Capabilities":
+      return index < 7 ? `SPR PDO ${index + 1}` : `EPR PDO ${index + 1}`;
+    default:
+      return null;
+  }
 }
 
 function peakCurrentDisplay(bits: number): string {
@@ -190,6 +205,7 @@ function buildFixedPowerObject(
   index: number,
   parentSectionKey: string,
   byteOffset: number,
+  titleBase?: string,
 ): BuiltSection {
   const reserved22 = extractBits(raw32, 22, 1);
   const highCapabilityBits = role === "source" ? extractBits(raw32, 23, 7) : extractBits(raw32, 20, 10);
@@ -283,7 +299,7 @@ function buildFixedPowerObject(
     section: createSection(
       `${parentSectionKey}:object-${index}:fixed-${role}-pdo`,
       "data_object",
-      `Power Data Object ${index + 1} - Fixed Supply`,
+      powerObjectTitle(titleBase, index, "Fixed Supply"),
       `${role}_fixed_supply_pdo`,
       parentSectionKey,
       1,
@@ -302,6 +318,7 @@ function buildBatteryPowerObject(
   index: number,
   parentSectionKey: string,
   byteOffset: number,
+  titleBase?: string,
 ): BuiltSection {
   const maximumVoltage = extractBits(raw32, 20, 10) * 50;
   const minimumVoltage = extractBits(raw32, 10, 10) * 50;
@@ -311,7 +328,7 @@ function buildBatteryPowerObject(
     section: createSection(
       `${parentSectionKey}:object-${index}:battery-${role}-pdo`,
       "data_object",
-      `Power Data Object ${index + 1} - Battery`,
+      powerObjectTitle(titleBase, index, "Battery"),
       `${role}_battery_pdo`,
       parentSectionKey,
       1,
@@ -355,6 +372,7 @@ function buildVariablePowerObject(
   index: number,
   parentSectionKey: string,
   byteOffset: number,
+  titleBase?: string,
 ): BuiltSection {
   const maximumVoltage = extractBits(raw32, 20, 10) * 50;
   const minimumVoltage = extractBits(raw32, 10, 10) * 50;
@@ -364,7 +382,7 @@ function buildVariablePowerObject(
     section: createSection(
       `${parentSectionKey}:object-${index}:variable-${role}-pdo`,
       "data_object",
-      `Power Data Object ${index + 1} - Variable Supply`,
+      powerObjectTitle(titleBase, index, "Variable Supply"),
       `${role}_variable_supply_pdo`,
       parentSectionKey,
       1,
@@ -408,6 +426,7 @@ function buildPpsPowerObject(
   index: number,
   parentSectionKey: string,
   byteOffset: number,
+  titleBase?: string,
 ): BuiltSection {
   const maximumVoltage = extractBits(raw32, 17, 8) * 100;
   const minimumVoltage = extractBits(raw32, 8, 8) * 100;
@@ -425,7 +444,7 @@ function buildPpsPowerObject(
     section: createSection(
       `${parentSectionKey}:object-${index}:spr-pps-${role}-apdo`,
       "data_object",
-      `Power Data Object ${index + 1} - SPR PPS APDO`,
+      powerObjectTitle(titleBase, index, "SPR PPS APDO"),
       `${role}_spr_pps_apdo`,
       parentSectionKey,
       1,
@@ -478,6 +497,7 @@ function buildSprAvsPowerObject(
   index: number,
   parentSectionKey: string,
   byteOffset: number,
+  titleBase?: string,
 ): BuiltSection {
   const issues: DecodeIssue[] = [];
 
@@ -494,7 +514,7 @@ function buildSprAvsPowerObject(
       section: createSection(
         `${parentSectionKey}:object-${index}:spr-avs-source-apdo`,
         "data_object",
-        `Power Data Object ${index + 1} - SPR AVS APDO`,
+        powerObjectTitle(titleBase, index, "SPR AVS APDO"),
         "source_spr_avs_apdo",
         parentSectionKey,
         1,
@@ -538,7 +558,7 @@ function buildSprAvsPowerObject(
     section: createSection(
       `${parentSectionKey}:object-${index}:spr-avs-sink-apdo`,
       "data_object",
-      `Power Data Object ${index + 1} - SPR AVS APDO`,
+      powerObjectTitle(titleBase, index, "SPR AVS APDO"),
       "sink_spr_avs_apdo",
       parentSectionKey,
       1,
@@ -573,6 +593,7 @@ function buildEprAvsPowerObject(
   index: number,
   parentSectionKey: string,
   byteOffset: number,
+  titleBase?: string,
 ): BuiltSection {
   const maximumVoltage = extractBits(raw32, 17, 9) * 100;
   const minimumVoltage = extractBits(raw32, 8, 8) * 100;
@@ -589,7 +610,7 @@ function buildEprAvsPowerObject(
       section: createSection(
         `${parentSectionKey}:object-${index}:epr-avs-source-apdo`,
         "data_object",
-        `Power Data Object ${index + 1} - EPR AVS APDO`,
+        powerObjectTitle(titleBase, index, "EPR AVS APDO"),
         "source_epr_avs_apdo",
         parentSectionKey,
         1,
@@ -634,7 +655,7 @@ function buildEprAvsPowerObject(
     section: createSection(
       `${parentSectionKey}:object-${index}:epr-avs-sink-apdo`,
       "data_object",
-      `Power Data Object ${index + 1} - EPR AVS APDO`,
+      powerObjectTitle(titleBase, index, "EPR AVS APDO"),
       "sink_epr_avs_apdo",
       parentSectionKey,
       1,
@@ -675,12 +696,13 @@ function buildReservedApdo(
   index: number,
   parentSectionKey: string,
   byteOffset: number,
+  titleBase?: string,
 ): BuiltSection {
   return {
     section: createSection(
       `${parentSectionKey}:object-${index}:reserved-apdo`,
       "data_object",
-      `Power Data Object ${index + 1} - Reserved APDO`,
+      powerObjectTitle(titleBase, index, "Reserved APDO"),
       "reserved_apdo",
       parentSectionKey,
       1,
@@ -699,13 +721,46 @@ function buildReservedApdo(
   };
 }
 
+function buildEmptyPdoObject(
+  raw32: number,
+  index: number,
+  parentSectionKey: string,
+  byteOffset: number,
+  titleBase?: string,
+): BuiltSection {
+  return {
+    section: createSection(
+      `${parentSectionKey}:object-${index}:empty-pdo`,
+      "data_object",
+      powerObjectTitle(titleBase, index, "Empty PDO"),
+      "empty_pdo",
+      parentSectionKey,
+      1,
+      byteOffset,
+      raw32,
+      [
+        field("empty_pdo", "Empty PDO", 0, 32, raw32, "Empty PDO", {
+          displayValue: "Empty PDO",
+        }),
+      ],
+      [],
+      index,
+    ),
+  };
+}
+
 function buildPowerObject(
   raw32: number,
   role: PowerRole,
   index: number,
   parentSectionKey: string,
   byteOffset: number,
+  titleBase?: string,
 ): BuiltSection {
+  if (raw32 === 0) {
+    return buildEmptyPdoObject(raw32, index, parentSectionKey, byteOffset, titleBase);
+  }
+
   const supplyType = extractBits(raw32, 30, 2);
 
   // Source priority for protocol terms and parser cross-checking is documented in
@@ -713,167 +768,44 @@ function buildPowerObject(
   // Table 6.7 is the reliable source here: 01b = Battery, 10b = Variable.
   // Some plain-text table extraction around 6.11/6.12 flips the labels.
   if (supplyType === 0b00) {
-    return buildFixedPowerObject(raw32, role, index, parentSectionKey, byteOffset);
+    return buildFixedPowerObject(raw32, role, index, parentSectionKey, byteOffset, titleBase);
   }
 
   if (supplyType === 0b01) {
-    return buildBatteryPowerObject(raw32, role, index, parentSectionKey, byteOffset);
+    return buildBatteryPowerObject(raw32, role, index, parentSectionKey, byteOffset, titleBase);
   }
 
   if (supplyType === 0b10) {
-    return buildVariablePowerObject(raw32, role, index, parentSectionKey, byteOffset);
+    return buildVariablePowerObject(raw32, role, index, parentSectionKey, byteOffset, titleBase);
   }
 
   const apdoType = extractBits(raw32, 28, 2);
   if (apdoType === 0b00) {
-    return buildPpsPowerObject(raw32, role, index, parentSectionKey, byteOffset);
+    return buildPpsPowerObject(raw32, role, index, parentSectionKey, byteOffset, titleBase);
   }
   if (apdoType === 0b01) {
-    return buildEprAvsPowerObject(raw32, role, index, parentSectionKey, byteOffset);
+    return buildEprAvsPowerObject(raw32, role, index, parentSectionKey, byteOffset, titleBase);
   }
   if (apdoType === 0b10) {
-    return buildSprAvsPowerObject(raw32, role, index, parentSectionKey, byteOffset);
+    return buildSprAvsPowerObject(raw32, role, index, parentSectionKey, byteOffset, titleBase);
   }
-  return buildReservedApdo(raw32, index, parentSectionKey, byteOffset);
+  return buildReservedApdo(raw32, index, parentSectionKey, byteOffset, titleBase);
 }
 
-function buildRequestCandidates(
-  raw32: number,
-  parentSectionKey: string,
-  byteOffset: number,
-  index: number,
-): Section[] {
-  const commonNote = "Used only when the selected PDO format matches this candidate.";
-
-  return [
-    createSection(
-      `${parentSectionKey}:object-${index}:fixed-variable-request`,
-      "request_payload_interpretation",
-      "Request Payload Interpretation - Fixed / Variable",
-      "fixed_or_variable_request_candidate",
-      `${parentSectionKey}:object-${index}:request`,
-      2,
-      byteOffset,
-      raw32,
-      [
-        field("giveback", "GiveBack", 27, 1, extractBits(raw32, 27, 1), extractBits(raw32, 27, 1) === 1, {
-          displayValue: boolDisplay(extractBits(raw32, 27, 1) === 1, "Set (Deprecated)", "Clear"),
-          note: commonNote,
-        }),
-        field("reserved", "Reserved", 20, 2, extractBits(raw32, 20, 2), extractBits(raw32, 20, 2), {
-          note: `${commonNote} Bits 21..20 shall be zero.`,
-        }),
-        field("operating_current", "Operating Current", 10, 10, extractBits(raw32, 10, 10), extractBits(raw32, 10, 10) * 10, {
-          displayValue: `${extractBits(raw32, 10, 10) * 10} mA`,
-          unit: "mA",
-          note: `${commonNote} 10mA units.`,
-        }),
-        field("maximum_operating_current", "Maximum Operating Current", 0, 10, extractBits(raw32, 0, 10), extractBits(raw32, 0, 10) * 10, {
-          displayValue: `${extractBits(raw32, 0, 10) * 10} mA`,
-          unit: "mA",
-          note: `${commonNote} 10mA units.`,
-        }),
-      ],
-      [],
-    ),
-    createSection(
-      `${parentSectionKey}:object-${index}:battery-request`,
-      "request_payload_interpretation",
-      "Request Payload Interpretation - Battery",
-      "battery_request_candidate",
-      `${parentSectionKey}:object-${index}:request`,
-      2,
-      byteOffset,
-      raw32,
-      [
-        field("giveback", "GiveBack", 27, 1, extractBits(raw32, 27, 1), extractBits(raw32, 27, 1) === 1, {
-          displayValue: boolDisplay(extractBits(raw32, 27, 1) === 1, "Set (Deprecated)", "Clear"),
-          note: commonNote,
-        }),
-        field("reserved", "Reserved", 20, 2, extractBits(raw32, 20, 2), extractBits(raw32, 20, 2), {
-          note: `${commonNote} Bits 21..20 shall be zero.`,
-        }),
-        field("operating_power", "Operating Power", 10, 10, extractBits(raw32, 10, 10), extractBits(raw32, 10, 10) * 250, {
-          displayValue: `${extractBits(raw32, 10, 10) * 250} mW`,
-          unit: "mW",
-          note: `${commonNote} 250mW units.`,
-        }),
-        field("maximum_operating_power", "Maximum Operating Power", 0, 10, extractBits(raw32, 0, 10), extractBits(raw32, 0, 10) * 250, {
-          displayValue: `${extractBits(raw32, 0, 10) * 250} mW`,
-          unit: "mW",
-          note: `${commonNote} 250mW units.`,
-        }),
-      ],
-      [],
-    ),
-    createSection(
-      `${parentSectionKey}:object-${index}:pps-request`,
-      "request_payload_interpretation",
-      "Request Payload Interpretation - SPR PPS",
-      "pps_request_candidate",
-      `${parentSectionKey}:object-${index}:request`,
-      2,
-      byteOffset,
-      raw32,
-      [
-        field("reserved_27", "Reserved", 27, 1, extractBits(raw32, 27, 1), extractBits(raw32, 27, 1), {
-          note: `${commonNote} Bit 27 shall be zero.`,
-        }),
-        field("reserved_21", "Reserved", 21, 1, extractBits(raw32, 21, 1), extractBits(raw32, 21, 1), {
-          note: `${commonNote} Bit 21 shall be zero.`,
-        }),
-        field("output_voltage", "Output Voltage", 9, 12, extractBits(raw32, 9, 12), extractBits(raw32, 9, 12) * 20, {
-          displayValue: `${extractBits(raw32, 9, 12) * 20} mV`,
-          unit: "mV",
-          note: `${commonNote} 20mV units.`,
-        }),
-        field("reserved_8_7", "Reserved", 7, 2, extractBits(raw32, 7, 2), extractBits(raw32, 7, 2), {
-          note: `${commonNote} Bits 8..7 shall be zero.`,
-        }),
-        field("operating_current", "Operating Current", 0, 7, extractBits(raw32, 0, 7), extractBits(raw32, 0, 7) * 50, {
-          displayValue: `${extractBits(raw32, 0, 7) * 50} mA`,
-          unit: "mA",
-          note: `${commonNote} 50mA units.`,
-        }),
-      ],
-      [],
-    ),
-    createSection(
-      `${parentSectionKey}:object-${index}:avs-request`,
-      "request_payload_interpretation",
-      "Request Payload Interpretation - AVS",
-      "avs_request_candidate",
-      `${parentSectionKey}:object-${index}:request`,
-      2,
-      byteOffset,
-      raw32,
-      [
-        field("reserved_27", "Reserved", 27, 1, extractBits(raw32, 27, 1), extractBits(raw32, 27, 1), {
-          note: `${commonNote} Bit 27 shall be zero.`,
-        }),
-        field("reserved_21", "Reserved", 21, 1, extractBits(raw32, 21, 1), extractBits(raw32, 21, 1), {
-          note: `${commonNote} Bit 21 shall be zero.`,
-        }),
-        field("output_voltage", "Output Voltage", 9, 12, extractBits(raw32, 9, 12), extractBits(raw32, 9, 12) * 25, {
-          displayValue: `${extractBits(raw32, 9, 12) * 25} mV`,
-          unit: "mV",
-          note: `${commonNote} 25mV units; least two significant bits shall be zero, so the effective step is 100mV.`,
-        }),
-        field("reserved_8_7", "Reserved", 7, 2, extractBits(raw32, 7, 2), extractBits(raw32, 7, 2), {
-          note: `${commonNote} Bits 8..7 shall be zero.`,
-        }),
-        field("operating_current", "Operating Current", 0, 7, extractBits(raw32, 0, 7), extractBits(raw32, 0, 7) * 50, {
-          displayValue: `${extractBits(raw32, 0, 7) * 50} mA`,
-          unit: "mA",
-          note: `${commonNote} 50mA units.`,
-        }),
-      ],
-      [],
-    ),
-  ];
+function rdoKindLabel(kind: RdoKind): string {
+  switch (kind) {
+    case "fixed_variable":
+      return "Fixed and Variable";
+    case "battery":
+      return "Battery";
+    case "pps":
+      return "PPS";
+    case "avs":
+      return "AVS";
+  }
 }
 
-function classifyRequestInterpretationFromPdo(raw32: number): RequestInterpretationKind | null {
+export function classifyRdoKindFromPdo(raw32: number): RdoKind | null {
   const supplyType = extractBits(raw32, 30, 2);
 
   if (supplyType === 0b00 || supplyType === 0b10) {
@@ -898,28 +830,211 @@ function classifyRequestInterpretationFromPdo(raw32: number): RequestInterpretat
   return null;
 }
 
-function buildResolvedRequestCandidate(
-  raw32: number,
-  kind: RequestInterpretationKind | null,
-  parentSectionKey: string,
-  byteOffset: number,
-  index: number,
-): Section[] {
-  const candidates = buildRequestCandidates(raw32, parentSectionKey, byteOffset, index);
+function buildRdoBit27CommonField(raw32: number): BitField {
+  const bit27 = extractBits(raw32, 27, 1);
 
+  return field("giveback_or_reserved", "GiveBack / Reserved", 27, 1, bit27, bit27, {
+    displayValue: boolDisplay(bit27 === 1),
+    note: "GiveBack in the Fixed and Variable Request Data Object / Battery Request Data Object. Reserved in the PPS Request Data Object / AVS Request Data Object.",
+  });
+}
+
+function buildRdoGiveBackField(raw32: number): BitField {
+  const giveBack = extractBits(raw32, 27, 1);
+
+  return field("giveback", "Giveback", 27, 1, giveBack, giveBack === 1, {
+    displayValue: boolDisplay(giveBack === 1),
+    note: "Deprecated and Shall be set to zero.",
+  });
+}
+
+function buildRdoReserved27Field(raw32: number): BitField {
+  const reserved = extractBits(raw32, 27, 1);
+
+  return field("reserved_27", "Reserved", 27, 1, reserved, reserved, {
+    note: "Bit 27 shall be set to zero.",
+  });
+}
+
+function buildRdoHeaderFields(raw32: number, bit27Field: BitField): BitField[] {
+  return [
+    field("object_position", "Object Position", 28, 4, extractBits(raw32, 28, 4), extractBits(raw32, 28, 4)),
+    bit27Field,
+    flagField(
+      "capability_mismatch",
+      "Capability Mismatch",
+      26,
+      extractBits(raw32, 26, 1),
+      "Set",
+      "Clear",
+      "Set to '1' for a Capability Mismatch.",
+    ),
+    flagField(
+      "usb_communications_capable",
+      "USB Communications Capable",
+      25,
+      extractBits(raw32, 25, 1),
+      "Set",
+      "Clear",
+      "Set to '1' if USB Communications Capable.",
+    ),
+    flagField(
+      "no_usb_suspend",
+      "No USB Suspend",
+      24,
+      extractBits(raw32, 24, 1),
+      "Set",
+      "Clear",
+      "Set to '1' if requesting No USB Suspend.",
+    ),
+    flagField(
+      "unchunked_extended_messages_supported",
+      "Unchunked Extended Messages Supported",
+      23,
+      extractBits(raw32, 23, 1),
+      "Set",
+      "Clear",
+      "Set to '1' if Unchunked Extended Messages Supported.",
+    ),
+    flagField("epr_capable", "EPR Capable", 22, extractBits(raw32, 22, 1), "Set", "Clear", "Set to '1' if EPR Capable."),
+  ];
+}
+
+function buildRdoCommonFields(raw32: number): BitField[] {
+  return buildRdoHeaderFields(raw32, buildRdoBit27CommonField(raw32));
+}
+
+function buildFixedVariableRdoFields(raw32: number): BitField[] {
+  return [
+    ...buildRdoHeaderFields(raw32, buildRdoGiveBackField(raw32)),
+    field("reserved", "Reserved", 20, 2, extractBits(raw32, 20, 2), extractBits(raw32, 20, 2), {
+      note: "Bits 21..20 shall be set to zero.",
+    }),
+    field("operating_current", "Operating Current", 10, 10, extractBits(raw32, 10, 10), extractBits(raw32, 10, 10) * 10, {
+      displayValue: `${extractBits(raw32, 10, 10) * 10} mA`,
+      unit: "mA",
+      note: "10mA units.",
+    }),
+    field(
+      "maximum_operating_current",
+      "Maximum Operating Current",
+      0,
+      10,
+      extractBits(raw32, 0, 10),
+      extractBits(raw32, 0, 10) * 10,
+      {
+        displayValue: `${extractBits(raw32, 0, 10) * 10} mA`,
+        unit: "mA",
+        note: "10mA units.",
+      },
+    ),
+  ];
+}
+
+function buildBatteryRdoFields(raw32: number): BitField[] {
+  return [
+    ...buildRdoHeaderFields(raw32, buildRdoGiveBackField(raw32)),
+    field("reserved", "Reserved", 20, 2, extractBits(raw32, 20, 2), extractBits(raw32, 20, 2), {
+      note: "Bits 21..20 shall be set to zero.",
+    }),
+    field("operating_power", "Operating Power", 10, 10, extractBits(raw32, 10, 10), extractBits(raw32, 10, 10) * 250, {
+      displayValue: `${extractBits(raw32, 10, 10) * 250} mW`,
+      unit: "mW",
+      note: "250mW units.",
+    }),
+    field(
+      "maximum_operating_power",
+      "Maximum Operating Power",
+      0,
+      10,
+      extractBits(raw32, 0, 10),
+      extractBits(raw32, 0, 10) * 250,
+      {
+        displayValue: `${extractBits(raw32, 0, 10) * 250} mW`,
+        unit: "mW",
+        note: "250mW units.",
+      },
+    ),
+  ];
+}
+
+function buildPpsRdoFields(raw32: number): BitField[] {
+  return [
+    ...buildRdoHeaderFields(raw32, buildRdoReserved27Field(raw32)),
+    field("reserved_21", "Reserved", 21, 1, extractBits(raw32, 21, 1), extractBits(raw32, 21, 1), {
+      note: "Bit 21 shall be set to zero.",
+    }),
+    field("output_voltage", "Output Voltage", 9, 12, extractBits(raw32, 9, 12), extractBits(raw32, 9, 12) * 20, {
+      displayValue: `${extractBits(raw32, 9, 12) * 20} mV`,
+      unit: "mV",
+      note: "20mV units.",
+    }),
+    field("reserved_8_7", "Reserved", 7, 2, extractBits(raw32, 7, 2), extractBits(raw32, 7, 2), {
+      note: "Bits 8..7 shall be set to zero.",
+    }),
+    field("operating_current", "Operating Current", 0, 7, extractBits(raw32, 0, 7), extractBits(raw32, 0, 7) * 50, {
+      displayValue: `${extractBits(raw32, 0, 7) * 50} mA`,
+      unit: "mA",
+      note: "50mA units.",
+    }),
+  ];
+}
+
+function buildAvsRdoFields(raw32: number): BitField[] {
+  return [
+    ...buildRdoHeaderFields(raw32, buildRdoReserved27Field(raw32)),
+    field("reserved_21", "Reserved", 21, 1, extractBits(raw32, 21, 1), extractBits(raw32, 21, 1), {
+      note: "Bit 21 shall be set to zero.",
+    }),
+    field("output_voltage", "Output Voltage", 9, 12, extractBits(raw32, 9, 12), extractBits(raw32, 9, 12) * 25, {
+      displayValue: `${extractBits(raw32, 9, 12) * 25} mV`,
+      unit: "mV",
+      note: "25mV units. The least two significant bits shall be set to zero, so the effective step is 100mV.",
+    }),
+    field("reserved_8_7", "Reserved", 7, 2, extractBits(raw32, 7, 2), extractBits(raw32, 7, 2), {
+      note: "Bits 8..7 shall be set to zero.",
+    }),
+    field("operating_current", "Operating Current", 0, 7, extractBits(raw32, 0, 7), extractBits(raw32, 0, 7) * 50, {
+      displayValue: `${extractBits(raw32, 0, 7) * 50} mA`,
+      unit: "mA",
+      note: "50mA units.",
+    }),
+  ];
+}
+
+function buildRdoFields(raw32: number, kind: RdoKind | null): BitField[] {
   if (kind === null) {
-    return candidates;
+    return buildRdoCommonFields(raw32);
   }
 
-  const semanticKind = kind === "fixed_variable"
-    ? "fixed_or_variable_request_candidate"
-    : kind === "battery"
-      ? "battery_request_candidate"
-      : kind === "pps"
-        ? "pps_request_candidate"
-        : "avs_request_candidate";
+  switch (kind) {
+    case "fixed_variable":
+      return buildFixedVariableRdoFields(raw32);
+    case "battery":
+      return buildBatteryRdoFields(raw32);
+    case "pps":
+      return buildPpsRdoFields(raw32);
+    case "avs":
+      return buildAvsRdoFields(raw32);
+  }
+}
 
-  return candidates.filter((section) => section.semanticKind === semanticKind);
+function buildRequestSectionTitle(messageTypeName: string, kind: RdoKind | null): string {
+  if (messageTypeName === "Request") {
+    return kind === null ? "RDO - Common" : `RDO - ${rdoKindLabel(kind)}`;
+  }
+
+  return kind === null
+    ? "EPR Request Data Object"
+    : `EPR Request Data Object - ${rdoKindLabel(kind)}`;
+}
+
+function buildRequestSemanticKind(messageTypeName: string, kind: RdoKind | null): string {
+  if (messageTypeName === "Request") {
+    return kind === null ? "rdo_common" : `rdo_${kind}`;
+  }
+
+  return kind === null ? "epr_request_data_object" : `epr_request_${kind}_rdo`;
 }
 
 function buildRequestObject(
@@ -930,7 +1045,7 @@ function buildRequestObject(
   options: {
     messageTypeName?: string;
     objectCount?: number;
-    resolvedKind?: RequestInterpretationKind | null;
+    resolvedKind?: RdoKind | null;
   } = {},
 ): BuiltSection {
   const objectPosition = extractBits(raw32, 28, 4);
@@ -939,6 +1054,15 @@ function buildRequestObject(
 
   if (objectPosition === 0 || objectPosition >= 14) {
     issues.push(createIssue("PD_RDO_RESERVED_OBJECT_POSITION", "Object Position 0 and 14..15 are reserved in Request Data Objects."));
+  }
+
+  if (messageTypeName === "Request" && objectPosition > 7 && objectPosition < 14) {
+    issues.push(
+      createIssue(
+        "PD_REQUEST_SPR_OBJECT_POSITION_OUT_OF_RANGE",
+        "Request Message object positions above 7 are reserved for EPR (A)PDOs.",
+      ),
+    );
   }
 
   if (options.objectCount !== undefined) {
@@ -955,38 +1079,16 @@ function buildRequestObject(
 
   return {
     section: createSection(
-      `${parentSectionKey}:object-${index}:request`,
+      `${parentSectionKey}:object-${index}:rdo`,
       "request_data_object",
-      messageTypeName === "EPR_Request" ? "EPR Request Data Object" : `Request Data Object ${index + 1}`,
-      "request_data_object",
+      buildRequestSectionTitle(messageTypeName, options.resolvedKind ?? null),
+      buildRequestSemanticKind(messageTypeName, options.resolvedKind ?? null),
       parentSectionKey,
       1,
       byteOffset,
       raw32,
-      [
-        field("object_position", "Object Position", 28, 4, objectPosition, objectPosition),
-        field("bit_27", "Bit 27 (GiveBack / Reserved)", 27, 1, extractBits(raw32, 27, 1), extractBits(raw32, 27, 1), {
-          note: "Fixed/Battery RDOs use this as GiveBack (deprecated); PPS/AVS RDOs mark it Reserved.",
-        }),
-        flagField("capability_mismatch", "Capability Mismatch", 26, extractBits(raw32, 26, 1), "Mismatch", "Match"),
-        flagField("usb_communications_capable", "USB Communications Capable", 25, extractBits(raw32, 25, 1)),
-        flagField("no_usb_suspend", "No USB Suspend", 24, extractBits(raw32, 24, 1), "Requested", "Not Requested"),
-        flagField(
-          "unchunked_extended_messages_supported",
-          "Unchunked Extended Messages Supported",
-          23,
-          extractBits(raw32, 23, 1),
-        ),
-        flagField("epr_capable", "EPR Capable", 22, extractBits(raw32, 22, 1)),
-      ],
+      buildRdoFields(raw32, options.resolvedKind ?? null),
       issues,
-      index,
-    ),
-    extraSections: buildResolvedRequestCandidate(
-      raw32,
-      options.resolvedKind ?? null,
-      parentSectionKey,
-      byteOffset,
       index,
     ),
   };
@@ -1002,17 +1104,13 @@ function buildCopyOfPdoObject(
   const originalIndex = originalObjectPosition >= 1 && originalObjectPosition <= 11
     ? originalObjectPosition - 1
     : 0;
-  const built = buildPowerObject(raw32, "source", originalIndex, parentSectionKey, byteOffset);
-  const copyTitle = built.section.title.startsWith("Power Data Object ")
-    ? built.section.title.replace(/^Power Data Object \d+/, "Copy of Requested Power Data Object")
-    : "Copy of Requested Power Data Object";
+  const built = buildPowerObject(raw32, "source", originalIndex, parentSectionKey, byteOffset, "Copy of PDO");
 
   return {
     section: {
       ...built.section,
       key: `${parentSectionKey}:object-${payloadIndex}:copy-of-pdo`,
-      title: copyTitle,
-      semanticKind: "copy_of_requested_power_data_object",
+      semanticKind: "copy_of_pdo",
       index: payloadIndex,
     },
     extraSections: built.extraSections,
@@ -3685,6 +3783,9 @@ export function explainDataObjects(
   messageType: MessageTypeInfo,
   payloadSectionKey: string,
   payloadByteOffset: number,
+  options: {
+    requestRdoKind?: RdoKind | null;
+  } = {},
 ): Section[] {
   if (messageType.name === "Vendor_Defined") {
     const sections = explainVendorDefinedObjects(payloadBytes, sop, payloadSectionKey, payloadByteOffset);
@@ -3696,8 +3797,6 @@ export function explainDataObjects(
         kind: "raw_payload",
         title: "Trailing Raw Payload",
         semanticKind: "trailing_raw_payload",
-        parentSectionKey: payloadSectionKey,
-        depth: 1,
         byteOffset: payloadByteOffset + count * 4,
         byteLength: payloadBytes.length - count * 4,
         rawBytes: payloadBytes.slice(count * 4),
@@ -3722,19 +3821,20 @@ export function explainDataObjects(
     ? extractBits(firstObjectRaw32, 28, 4)
     : null;
   const eprRequestResolvedKind = messageType.name === "EPR_Request" && count > 1
-    ? classifyRequestInterpretationFromPdo(readUint32Le(payloadBytes, 4))
+    ? classifyRdoKindFromPdo(readUint32Le(payloadBytes, 4))
     : null;
 
   for (let index = 0; index < count; index += 1) {
     const raw32 = readUint32Le(payloadBytes, index * 4);
     const byteOffset = payloadByteOffset + index * 4;
+    const capabilityTitle = capabilityObjectTitle(messageType.name, index) ?? undefined;
 
     let built: BuiltSection;
 
-    if (messageType.name === "Source_Capabilities") {
-      built = buildPowerObject(raw32, "source", index, payloadSectionKey, byteOffset);
-    } else if (messageType.name === "Sink_Capabilities") {
-      built = buildPowerObject(raw32, "sink", index, payloadSectionKey, byteOffset);
+    if (messageType.name === "Source_Capabilities" || messageType.name === "EPR_Source_Capabilities") {
+      built = buildPowerObject(raw32, "source", index, payloadSectionKey, byteOffset, capabilityTitle);
+    } else if (messageType.name === "Sink_Capabilities" || messageType.name === "EPR_Sink_Capabilities") {
+      built = buildPowerObject(raw32, "sink", index, payloadSectionKey, byteOffset, capabilityTitle);
     } else if (messageType.name === "BIST" && index === 0) {
       built = buildBistDataObject(raw32, index, payloadSectionKey, byteOffset, count);
     } else if (messageType.name === "BIST") {
@@ -3765,6 +3865,7 @@ export function explainDataObjects(
       built = buildRequestObject(raw32, index, payloadSectionKey, byteOffset, {
         messageTypeName: "Request",
         objectCount: count,
+        resolvedKind: options.requestRdoKind ?? null,
       });
     } else if (messageType.name === "EPR_Request" && index === 0) {
       built = buildRequestObject(raw32, index, payloadSectionKey, byteOffset, {
@@ -3818,8 +3919,6 @@ export function explainDataObjects(
       kind: "raw_payload",
       title: "Trailing Raw Payload",
       semanticKind: "trailing_raw_payload",
-      parentSectionKey: payloadSectionKey,
-      depth: 1,
       byteOffset: payloadByteOffset + count * 4,
       byteLength: payloadBytes.length - count * 4,
       rawBytes: payloadBytes.slice(count * 4),

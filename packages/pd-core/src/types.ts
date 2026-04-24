@@ -1,8 +1,32 @@
 export type StartOfPacket = "SOP" | "SOP_PRIME" | "SOP_DPRIME";
 
+export type MessagePacket = {
+  sop: StartOfPacket;
+  bytes: Uint8Array;
+};
+
 export type MessageFrame = {
   sop: StartOfPacket;
   bytes: Uint8Array;
+};
+
+export type DecodeContextMessage =
+  | {
+      kind: "frame";
+      frame: MessageFrame;
+    }
+  | {
+      kind: "packet";
+      packet: MessagePacket;
+    };
+
+export type ChunkedExtendedMessageContext = {
+  previousChunks: readonly DecodeContextMessage[];
+};
+
+export type DecodeContext = {
+  sourceCapabilities?: DecodeContextMessage;
+  chunkedExtendedMessage?: ChunkedExtendedMessageContext;
 };
 
 export type SpecificationRevision = "1.0" | "2.0" | "3.x" | "reserved";
@@ -59,11 +83,9 @@ export type ExtendedMessageHeader = {
 export type SectionKind =
   | "message_header"
   | "extended_message_header"
-  | "data_message_payload"
-  | "extended_message_payload"
+  | "crc32"
   | "data_object"
   | "request_data_object"
-  | "request_payload_interpretation"
   | "vdm_header"
   | "vendor_data_object"
   | "data_block"
@@ -75,8 +97,6 @@ export type Section = {
   title: string;
   index?: number;
   semanticKind?: string;
-  parentSectionKey?: string;
-  depth: number;
   byteOffset: number;
   byteLength: number;
   rawBytes: Uint8Array;
@@ -101,7 +121,27 @@ export type DecodedMessage = {
   issues: DecodeIssue[];
 };
 
+export type PacketLayout = {
+  expectedMessageByteLength: number | null;
+  actualMessageByteLength: number;
+  crcByteOffset: number | null;
+  crcByteLength: number;
+};
+
+export type PacketCrc = {
+  raw32: number | null;
+  rawBytes: Uint8Array;
+  status: "present" | "missing" | "partial";
+  checkStatus: "not_checked";
+};
+
+export type DecodedPacket = DecodedMessage & {
+  packet: MessagePacket;
+  packetLayout: PacketLayout;
+  crc: PacketCrc;
+};
+
 export type SequenceDecoder = {
-  push(frame: MessageFrame): DecodedMessage;
+  push(packet: MessagePacket, context?: DecodeContext): DecodedPacket;
   reset(): void;
 };
