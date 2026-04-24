@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { createBatchedQueue } from '@/lib/batching/batchedQueue'
 import { createCaptureBuffer, type CaptureBuffer } from '@/lib/buffers/captureBuffer'
 import { createPowerSamplesBuffer, type PowerSamplesBuffer } from '@/lib/buffers/powerSamplesBuffer'
 import {
@@ -32,11 +33,6 @@ interface DeviceState {
   captureCount: number
   powerCount: number
 
-  pendingRecords: CaptureRecord[]
-  pendingPowerSamples: PowerSample[]
-  captureUpdateTimer: number | null
-  powerUpdateTimer: number | null
-
   setIsConnected: (isConnected: boolean) => void
   setIsConnecting: (isConnecting: boolean) => void
   setManualDisconnect: (manualDisconnect: boolean) => void
@@ -64,228 +60,160 @@ const POWER_BATCH_TIMEOUT = 50
 
 const initialPreferences = readDevicePreferences()
 
-const useDeviceStore = create<DeviceState>()((set, get) => ({
-  isConnected: false,
-  isConnecting: false,
-  manualDisconnect: initialPreferences.manualDisconnect,
-  autoConnectOnLoad: initialPreferences.autoConnectOnLoad,
-  autoReconnectOnHotplug: initialPreferences.autoReconnectOnHotplug,
-  lastDeviceFingerprint: initialPreferences.lastDeviceFingerprint,
-  detailContextBacktrackRecords: initialPreferences.detailContextBacktrackRecords,
-  powerCaptureEnabled: initialPreferences.powerCaptureEnabled,
-  protocolSelectedIndex: null,
-  captureBuffer: createCaptureBuffer(),
-  powerBuffer: createPowerSamplesBuffer(POWER_BUFFER_CAPACITY),
-  captureVersion: 0,
-  powerVersion: 0,
-  pendingRecords: [],
-  pendingPowerSamples: [],
-  captureUpdateTimer: null,
-  powerUpdateTimer: null,
-  captureCount: 0,
-  powerCount: 0,
-
-  setIsConnected: (isConnected) => set({ isConnected }),
-
-  setIsConnecting: (isConnecting) => set({ isConnecting }),
-
-  setManualDisconnect: (manualDisconnect) => {
-    writeManualDisconnect(manualDisconnect)
-    set({ manualDisconnect })
-  },
-
-  setAutoConnectOnLoad: (autoConnectOnLoad) => {
-    writeAutoConnectOnLoad(autoConnectOnLoad)
-    set({ autoConnectOnLoad })
-  },
-
-  setAutoReconnectOnHotplug: (autoReconnectOnHotplug) => {
-    writeAutoReconnectOnHotplug(autoReconnectOnHotplug)
-    set({ autoReconnectOnHotplug })
-  },
-
-  setLastDeviceFingerprint: (lastDeviceFingerprint) => {
-    writeLastDeviceFingerprint(lastDeviceFingerprint)
-    set({ lastDeviceFingerprint })
-  },
-
-  setDetailContextBacktrackRecords: (detailContextBacktrackRecords) => {
-    writeDetailContextBacktrackRecords(detailContextBacktrackRecords)
-    set({ detailContextBacktrackRecords })
-  },
-
-  setPowerCaptureEnabled: (powerCaptureEnabled) => {
-    const { powerUpdateTimer } = get()
-
-    writePowerCaptureEnabled(powerCaptureEnabled)
-
-    if (!powerCaptureEnabled && powerUpdateTimer !== null) {
-      clearTimeout(powerUpdateTimer)
+const useDeviceStore = create<DeviceState>()((set, get) => {
+  const captureQueue = createBatchedQueue<CaptureRecord>({
+    maxBatchSize: CAPTURE_BATCH_SIZE,
+    timeoutMs: CAPTURE_BATCH_TIMEOUT,
+    onFlush(records) {
+      const { captureBuffer } = get()
+      captureBuffer.addBatch(records)
       set({
-        powerCaptureEnabled,
-        pendingPowerSamples: [],
-        powerUpdateTimer: null,
+        captureVersion: captureBuffer.currentVersion,
+        captureCount: captureBuffer.length,
       })
-      return
-    }
+    },
+  })
 
-    set({ powerCaptureEnabled })
-  },
+  const powerQueue = createBatchedQueue<PowerSample>({
+    maxBatchSize: POWER_BATCH_SIZE,
+    timeoutMs: POWER_BATCH_TIMEOUT,
+    onFlush(samples) {
+      const { powerBuffer } = get()
+      powerBuffer.addBatch(samples)
+      set({
+        powerVersion: powerBuffer.currentVersion,
+        powerCount: powerBuffer.length,
+      })
+    },
+  })
 
-  setProtocolSelectedIndex: (protocolSelectedIndex) => set({ protocolSelectedIndex }),
+  return {
+    isConnected: false,
+    isConnecting: false,
+    manualDisconnect: initialPreferences.manualDisconnect,
+    autoConnectOnLoad: initialPreferences.autoConnectOnLoad,
+    autoReconnectOnHotplug: initialPreferences.autoReconnectOnHotplug,
+    lastDeviceFingerprint: initialPreferences.lastDeviceFingerprint,
+    detailContextBacktrackRecords: initialPreferences.detailContextBacktrackRecords,
+    powerCaptureEnabled: initialPreferences.powerCaptureEnabled,
+    protocolSelectedIndex: null,
+    captureBuffer: createCaptureBuffer(),
+    powerBuffer: createPowerSamplesBuffer(POWER_BUFFER_CAPACITY),
+    captureVersion: 0,
+    powerVersion: 0,
+    captureCount: 0,
+    powerCount: 0,
 
-  addRecord: (record) => {
-    const { pendingRecords, captureUpdateTimer } = get()
+    setIsConnected: (isConnected) => set({ isConnected }),
 
-    pendingRecords.push(record)
+    setIsConnecting: (isConnecting) => set({ isConnecting }),
 
-    if (pendingRecords.length >= CAPTURE_BATCH_SIZE) {
-      get().flushPendingRecords()
-    } else if (captureUpdateTimer === null) {
-      const newTimer = window.setTimeout(() => {
-        get().flushPendingRecords()
-      }, CAPTURE_BATCH_TIMEOUT)
+    setManualDisconnect: (manualDisconnect) => {
+      writeManualDisconnect(manualDisconnect)
+      set({ manualDisconnect })
+    },
 
-      set({ captureUpdateTimer: newTimer })
-    }
-  },
+    setAutoConnectOnLoad: (autoConnectOnLoad) => {
+      writeAutoConnectOnLoad(autoConnectOnLoad)
+      set({ autoConnectOnLoad })
+    },
 
-  addPowerSample: (sample) => {
-    const { pendingPowerSamples, powerUpdateTimer, powerCaptureEnabled } = get()
+    setAutoReconnectOnHotplug: (autoReconnectOnHotplug) => {
+      writeAutoReconnectOnHotplug(autoReconnectOnHotplug)
+      set({ autoReconnectOnHotplug })
+    },
 
-    if (!powerCaptureEnabled) {
-      return
-    }
+    setLastDeviceFingerprint: (lastDeviceFingerprint) => {
+      writeLastDeviceFingerprint(lastDeviceFingerprint)
+      set({ lastDeviceFingerprint })
+    },
 
-    pendingPowerSamples.push(sample)
+    setDetailContextBacktrackRecords: (detailContextBacktrackRecords) => {
+      writeDetailContextBacktrackRecords(detailContextBacktrackRecords)
+      set({ detailContextBacktrackRecords })
+    },
 
-    if (pendingPowerSamples.length >= POWER_BATCH_SIZE) {
-      get().flushPendingPowerSamples()
-    } else if (powerUpdateTimer === null) {
-      const newTimer = window.setTimeout(() => {
-        get().flushPendingPowerSamples()
-      }, POWER_BATCH_TIMEOUT)
+    setPowerCaptureEnabled: (powerCaptureEnabled) => {
+      writePowerCaptureEnabled(powerCaptureEnabled)
 
-      set({ powerUpdateTimer: newTimer })
-    }
-  },
+      if (!powerCaptureEnabled) {
+        powerQueue.clear()
+      }
 
-  flushPendingRecords: () => {
-    const { pendingRecords, captureBuffer, captureUpdateTimer } = get()
+      set({ powerCaptureEnabled })
+    },
 
-    if (pendingRecords.length === 0) return
+    setProtocolSelectedIndex: (protocolSelectedIndex) => set({ protocolSelectedIndex }),
 
-    captureBuffer.addBatch([...pendingRecords])
+    addRecord: (record) => {
+      captureQueue.push(record)
+    },
 
-    if (captureUpdateTimer !== null) {
-      clearTimeout(captureUpdateTimer)
-    }
+    addPowerSample: (sample) => {
+      if (!get().powerCaptureEnabled) return
+      powerQueue.push(sample)
+    },
 
-    const newCount = captureBuffer.length
+    flushPendingRecords: () => {
+      captureQueue.flush()
+    },
 
-    set({
-      captureVersion: captureBuffer.currentVersion,
-      captureCount: newCount,
-      pendingRecords: [],
-      captureUpdateTimer: null
-    })
-  },
+    flushPendingPowerSamples: () => {
+      powerQueue.flush()
+    },
 
-  flushPendingPowerSamples: () => {
-    const { pendingPowerSamples, powerBuffer, powerUpdateTimer } = get()
+    clearRecords: () => {
+      const { captureBuffer } = get()
 
-    if (pendingPowerSamples.length === 0) return
-
-    powerBuffer.addBatch([...pendingPowerSamples])
-
-    if (powerUpdateTimer !== null) {
-      clearTimeout(powerUpdateTimer)
-    }
-
-    set({
-      powerVersion: powerBuffer.currentVersion,
-      powerCount: powerBuffer.length,
-      pendingPowerSamples: [],
-      powerUpdateTimer: null,
-    })
-  },
-
-  clearRecords: () => {
-    const { captureBuffer, captureUpdateTimer } = get()
-
-    if (captureUpdateTimer !== null) {
-      clearTimeout(captureUpdateTimer)
-    }
-
-    captureBuffer.clear()
-    set({
-      protocolSelectedIndex: null,
-      captureVersion: captureBuffer.currentVersion,
-      captureCount: 0,
-      pendingRecords: [],
-      captureUpdateTimer: null
-    })
-  },
-
-  clearPowerSamples: () => {
-    const { powerBuffer, powerUpdateTimer } = get()
-
-    if (powerUpdateTimer !== null) {
-      clearTimeout(powerUpdateTimer)
-    }
-
-    powerBuffer.clear()
-    set({
-      powerVersion: powerBuffer.currentVersion,
-      powerCount: 0,
-      pendingPowerSamples: [],
-      powerUpdateTimer: null,
-    })
-  },
-
-  resetDevice: () => {
-    const { captureUpdateTimer, powerUpdateTimer } = get()
-
-    if (captureUpdateTimer !== null) {
-      clearTimeout(captureUpdateTimer)
-    }
-    if (powerUpdateTimer !== null) {
-      clearTimeout(powerUpdateTimer)
-    }
-
-    set({
-      isConnected: false,
-      isConnecting: false,
-      captureUpdateTimer: null,
-      powerUpdateTimer: null,
-    })
-  },
-
-  importRecords: (records, mode) => {
-    const { captureBuffer, captureUpdateTimer } = get()
-
-    // Flush any pending records first
-    get().flushPendingRecords()
-
-    if (captureUpdateTimer !== null) {
-      clearTimeout(captureUpdateTimer)
-    }
-
-    if (mode === 'replace') {
+      captureQueue.clear()
       captureBuffer.clear()
+      set({
+        protocolSelectedIndex: null,
+        captureVersion: captureBuffer.currentVersion,
+        captureCount: 0,
+      })
+    },
+
+    clearPowerSamples: () => {
+      const { powerBuffer } = get()
+
+      powerQueue.clear()
+      powerBuffer.clear()
+      set({
+        powerVersion: powerBuffer.currentVersion,
+        powerCount: 0,
+      })
+    },
+
+    resetDevice: () => {
+      captureQueue.clear()
+      powerQueue.clear()
+
+      set({
+        isConnected: false,
+        isConnecting: false,
+      })
+    },
+
+    importRecords: (records, mode) => {
+      const { captureBuffer } = get()
+
+      captureQueue.flush()
+
+      if (mode === 'replace') {
+        captureBuffer.clear()
+      }
+
+      captureBuffer.addBatch(records)
+
+      set({
+        protocolSelectedIndex: mode === 'replace' ? null : get().protocolSelectedIndex,
+        captureVersion: captureBuffer.currentVersion,
+        captureCount: captureBuffer.length,
+      })
     }
-
-    captureBuffer.addBatch(records)
-
-    set({
-      protocolSelectedIndex: mode === 'replace' ? null : get().protocolSelectedIndex,
-      captureVersion: captureBuffer.currentVersion,
-      captureCount: captureBuffer.length,
-      pendingRecords: [],
-      captureUpdateTimer: null
-    })
   }
-}))
+})
 
 export const selectCaptureCount = (state: DeviceState) => state.captureCount
 export const selectCaptureVersion = (state: DeviceState) => state.captureVersion
