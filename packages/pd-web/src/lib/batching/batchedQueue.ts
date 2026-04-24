@@ -14,11 +14,11 @@ export function createBatchedQueue<T>({
   onFlush: (items: T[]) => void
 }): BatchedQueue<T> {
   let pending: T[] = []
-  let timer: number | null = null
+  let timer: ReturnType<typeof globalThis.setTimeout> | null = null
 
   const clearTimer = () => {
     if (timer === null) return
-    clearTimeout(timer)
+    globalThis.clearTimeout(timer)
     timer = null
   }
 
@@ -41,7 +41,7 @@ export function createBatchedQueue<T>({
       }
 
       if (timer === null) {
-        timer = window.setTimeout(flush, timeoutMs)
+        timer = globalThis.setTimeout(flush, timeoutMs)
       }
     },
 
