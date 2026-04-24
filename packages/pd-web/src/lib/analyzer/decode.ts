@@ -5,25 +5,11 @@ import {
 } from '@usb-pd-sniffer/pd-core'
 import {
   MONITOR_EVENT,
-  isPdMonitorEvent,
-  monitorEventName,
   toPdObservedFrameFromMonitorEvent,
-  type FirmwareMeta,
-  type MonitorSnapshot,
 } from '@usb-pd-sniffer/pd-monitor'
 import type { CaptureRecord } from '@/types/pd'
 
-export {
-  MONITOR_EVENT,
-  isPdMonitorEvent,
-  monitorEventName,
-}
-export type {
-  FirmwareMeta,
-  MonitorSnapshot,
-}
-
-export function reportToObservedFrame(report: CaptureRecord) {
+export function recordToMessagePacket(report: CaptureRecord) {
   const rawPayload = Uint8Array.from(report.data.slice(0, report.data_len))
   return toPdObservedFrameFromMonitorEvent({
     eventType: report.event_type,
@@ -31,8 +17,8 @@ export function reportToObservedFrame(report: CaptureRecord) {
   })
 }
 
-export function decodeSingleReport(report: CaptureRecord): DecodedPacket | null {
-  const packet = reportToObservedFrame(report)
+export function decodeSingleRecord(report: CaptureRecord): DecodedPacket | null {
+  const packet = recordToMessagePacket(report)
   return packet === null ? null : decodePacket(packet)
 }
 
@@ -62,7 +48,7 @@ function findPreviousChunkedExtendedPackets(
       break
     }
 
-    const packet = reportToObservedFrame(reports[index])
+    const packet = recordToMessagePacket(reports[index])
     if (packet === null) {
       continue
     }
@@ -108,7 +94,7 @@ function findNearestSourceCapabilitiesFrame(
       break
     }
 
-    const packet = reportToObservedFrame(reports[index])
+    const packet = recordToMessagePacket(reports[index])
     if (packet === null) {
       continue
     }
@@ -122,7 +108,7 @@ function findNearestSourceCapabilitiesFrame(
   return undefined
 }
 
-export function decodeReportAtIndex(
+export function decodeRecordAtIndex(
   reports: readonly CaptureRecord[],
   targetIndex: number,
   backtrackRecords: number | null = null
@@ -131,7 +117,7 @@ export function decodeReportAtIndex(
     return null
   }
 
-  const packet = reportToObservedFrame(reports[targetIndex])
+  const packet = recordToMessagePacket(reports[targetIndex])
   if (packet === null) {
     return null
   }

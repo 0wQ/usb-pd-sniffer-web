@@ -9,8 +9,8 @@ import ImportDialog from '@/components/common/ImportDialog'
 import SendPdDialog from '@/components/common/SendPdDialog'
 import ViewTabs, { type AppView } from '@/components/common/ViewTabs'
 import clsx from 'clsx'
-import { decodeSingleReport, monitorEventName, reportToObservedFrame } from '@/lib/live/pdCore'
-import type { WebPdTxTarget } from '@/lib/live/tx'
+import { monitorEventName, type MonitorPdTxTarget } from '@usb-pd-sniffer/pd-monitor'
+import { decodeSingleRecord, recordToMessagePacket } from '@/lib/analyzer/decode'
 
 const ROW_HEIGHT = 30
 const THEME_STORAGE_KEY = 'usb-pd-sniffer-theme'
@@ -188,7 +188,7 @@ const RowComponentInner = ({ ariaAttributes, index, style, reports, onRowClick, 
 
     const prevReport = reportIndex > 0 ? reports[reportIndex - 1] : null
     const deltaTime = prevReport ? report.timestamp_us - prevReport.timestamp_us : null
-    const decoded = decodeSingleReport(report)
+    const decoded = decodeSingleRecord(report)
     const timestampText = formatTimestamp(report.timestamp_us)
     const deltaTimeText = formatDeltaTime(deltaTime)
     const hexData = formatHexData(report.data, report.data_len)
@@ -445,7 +445,7 @@ type CardProps = {
   onAutoConnectOnLoadChange: (value: boolean) => void
   onAutoReconnectOnHotplugChange: (value: boolean) => void
   onConnectBtnClick: () => void
-  onSendRawPdFrame: (target: WebPdTxTarget, hexPayload: string) => Promise<void>
+  onSendRawPdFrame: (target: MonitorPdTxTarget, hexPayload: string) => Promise<void>
   onSendHardReset: () => Promise<void>
   onSendCableReset: () => Promise<void>
   isSendingCommand: boolean
@@ -494,7 +494,7 @@ const Card = memo(({
       return null
     }
 
-    return reportToObservedFrame(selectedReport)
+    return recordToMessagePacket(selectedReport)
   }, [selectedReport])
 
   const handleRowClick = useCallback((index: number) => {

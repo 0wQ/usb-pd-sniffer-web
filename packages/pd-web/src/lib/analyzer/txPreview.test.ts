@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { parsePdHexPayload, previewPdTxFrame } from './tx'
+import { parsePdHexPayload, previewPdTxFrame } from './txPreview'
 
 describe('web native tx helpers', () => {
   test('parses spaced hex payload into bytes', () => {

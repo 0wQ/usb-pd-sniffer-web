@@ -13,7 +13,7 @@ It owns browser UI state, capture buffers, protocol table rendering, generic dec
 | `src/components/pages` | Page-level components such as the power telemetry page. |
 | `src/components/power` | Power telemetry chart components and chart-specific styles. |
 | `src/hooks` | Browser lifecycle hooks and monitor-device subscriptions. |
-| `src/lib/live` | Monitor/core adapter calls and TX helpers. |
+| `src/lib/analyzer` | Capture decode adapters, context selection, TX preview, and generic bit-view helpers. |
 | `src/stores` | Zustand device/capture state. |
 | `src/types` | Web app data types. |
 | `src/utils` | App-local utilities such as CSV helpers. |

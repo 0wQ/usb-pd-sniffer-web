@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MessageFrame } from '@usb-pd-sniffer/pd-core'
 import { toast } from 'sonner'
-import { previewPdTxFrame, type WebPdTxTarget } from '@/lib/live/tx'
+import type { MonitorPdTxTarget } from '@usb-pd-sniffer/pd-monitor'
+import { previewPdTxFrame } from '@/lib/analyzer/txPreview'
 
 type SendMode = 'raw' | 'hard_reset' | 'cable_reset'
 
@@ -11,7 +12,7 @@ type Props = {
   isSending: boolean
   selectedFrame: MessageFrame | null
   onClose: () => void
-  onSendRaw: (target: WebPdTxTarget, hexPayload: string) => Promise<void>
+  onSendRaw: (target: MonitorPdTxTarget, hexPayload: string) => Promise<void>
   onSendHardReset: () => Promise<void>
   onSendCableReset: () => Promise<void>
 }
@@ -28,7 +29,7 @@ const SendPdDialog = ({
 }: Props) => {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [mode, setMode] = useState<SendMode>('raw')
-  const [target, setTarget] = useState<WebPdTxTarget>('SOP')
+  const [target, setTarget] = useState<MonitorPdTxTarget>('SOP')
   const [hexPayload, setHexPayload] = useState('42 10')
   const preview = useMemo(() => {
     if (mode !== 'raw') {
@@ -185,7 +186,7 @@ const SendPdDialog = ({
             <select
               className="select select-bordered"
               value={target}
-              onChange={(e) => setTarget(e.target.value as WebPdTxTarget)}
+              onChange={(e) => setTarget(e.target.value as MonitorPdTxTarget)}
               disabled={!isConnected || isSending}
             >
               <option value="SOP">SOP</option>

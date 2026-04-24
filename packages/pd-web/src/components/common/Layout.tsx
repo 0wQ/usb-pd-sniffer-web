@@ -3,7 +3,7 @@ import DecodeCard from '@/components/card/DecodeCard'
 import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels'
 import useDeviceStore from '@/stores/deviceStore'
 import type { AppView } from '@/components/common/ViewTabs'
-import type { WebPdTxTarget } from '@/lib/live/tx'
+import type { MonitorPdTxTarget } from '@usb-pd-sniffer/pd-monitor'
 
 const DEFAULT_TOP_SIZE = 88
 const MIN_TOP_SIZE = 28
@@ -18,7 +18,7 @@ type Props = {
   onAutoConnectOnLoadChange: (value: boolean) => void
   onAutoReconnectOnHotplugChange: (value: boolean) => void
   onConnectBtnClick: () => void
-  onSendRawPdFrame: (target: WebPdTxTarget, hexPayload: string) => Promise<void>
+  onSendRawPdFrame: (target: MonitorPdTxTarget, hexPayload: string) => Promise<void>
   onSendHardReset: () => Promise<void>
   onSendCableReset: () => Promise<void>
   isSendingCommand: boolean

@@ -2,7 +2,8 @@ import clsx from 'clsx'
 import { useMemo } from 'react'
 import type { BitField, DecodedPacket, DecodeIssue, Section } from '@usb-pd-sniffer/pd-core'
 import useDeviceStore from '@/stores/deviceStore'
-import { decodeReportAtIndex, decodeSingleReport, monitorEventName } from '@/lib/live/pdCore'
+import { monitorEventName } from '@usb-pd-sniffer/pd-monitor'
+import { decodeRecordAtIndex, decodeSingleRecord } from '@/lib/analyzer/decode'
 
 type Props = {
   className?: string
@@ -244,12 +245,12 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
 
   const decodedFrame = useMemo(() => {
     if (selectedIndex === null) return null
-    return decodeReportAtIndex(reports, selectedIndex, detailContextBacktrackRecords)
+    return decodeRecordAtIndex(reports, selectedIndex, detailContextBacktrackRecords)
   }, [reports, selectedIndex, detailContextBacktrackRecords])
 
   const decodedWithoutContext = useMemo(() => {
     if (selectedReport === null) return null
-    return decodeSingleReport(selectedReport)
+    return decodeSingleRecord(selectedReport)
   }, [selectedReport])
 
   const deltaUs = selectedReport && previousReport

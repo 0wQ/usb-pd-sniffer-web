@@ -1,11 +1,12 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
 import {
   createMonitorDevice,
+  parsePdHexPayload,
   type MonitorDevice,
   type MonitorDeviceStatus,
+  type MonitorPdTxTarget,
 } from '@usb-pd-sniffer/pd-monitor'
 import useDeviceStore from '@/stores/deviceStore'
-import { parsePdHexPayload, type WebPdTxTarget } from '@/lib/live/tx'
 
 function statusError(status: MonitorDeviceStatus): string | null {
   if (!status.isSupported) {
@@ -128,7 +129,7 @@ export function useMonitorDevice() {
     resetDevice()
   }, [resetDevice, setManualDisconnect])
 
-  const sendRawPdFrame = useCallback(async (target: WebPdTxTarget, hexPayload: string) => {
+  const sendRawPdFrame = useCallback(async (target: MonitorPdTxTarget, hexPayload: string) => {
     const payload = parsePdHexPayload(hexPayload)
     await deviceRef.current?.sendRawPd(target, payload)
   }, [])

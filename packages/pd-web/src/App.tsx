@@ -6,7 +6,7 @@ import { useMonitorDevice } from '@/hooks/useMonitorDevice'
 import { useBeforeUnloadWarning } from '@/hooks/useBeforeUnloadWarning'
 import useDeviceStore from '@/stores/deviceStore'
 import { useState } from 'react'
-import type { WebPdTxTarget } from '@/lib/live/tx'
+import type { MonitorPdTxTarget } from '@usb-pd-sniffer/pd-monitor'
 
 function App() {
   const [currentView, setCurrentView] = useState<AppView>('protocol')
@@ -44,7 +44,7 @@ function App() {
     }
   }
 
-  const handleSendRawPdFrame = (target: WebPdTxTarget, hexPayload: string) => sendRawPdFrame(target, hexPayload)
+  const handleSendRawPdFrame = (target: MonitorPdTxTarget, hexPayload: string) => sendRawPdFrame(target, hexPayload)
 
   const handleSendHardReset = () => sendHardReset()
 

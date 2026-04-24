@@ -1,11 +1,9 @@
 import { decodeMessage, type DecodedMessage, type MessageFrame } from '@usb-pd-sniffer/pd-core'
-import { parsePdHexPayload } from '@usb-pd-sniffer/pd-monitor'
+import { parsePdHexPayload, type MonitorPdTxTarget } from '@usb-pd-sniffer/pd-monitor'
 
 export { parsePdHexPayload } from '@usb-pd-sniffer/pd-monitor'
 
-export type WebPdTxTarget = 'SOP' | 'SOP_PRIME' | 'SOP_DPRIME'
-
-function sopForTarget(target: WebPdTxTarget): MessageFrame['sop'] {
+function sopForTarget(target: MonitorPdTxTarget): MessageFrame['sop'] {
   switch (target) {
     case 'SOP':
       return 'SOP'
@@ -16,7 +14,7 @@ function sopForTarget(target: WebPdTxTarget): MessageFrame['sop'] {
   }
 }
 
-export function previewPdTxFrame(target: WebPdTxTarget, hexPayload: string): {
+export function previewPdTxFrame(target: MonitorPdTxTarget, hexPayload: string): {
   frame: MessageFrame
   decoded: DecodedMessage
 } {
