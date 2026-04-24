@@ -8,7 +8,7 @@ Current `pd-web` analyzer boundary:
 `pd-web` must not parse HID report bodies or hold `HIDDevice` directly. Device
 transport and native monitor ABI handling belong to `@usb-pd-sniffer/pd-monitor`.
 
-The copied v3 parser under `src/lib/pd/**` and legacy helpers such as
-`src/utils/usbPdParser.ts` are legacy carryovers from the shell migration.
-They are not part of the active analyzer path and should not be reintroduced
-into the mainline.
+This directory is not a protocol parser. It adapts capture records to
+`pd-core`, selects optional decode context, and prepares generic analyzer UI
+helpers. Protocol meaning belongs in `@usb-pd-sniffer/pd-core`; device ABI
+meaning belongs in `@usb-pd-sniffer/pd-monitor`.

@@ -219,7 +219,7 @@ const PowerPage = ({
                       ? 'Capture disabled'
                       : powerCount === 0
                         ? 'Waiting for telemetry'
-                        : 'Streaming to powerBuffer'}
+                        : 'Recording power telemetry'}
                   </div>
                 </div>
                 <div className="rounded-xl border border-base-300 bg-base-100/80 px-3 py-2">
