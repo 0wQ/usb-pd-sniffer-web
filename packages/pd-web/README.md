@@ -21,15 +21,15 @@ It owns WebHID, capture buffers, protocol table rendering, generic decode detail
 ## Commands
 
 ```bash
-bun run dev
-bun run typecheck
-bun run build
-bun run lint
+pnpm dev
+pnpm typecheck
+pnpm build
+pnpm lint
 ```
 
 Run these through the workspace when possible:
 
 ```bash
-bun run --cwd packages/pd-web typecheck
-bun run --cwd packages/pd-web build
+pnpm -C packages/pd-web typecheck
+pnpm -C packages/pd-web build
 ```

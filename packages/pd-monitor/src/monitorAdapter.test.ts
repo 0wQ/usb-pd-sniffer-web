@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import {
   encodeNativeMonitorTxCommandBody,
   isPdMonitorEvent,
@@ -37,9 +37,9 @@ describe("pd-monitor adapter", () => {
     expect(monitorEventSop(MONITOR_EVENT.PD_SOP1_DEBUG)).toBe("SOP_PRIME");
     expect(monitorEventSop(MONITOR_EVENT.PD_SOP2)).toBe("SOP_DPRIME");
     expect(monitorEventSop(MONITOR_EVENT.PD_SOP2_DEBUG)).toBe("SOP_DPRIME");
-    expect(monitorEventSop(MONITOR_EVENT.HARD_RESET)).toBe("HARD_RESET");
-    expect(monitorEventSop(MONITOR_EVENT.CABLE_RESET)).toBe("CABLE_RESET");
-    expect(monitorEventSop(MONITOR_EVENT.PD_ERROR)).toBe("ERROR");
+    expect(() => monitorEventSop(MONITOR_EVENT.HARD_RESET)).toThrow("does not map to a PD Start Of Packet");
+    expect(() => monitorEventSop(MONITOR_EVENT.CABLE_RESET)).toThrow("does not map to a PD Start Of Packet");
+    expect(() => monitorEventSop(MONITOR_EVENT.PD_ERROR)).toThrow("does not map to a PD Start Of Packet");
   });
 
   test("keeps POWER_TELEMETRY and connection events outside the PD frame pipeline", () => {
@@ -124,14 +124,8 @@ describe("pd-monitor adapter", () => {
       payload: new Uint8Array(0)
     });
 
-    expect(hardResetEcho).toEqual({
-      sop: "HARD_RESET",
-      bytes: new Uint8Array(0)
-    });
-    expect(cableResetEcho).toEqual({
-      sop: "CABLE_RESET",
-      bytes: new Uint8Array(0)
-    });
+    expect(hardResetEcho).toBeNull();
+    expect(cableResetEcho).toBeNull();
   });
 
   test("rejects reserved SET_ACTIVE_CC command", () => {

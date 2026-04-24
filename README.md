@@ -49,19 +49,19 @@ Known post-MVP branches are tracked in `.docs/planning/pd-core-v2-coverage-by-ty
 Run from `usb-pd-sniffer-web-v2`:
 
 ```bash
-bun run typecheck
-bun run build
-bun run test
-bun run web:dev
+pnpm typecheck
+pnpm build
+pnpm test
+pnpm web:dev
 ```
 
 Package-specific checks:
 
 ```bash
-bun run --cwd packages/pd-core typecheck
-bun run --cwd packages/pd-core build
-bun run --cwd packages/pd-web typecheck
-bun run --cwd packages/pd-web build
+pnpm -C packages/pd-core typecheck
+pnpm -C packages/pd-core build
+pnpm -C packages/pd-web typecheck
+pnpm -C packages/pd-web build
 ```
 
 ## Docs

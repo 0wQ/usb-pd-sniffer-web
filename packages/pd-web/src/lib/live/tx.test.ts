@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, test } from 'vitest'
 import { MONITOR_TX_CMD } from '@usb-pd-sniffer/pd-monitor'
 import { buildRawPdTxCommand, parsePdHexPayload, previewPdTxFrame } from './tx'
 

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { decodeMessage, decodePacket } from "./message.js";
 
 describe("decodePacket", () => {

@@ -16,8 +16,8 @@
     }
   },
   "scripts": {
-    "build": "rm -rf dist && bunx tsc -p tsconfig.json",
+    "build": "rm -rf dist && pnpm exec tsc -p tsconfig.json",
     "clean": "rm -rf dist *.tsbuildinfo",
-    "typecheck": "bunx tsc -p tsconfig.json --pretty false"
+    "typecheck": "pnpm exec tsc -p tsconfig.json --pretty false"
   }
 }
