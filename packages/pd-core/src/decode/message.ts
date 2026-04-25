@@ -178,6 +178,10 @@ function concatPayloadBytes(parts: readonly Uint8Array[]): Uint8Array {
   return merged;
 }
 
+function formatCrc32(raw32: number): string {
+  return `0x${raw32.toString(16).toUpperCase().padStart(8, "0")}`;
+}
+
 function buildCrcSection(layout: PacketLayout, crc: PacketCrc): Section {
   const issues: DecodeIssue[] = [];
 
@@ -193,7 +197,9 @@ function buildCrcSection(layout: PacketLayout, crc: PacketCrc): Section {
     issues.push({
       severity: "error",
       code: "PD_CRC32_INVALID",
-      message: "CRC32 does not match the message bytes.",
+      message: crc.expectedRaw32 === null
+        ? "CRC32 does not match the message bytes."
+        : `CRC32 does not match the message bytes. Expected ${formatCrc32(crc.expectedRaw32)}.`,
     });
   }
 
@@ -215,23 +221,9 @@ function buildCrcSection(layout: PacketLayout, crc: PacketCrc): Section {
             bitStart: 0,
             bitLength: 32,
             rawValue: crc.raw32,
-            decodedValue: `0x${crc.raw32.toString(16).toUpperCase().padStart(8, "0")}`,
-            displayValue: `0x${crc.raw32.toString(16).toUpperCase().padStart(8, "0")}`,
-            note: `Check: ${crc.checkStatus}`,
+            decodedValue: crc.checkStatus,
+            displayValue: crc.checkStatus === "not_applicable" ? "" : crc.checkStatus,
           },
-          ...(crc.expectedRaw32 === null
-            ? []
-            : [
-                {
-                  key: "expected-crc32",
-                  label: "Expected CRC32",
-                  bitStart: 0,
-                  bitLength: 32,
-                  rawValue: crc.expectedRaw32,
-                  decodedValue: `0x${crc.expectedRaw32.toString(16).toUpperCase().padStart(8, "0")}`,
-                  displayValue: `0x${crc.expectedRaw32.toString(16).toUpperCase().padStart(8, "0")}`,
-                },
-              ]),
         ],
     issues,
   };
@@ -721,7 +713,9 @@ export function decodePacket(packet: MessagePacket, context: DecodeContext = {})
     issues.push({
       severity: "error",
       code: "PD_CRC32_INVALID",
-      message: "CRC32 does not match the message bytes.",
+      message: split.crc.expectedRaw32 === null
+        ? "CRC32 does not match the message bytes."
+        : `CRC32 does not match the message bytes. Expected ${formatCrc32(split.crc.expectedRaw32)}.`,
     });
   }
 

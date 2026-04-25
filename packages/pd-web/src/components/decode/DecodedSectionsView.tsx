@@ -58,9 +58,11 @@ type FieldRowProps = {
   field: BitField
 }
 
+const fieldGridClassName = 'grid gap-x-3 md:grid-cols-[60px_minmax(0,2fr)_minmax(0,1fr)_60px]'
+
 function FieldRow({ field }: FieldRowProps) {
   return (
-    <div className="grid gap-x-3 gap-y-1 border-b border-base-300/70 px-3 py-2 last:border-b-0 md:grid-cols-[88px_minmax(0,1.2fr)_minmax(0,1fr)_120px]">
+    <div className={clsx(fieldGridClassName, 'gap-y-1 border-b border-base-300/70 px-3 py-2 last:border-b-0')}>
       <div className="font-mono text-[11px] text-base-content/55">{bitRangeLabel(field.bitStart, field.bitLength)}</div>
       <div className="min-w-0">
         <div className="text-xs text-base-content">{field.label}</div>
@@ -69,7 +71,7 @@ function FieldRow({ field }: FieldRowProps) {
         )}
       </div>
       <div className="min-w-0 font-mono text-xs text-base-content break-all">{formatFieldMeaning(field)}</div>
-      <div className="font-mono text-[11px] text-base-content/50">{formatRawValue(field.rawValue)}</div>
+      <div className="font-mono text-[11px] text-right text-base-content/50">{formatRawValue(field.rawValue)}</div>
     </div>
   )
 }
@@ -156,11 +158,11 @@ export function SectionView({ section }: SectionViewProps) {
 
         {section.fields.length > 0 ? (
           <div className="mt-3 overflow-hidden rounded-lg border border-base-300/80 bg-base-100">
-            <div className="grid border-b border-base-300/80 bg-base-200/55 px-3 py-2 text-[10px] uppercase tracking-[0.14em] text-base-content/45 md:grid-cols-[88px_minmax(0,1.2fr)_minmax(0,1fr)_120px]">
+            <div className={clsx(fieldGridClassName, 'border-b border-base-300/80 bg-base-200/55 px-3 py-2 text-[10px] uppercase tracking-[0.14em] text-base-content/45')}>
               <div>Bits</div>
               <div>Name</div>
               <div>Meaning</div>
-              <div>Raw</div>
+              <div className="text-right">Raw</div>
             </div>
             {section.fields.map((field) => (
               <FieldRow
