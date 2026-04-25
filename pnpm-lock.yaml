@@ -23,11 +23,9 @@ importers:
 
   packages/pd-core: {}
 
-  packages/pd-monitor:
-    dependencies:
-      '@usb-pd-sniffer/pd-core':
-        specifier: workspace:*
-        version: link:../pd-core
+  packages/pd-monitor: {}
+
+  packages/pd-monitor-atk-c2: {}
 
   packages/pd-web:
     dependencies:
@@ -40,6 +38,9 @@ importers:
       '@usb-pd-sniffer/pd-monitor':
         specifier: workspace:*
         version: link:../pd-monitor
+      '@usb-pd-sniffer/pd-monitor-atk-c2':
+        specifier: workspace:*
+        version: link:../pd-monitor-atk-c2
       clsx:
         specifier: ^2.1.1
         version: 2.1.1

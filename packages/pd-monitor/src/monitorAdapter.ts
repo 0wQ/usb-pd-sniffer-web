@@ -1,8 +1,3 @@
-import type {
-  MessagePacket,
-  StartOfPacket
-} from "@usb-pd-sniffer/pd-core";
-
 export type MonitorSnapshot = {
   vbusMv: number;
   ibusMa: number;
@@ -24,6 +19,18 @@ export type FirmwareMeta = {
 export type MonitorFrameInput = {
   eventType: number;
   payload: Uint8Array;
+};
+
+export type MonitorPdSop =
+  | "SOP"
+  | "SOP_PRIME"
+  | "SOP_DPRIME"
+  | "SOP_PRIME_DEBUG"
+  | "SOP_DPRIME_DEBUG";
+
+export type MonitorPdFrame = {
+  sop: MonitorPdSop;
+  bytes: Uint8Array;
 };
 
 export const MONITOR_EVENT = {
@@ -164,7 +171,7 @@ export function isPdMonitorEvent(eventType: number): boolean {
   return isPdSopFrameEvent(eventType) || isPdResetOrErrorEvent(eventType);
 }
 
-export function monitorEventSop(eventType: number): StartOfPacket {
+export function monitorEventSop(eventType: number): MonitorPdSop {
   switch (eventType) {
     case MONITOR_EVENT.PD_SOP0:
       return "SOP";
@@ -254,7 +261,7 @@ export function encodeNativeMonitorTxCommandBody(command: NativeMonitorTxCommand
 
 export function toPdObservedFrameFromMonitorEvent(
   input: MonitorFrameInput
-): MessagePacket | null {
+): MonitorPdFrame | null {
   if (!isPdSopFrameEvent(input.eventType)) {
     return null;
   }

@@ -6,11 +6,6 @@
     "composite": true,
     "lib": ["ES2022", "DOM"]
   },
-  "references": [
-    {
-      "path": "../pd-core"
-    }
-  ],
   "include": [
     "src/**/*.ts"
   ],

@@ -1,4 +1,3 @@
-import type { StartOfPacket } from "@usb-pd-sniffer/pd-core";
 import { MONITOR_EVENT, type MonitorRecord } from "./types.js";
 
 export const ATK_C2_USB = {
@@ -31,7 +30,14 @@ const RST1 = 0x14;
 const RST2 = 0x15;
 const EOP = 0x16;
 
-const SOP_MAP = new Map<string, StartOfPacket | "CABLE_RESET" | "HARD_RESET">([
+type AtkC2StartOfPacket =
+  | "SOP"
+  | "SOP_PRIME"
+  | "SOP_DPRIME"
+  | "SOP_PRIME_DEBUG"
+  | "SOP_DPRIME_DEBUG";
+
+const SOP_MAP = new Map<string, AtkC2StartOfPacket | "CABLE_RESET" | "HARD_RESET">([
   [[SYNC1, SYNC1, SYNC1, SYNC2].join(","), "SOP"],
   [[SYNC1, SYNC1, SYNC3, SYNC3].join(","), "SOP_PRIME"],
   [[SYNC1, SYNC3, SYNC1, SYNC3].join(","), "SOP_DPRIME"],
@@ -52,7 +58,7 @@ export type AtkC2Frame = {
 };
 
 export type AtkC2Packet = {
-  sop: StartOfPacket;
+  sop: AtkC2StartOfPacket;
   bytes: Uint8Array;
   sampleIndex: number;
 };
@@ -172,7 +178,7 @@ function getSymbol(bits: readonly number[], offset: number): number | null {
   return DEC4B5B[raw] ?? SYM_ERR;
 }
 
-function scanSymbols(bits: readonly number[]): { sop: StartOfPacket | "CABLE_RESET" | "HARD_RESET"; symbols: number[] } | null {
+function scanSymbols(bits: readonly number[]): { sop: AtkC2StartOfPacket | "CABLE_RESET" | "HARD_RESET"; symbols: number[] } | null {
   for (let offset = 0; offset <= bits.length - 20; offset++) {
     const sopSymbols = [
       getSymbol(bits, offset),
