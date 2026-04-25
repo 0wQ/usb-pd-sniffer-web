@@ -6,6 +6,8 @@ import {
   MONITOR_TX_CMD,
   NATIVE_HID_REPORT_BODY_SIZE,
   NATIVE_MONITOR_PAYLOAD_MAX_LEN,
+  NATIVE_PD_TX_MESSAGE_MAX_LEN,
+  NATIVE_PD_TX_MESSAGE_MIN_LEN,
   normalizePdPayloadForMonitorEvent,
   monitorEventName,
   monitorEventSop,
@@ -126,6 +128,22 @@ describe("pd-monitor adapter", () => {
     expect(body[0]).toBe(MONITOR_TX_CMD.SEND_RAW_SOP1);
     expect(body[1]).toBe(4);
     expect(Array.from(body.subarray(2, 6))).toEqual([0x42, 0x10, 0xaa, 0xbb]);
+  });
+
+  test("rejects raw SOP command payloads outside the message-without-CRC length range", () => {
+    expect(() =>
+      encodeNativeMonitorTxCommandBody({
+        opcode: MONITOR_TX_CMD.SEND_RAW_SOP0,
+        payload: Uint8Array.from([0x42])
+      })
+    ).toThrow(`Raw PD TX payload length must be ${NATIVE_PD_TX_MESSAGE_MIN_LEN}..${NATIVE_PD_TX_MESSAGE_MAX_LEN} bytes without CRC`);
+
+    expect(() =>
+      encodeNativeMonitorTxCommandBody({
+        opcode: MONITOR_TX_CMD.SEND_RAW_SOP0,
+        payload: new Uint8Array(NATIVE_PD_TX_MESSAGE_MAX_LEN + 1)
+      })
+    ).toThrow(`Raw PD TX payload length must be ${NATIVE_PD_TX_MESSAGE_MIN_LEN}..${NATIVE_PD_TX_MESSAGE_MAX_LEN} bytes without CRC`);
   });
 
   test("encodes reset commands with zero payload for native HID OUT", () => {

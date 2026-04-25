@@ -33,7 +33,7 @@ function formatTimestampUs(timestampUs: number): string {
 
 function formatDeltaUs(deltaUs: number | null): string {
   if (deltaUs === null) return '-'
-  return `${deltaUs >= 0 ? '+' : ''}${deltaUs} us`
+  return `${deltaUs >= 0 ? '+' : ''}${deltaUs.toLocaleString()} us`
 }
 
 function contextDiffSummary(withContext: DecodedPacket, withoutContext: DecodedPacket): string | null {

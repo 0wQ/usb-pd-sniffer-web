@@ -58,6 +58,8 @@ export const MONITOR_EVENT = {
 export const NATIVE_HID_REPORT_ID = 0x00;
 export const NATIVE_HID_REPORT_BODY_SIZE = 64;
 export const NATIVE_MONITOR_PAYLOAD_MAX_LEN = 34;
+export const NATIVE_PD_TX_MESSAGE_MIN_LEN = 2;
+export const NATIVE_PD_TX_MESSAGE_MAX_LEN = 30;
 export const NATIVE_TX_PAYLOAD_MAX_LEN = 62;
 
 export const MONITOR_TX_CMD = {
@@ -239,8 +241,8 @@ export function encodeNativeMonitorTxCommandBody(command: NativeMonitorTxCommand
     case MONITOR_TX_CMD.SEND_RAW_SOP0:
     case MONITOR_TX_CMD.SEND_RAW_SOP1:
     case MONITOR_TX_CMD.SEND_RAW_SOP2:
-      if (payload.length < 2 || payload.length > 34) {
-        throw new Error(`Raw PD TX payload length must be 2..34 bytes, got ${payload.length}.`);
+      if (payload.length < NATIVE_PD_TX_MESSAGE_MIN_LEN || payload.length > NATIVE_PD_TX_MESSAGE_MAX_LEN) {
+        throw new Error(`Raw PD TX payload length must be ${NATIVE_PD_TX_MESSAGE_MIN_LEN}..${NATIVE_PD_TX_MESSAGE_MAX_LEN} bytes without CRC, got ${payload.length}.`);
       }
       body[1] = payload.length;
       body.set(payload.subarray(0, Math.min(payload.length, NATIVE_TX_PAYLOAD_MAX_LEN)), 2);

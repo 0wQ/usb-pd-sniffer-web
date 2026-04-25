@@ -38,7 +38,7 @@ const SendPdDialog = ({
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [mode, setMode] = useState<SendMode>('raw')
   const [target, setTarget] = useState<MonitorPdTxTarget>('SOP')
-  const [hexPayload, setHexPayload] = useState('42 10')
+  const [hexPayload, setHexPayload] = useState('A7 00')
   const preview = useMemo(() => {
     if (mode !== 'raw') {
       return null
