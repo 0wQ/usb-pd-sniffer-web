@@ -808,29 +808,12 @@ export function classifyRdoKindFromPdo(raw32: number): RdoKind | null {
   return null;
 }
 
-function buildRdoBit27CommonField(raw32: number): BitField {
-  const bit27 = extractBits(raw32, 27, 1);
-
-  return field("giveback_or_reserved", "GiveBack / Reserved", 27, 1, bit27, bit27, {
-    displayValue: boolDisplay(bit27 === 1),
-    note: "GiveBack in the Fixed and Variable Request Data Object / Battery Request Data Object. Reserved in the PPS Request Data Object / AVS Request Data Object.",
-  });
-}
-
 function buildRdoGiveBackField(raw32: number): BitField {
   const giveBack = extractBits(raw32, 27, 1);
 
   return field("giveback", "Giveback", 27, 1, giveBack, giveBack === 1, {
     displayValue: boolDisplay(giveBack === 1),
     note: "Deprecated and Shall be set to zero.",
-  });
-}
-
-function buildRdoReserved27Field(raw32: number): BitField {
-  const reserved = extractBits(raw32, 27, 1);
-
-  return field("reserved_27", "Reserved", 27, 1, reserved, reserved, {
-    note: "Bit 27 shall be set to zero.",
   });
 }
 
@@ -845,7 +828,6 @@ function buildRdoHeaderFields(raw32: number, bit27Field: BitField): BitField[] {
       extractBits(raw32, 26, 1),
       "Set",
       "Clear",
-      "Set to '1' for a Capability Mismatch.",
     ),
     flagField(
       "usb_communications_capable",
@@ -854,7 +836,6 @@ function buildRdoHeaderFields(raw32: number, bit27Field: BitField): BitField[] {
       extractBits(raw32, 25, 1),
       "Set",
       "Clear",
-      "Set to '1' if USB Communications Capable.",
     ),
     flagField(
       "no_usb_suspend",
@@ -863,7 +844,6 @@ function buildRdoHeaderFields(raw32: number, bit27Field: BitField): BitField[] {
       extractBits(raw32, 24, 1),
       "Set",
       "Clear",
-      "Set to '1' if requesting No USB Suspend.",
     ),
     flagField(
       "unchunked_extended_messages_supported",
@@ -872,22 +852,15 @@ function buildRdoHeaderFields(raw32: number, bit27Field: BitField): BitField[] {
       extractBits(raw32, 23, 1),
       "Set",
       "Clear",
-      "Set to '1' if Unchunked Extended Messages Supported.",
     ),
-    flagField("epr_capable", "EPR Capable", 22, extractBits(raw32, 22, 1), "Set", "Clear", "Set to '1' if EPR Capable."),
+    flagField("epr_capable", "EPR Capable", 22, extractBits(raw32, 22, 1), "Set", "Clear"),
   ];
-}
-
-function buildRdoCommonFields(raw32: number): BitField[] {
-  return buildRdoHeaderFields(raw32, buildRdoBit27CommonField(raw32));
 }
 
 function buildFixedVariableRdoFields(raw32: number): BitField[] {
   return [
     ...buildRdoHeaderFields(raw32, buildRdoGiveBackField(raw32)),
-    field("reserved", "Reserved", 20, 2, extractBits(raw32, 20, 2), extractBits(raw32, 20, 2), {
-      note: "Bits 21..20 shall be set to zero.",
-    }),
+    field("reserved", "Reserved", 20, 2, extractBits(raw32, 20, 2), extractBits(raw32, 20, 2)),
     field("operating_current", "Operating Current", 10, 10, extractBits(raw32, 10, 10), extractBits(raw32, 10, 10) * 10, {
       displayValue: `${extractBits(raw32, 10, 10) * 10} mA`,
       unit: "mA",
@@ -912,9 +885,7 @@ function buildFixedVariableRdoFields(raw32: number): BitField[] {
 function buildBatteryRdoFields(raw32: number): BitField[] {
   return [
     ...buildRdoHeaderFields(raw32, buildRdoGiveBackField(raw32)),
-    field("reserved", "Reserved", 20, 2, extractBits(raw32, 20, 2), extractBits(raw32, 20, 2), {
-      note: "Bits 21..20 shall be set to zero.",
-    }),
+    field("reserved", "Reserved", 20, 2, extractBits(raw32, 20, 2), extractBits(raw32, 20, 2)),
     field("operating_power", "Operating Power", 10, 10, extractBits(raw32, 10, 10), extractBits(raw32, 10, 10) * 250, {
       displayValue: `${extractBits(raw32, 10, 10) * 250} mW`,
       unit: "mW",
@@ -937,19 +908,17 @@ function buildBatteryRdoFields(raw32: number): BitField[] {
 }
 
 function buildPpsRdoFields(raw32: number): BitField[] {
+  const reserved27 = extractBits(raw32, 27, 1);
+
   return [
-    ...buildRdoHeaderFields(raw32, buildRdoReserved27Field(raw32)),
-    field("reserved_21", "Reserved", 21, 1, extractBits(raw32, 21, 1), extractBits(raw32, 21, 1), {
-      note: "Bit 21 shall be set to zero.",
-    }),
+    ...buildRdoHeaderFields(raw32, field("reserved_27", "Reserved", 27, 1, reserved27, reserved27)),
+    field("reserved_21", "Reserved", 21, 1, extractBits(raw32, 21, 1), extractBits(raw32, 21, 1)),
     field("output_voltage", "Output Voltage", 9, 12, extractBits(raw32, 9, 12), extractBits(raw32, 9, 12) * 20, {
       displayValue: `${extractBits(raw32, 9, 12) * 20} mV`,
       unit: "mV",
       note: "20mV units.",
     }),
-    field("reserved_8_7", "Reserved", 7, 2, extractBits(raw32, 7, 2), extractBits(raw32, 7, 2), {
-      note: "Bits 8..7 shall be set to zero.",
-    }),
+    field("reserved_8_7", "Reserved", 7, 2, extractBits(raw32, 7, 2), extractBits(raw32, 7, 2)),
     field("operating_current", "Operating Current", 0, 7, extractBits(raw32, 0, 7), extractBits(raw32, 0, 7) * 50, {
       displayValue: `${extractBits(raw32, 0, 7) * 50} mA`,
       unit: "mA",
@@ -959,19 +928,17 @@ function buildPpsRdoFields(raw32: number): BitField[] {
 }
 
 function buildAvsRdoFields(raw32: number): BitField[] {
+  const reserved27 = extractBits(raw32, 27, 1);
+
   return [
-    ...buildRdoHeaderFields(raw32, buildRdoReserved27Field(raw32)),
-    field("reserved_21", "Reserved", 21, 1, extractBits(raw32, 21, 1), extractBits(raw32, 21, 1), {
-      note: "Bit 21 shall be set to zero.",
-    }),
+    ...buildRdoHeaderFields(raw32, field("reserved_27", "Reserved", 27, 1, reserved27, reserved27)),
+    field("reserved_21", "Reserved", 21, 1, extractBits(raw32, 21, 1), extractBits(raw32, 21, 1)),
     field("output_voltage", "Output Voltage", 9, 12, extractBits(raw32, 9, 12), extractBits(raw32, 9, 12) * 25, {
       displayValue: `${extractBits(raw32, 9, 12) * 25} mV`,
       unit: "mV",
       note: "25mV units. The least two significant bits shall be set to zero, so the effective step is 100mV.",
     }),
-    field("reserved_8_7", "Reserved", 7, 2, extractBits(raw32, 7, 2), extractBits(raw32, 7, 2), {
-      note: "Bits 8..7 shall be set to zero.",
-    }),
+    field("reserved_8_7", "Reserved", 7, 2, extractBits(raw32, 7, 2), extractBits(raw32, 7, 2)),
     field("operating_current", "Operating Current", 0, 7, extractBits(raw32, 0, 7), extractBits(raw32, 0, 7) * 50, {
       displayValue: `${extractBits(raw32, 0, 7) * 50} mA`,
       unit: "mA",
@@ -982,7 +949,12 @@ function buildAvsRdoFields(raw32: number): BitField[] {
 
 function buildRdoFields(raw32: number, kind: RdoKind | null): BitField[] {
   if (kind === null) {
-    return buildRdoCommonFields(raw32);
+    const bit27 = extractBits(raw32, 27, 1);
+
+    return buildRdoHeaderFields(raw32, field("giveback_or_reserved", "GiveBack / Reserved", 27, 1, bit27, bit27, {
+      displayValue: boolDisplay(bit27 === 1),
+      note: "GiveBack in the Fixed and Variable Request Data Object / Battery Request Data Object. Reserved in the PPS Request Data Object / AVS Request Data Object.",
+    }));
   }
 
   switch (kind) {
@@ -2641,9 +2613,7 @@ function buildAlertDataObject(
         field("battery_status_change_event", "Battery Status Change Event", 25, 1, batteryStatusChangeEvent, batteryStatusChangeEvent === 1, {
           displayValue: boolDisplay(batteryStatusChangeEvent === 1, "Set", "Clear"),
         }),
-        field("reserved_type_bit", "Reserved", 24, 1, reservedTypeBit, reservedTypeBit, {
-          note: "Type of Alert bit 0; shall be set to zero.",
-        }),
+        field("reserved_type_bit", "Reserved", 24, 1, reservedTypeBit, reservedTypeBit),
         field("fixed_batteries", "Fixed Batteries", 20, 4, fixedBatteries, fixedBatteries, {
           displayValue: alertBatteryBitmapDisplay(fixedBatteries, 0),
         }),
@@ -2732,9 +2702,7 @@ function buildBatteryStatusDataObject(
           displayValue: capacityDisplay,
           note: batteryPresentCapacity === 0xffff ? "0xFFFF indicates Battery SoC unknown." : "State of Charge in 0.1 Wh increments.",
         }),
-        field("reserved_high", "Reserved", 12, 4, reservedHigh, reservedHigh, {
-          note: "Shall not be used.",
-        }),
+        field("reserved_high", "Reserved", 12, 4, reservedHigh, reservedHigh),
         field("battery_charging_status", "Battery Charging Status", 10, 2, batteryChargingStatus, batteryChargingStatus, {
           displayValue: batteryChargingStatusDisplay(batteryChargingStatus, batteryPresent),
         }),

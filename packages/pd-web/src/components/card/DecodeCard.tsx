@@ -168,12 +168,12 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
                   <div className="mt-1 font-mono text-xs">{selectedRecord.data_len} B</div>
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Type</div>
-                  <div className="mt-1 font-mono text-xs">{decodedFrame?.messageType.name ?? formatUfcsTypeSummary(ufcsDecoded) ?? '-'}</div>
-                </div>
-                <div>
                   <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Sections</div>
                   <div className="mt-1 font-mono text-xs">{decodedFrame?.sections.length ?? 0}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Type</div>
+                  <div className="mt-1 font-mono text-xs">{decodedFrame?.messageType.name ?? formatUfcsTypeSummary(ufcsDecoded) ?? '-'}</div>
                 </div>
               </div>
             </div>
