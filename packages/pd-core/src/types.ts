@@ -1,4 +1,9 @@
-export type StartOfPacket = "SOP" | "SOP_PRIME" | "SOP_DPRIME";
+export type StartOfPacket =
+  | "SOP"
+  | "SOP_PRIME"
+  | "SOP_DPRIME"
+  | "SOP_PRIME_DEBUG"
+  | "SOP_DPRIME_DEBUG";
 
 export type MessagePacket = {
   sop: StartOfPacket;
@@ -131,8 +136,9 @@ export type PacketLayout = {
 export type PacketCrc = {
   raw32: number | null;
   rawBytes: Uint8Array;
-  status: "present" | "missing" | "partial";
-  checkStatus: "not_checked";
+  status: "present" | "missing";
+  checkStatus: "valid" | "invalid" | "not_applicable";
+  expectedRaw32: number | null;
 };
 
 export type DecodedPacket = DecodedMessage & {

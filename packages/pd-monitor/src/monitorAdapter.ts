@@ -169,11 +169,13 @@ export function monitorEventSop(eventType: number): StartOfPacket {
     case MONITOR_EVENT.PD_SOP0:
       return "SOP";
     case MONITOR_EVENT.PD_SOP1:
-    case MONITOR_EVENT.PD_SOP1_DEBUG:
       return "SOP_PRIME";
+    case MONITOR_EVENT.PD_SOP1_DEBUG:
+      return "SOP_PRIME_DEBUG";
     case MONITOR_EVENT.PD_SOP2:
-    case MONITOR_EVENT.PD_SOP2_DEBUG:
       return "SOP_DPRIME";
+    case MONITOR_EVENT.PD_SOP2_DEBUG:
+      return "SOP_DPRIME_DEBUG";
     default:
       throw new Error(`Event ${eventType} does not map to a PD Start Of Packet.`);
   }

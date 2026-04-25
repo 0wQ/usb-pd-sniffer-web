@@ -1,10 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MessageFrame } from '@usb-pd-sniffer/pd-core'
+import clsx from 'clsx'
 import { toast } from 'sonner'
 import type { MonitorPdTxTarget } from '@usb-pd-sniffer/pd-monitor'
 import { previewPdTxFrame } from '@/lib/analyzer/txPreview'
+import { hexBytes, IssueList, SectionView } from '@/components/decode/DecodedSectionsView'
 
 type SendMode = 'raw' | 'hard_reset' | 'cable_reset'
+
+const SEND_MODE_OPTIONS: Array<{ key: SendMode; label: string }> = [
+  { key: 'raw', label: 'Raw' },
+  { key: 'hard_reset', label: 'Hard Reset' },
+  { key: 'cable_reset', label: 'Cable Reset' },
+]
 
 type Props = {
   isOpen: boolean
@@ -98,11 +106,6 @@ const SendPdDialog = ({
     )
   }
 
-  const selectedFrameSummary = useMemo(() => {
-    if (selectedFrame === null) return 'No protocol frame selected.'
-    return `Selected frame: ${selectedFrame.sop} ${selectedFrame.bytes.length}B`
-  }, [selectedFrame])
-
   const fillFromSelected = () => {
     if (selectedFrame === null) {
       toast.error('No protocol frame selected.')
@@ -113,21 +116,47 @@ const SendPdDialog = ({
       case 'SOP':
         setMode('raw')
         setTarget('SOP')
-        setHexPayload(Array.from(selectedFrame.bytes).map((byte) => byte.toString(16).padStart(2, '0').toUpperCase()).join(' '))
+        setHexPayload(hexBytes(selectedFrame.bytes))
         return
       case 'SOP_PRIME':
         setMode('raw')
         setTarget('SOP_PRIME')
-        setHexPayload(Array.from(selectedFrame.bytes).map((byte) => byte.toString(16).padStart(2, '0').toUpperCase()).join(' '))
+        setHexPayload(hexBytes(selectedFrame.bytes))
         return
       case 'SOP_DPRIME':
         setMode('raw')
         setTarget('SOP_DPRIME')
-        setHexPayload(Array.from(selectedFrame.bytes).map((byte) => byte.toString(16).padStart(2, '0').toUpperCase()).join(' '))
+        setHexPayload(hexBytes(selectedFrame.bytes))
         return
       default:
         toast.error(`Selected frame ${selectedFrame.sop} cannot be sent from the current TX dialog.`)
     }
+  }
+
+  const sendButtonLabel =
+    mode === 'raw'
+      ? (isSending ? 'Sending...' : 'Send Raw')
+      : mode === 'hard_reset'
+        ? (isSending ? 'Sending...' : 'Send Hard Reset')
+        : (isSending ? 'Sending...' : 'Send Cable Reset')
+  const sendButtonClass = clsx(
+    'btn btn-sm rounded-full gap-2 px-4 normal-case',
+    mode === 'raw'
+      ? 'border-primary/30 bg-primary/10 text-primary hover:bg-primary/15'
+      : 'border-warning/35 bg-warning/10 text-warning hover:bg-warning/15',
+  )
+  const handleSendCurrentMode = () => {
+    if (mode === 'raw') {
+      void handleSendRaw()
+      return
+    }
+
+    if (mode === 'hard_reset') {
+      void handleSendHardReset()
+      return
+    }
+
+    void handleSendCableReset()
   }
 
   return (
@@ -137,54 +166,58 @@ const SendPdDialog = ({
       onClick={handleBackdropClick}
       onClose={onClose}
     >
-      <div className="modal-box max-w-2xl">
+      <div className="modal-box flex max-h-[calc(100vh-2rem)] max-w-5xl flex-col overflow-hidden">
         <h3 className="text-lg font-bold">Native PD TX</h3>
         <p className="mt-2 text-sm text-base-content/70">
           Send raw PD bytes through the monitor device. Enter header + data objects only, without CRC.
         </p>
 
-        <div className="mt-4 grid gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-base-300 bg-base-200/70 px-3 py-2">
-            <div className="text-sm text-base-content/70">{selectedFrameSummary}</div>
-            <button
-              className="btn btn-sm btn-ghost"
-              onClick={fillFromSelected}
-              disabled={selectedFrame === null || isSending}
-            >
-              Fill From Selected
-            </button>
-          </div>
+        <div className="mt-4 flex min-h-0 flex-1 flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="inline-flex w-fit items-center rounded-full border border-base-300/80 bg-base-200/70 p-1">
+              {SEND_MODE_OPTIONS.map((option) => (
+                <button
+                  key={option.key}
+                  className={clsx(
+                    'rounded-full px-3 py-1.5 text-xs font-medium tracking-[0.08em] transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-55',
+                    {
+                      'bg-base-100 text-primary shadow-sm': mode === option.key,
+                      'text-base-content/55 hover:bg-base-100/70 hover:text-base-content/80': mode !== option.key,
+                    },
+                  )}
+                  onClick={() => setMode(option.key)}
+                  disabled={isSending}
+                  type="button"
+                >
+                  <span className="select-none">{option.label}</span>
+                </button>
+              ))}
+            </div>
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              className={`btn btn-sm ${mode === 'raw' ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setMode('raw')}
-              disabled={isSending}
-            >
-              Raw
-            </button>
-            <button
-              className={`btn btn-sm ${mode === 'hard_reset' ? 'btn-warning' : 'btn-ghost'}`}
-              onClick={() => setMode('hard_reset')}
-              disabled={isSending}
-            >
-              Hard Reset
-            </button>
-            <button
-              className={`btn btn-sm ${mode === 'cable_reset' ? 'btn-warning' : 'btn-ghost'}`}
-              onClick={() => setMode('cable_reset')}
-              disabled={isSending}
-            >
-              Cable Reset
-            </button>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <button
+                className="btn btn-sm rounded-full border-base-300 bg-base-100 px-4 normal-case text-base-content/70 hover:bg-base-200"
+                onClick={fillFromSelected}
+                disabled={selectedFrame === null || isSending || mode !== 'raw'}
+              >
+                Fill From Selected
+              </button>
+              <button
+                className={sendButtonClass}
+                onClick={handleSendCurrentMode}
+                disabled={!isConnected || isSending}
+              >
+                {sendButtonLabel}
+              </button>
+            </div>
           </div>
 
           {mode === 'raw' ? (
             <>
-          <label className="grid gap-2">
+          <label className="grid max-w-[180px] gap-2">
             <span className="text-sm font-medium">SOP Target</span>
             <select
-              className="select select-bordered"
+              className="select select-bordered w-full"
               value={target}
               onChange={(e) => setTarget(e.target.value as MonitorPdTxTarget)}
               disabled={!isConnected || isSending}
@@ -195,10 +228,10 @@ const SendPdDialog = ({
             </select>
           </label>
 
-          <label className="grid gap-2">
+          <label className="grid min-w-0 gap-2">
             <span className="text-sm font-medium">Raw Payload</span>
             <textarea
-              className="textarea textarea-bordered min-h-28 font-mono text-sm"
+              className="textarea textarea-bordered min-h-16 w-full font-mono text-sm"
               placeholder="42 10 aa bb"
               value={hexPayload}
               onChange={(e) => setHexPayload(e.target.value)}
@@ -209,7 +242,7 @@ const SendPdDialog = ({
             </span>
           </label>
 
-          <div className="rounded-lg border border-base-300 bg-base-200/70 p-3">
+          <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-base-300 bg-base-200/70 p-3">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <div className="text-sm font-medium">Local Preview</div>
               {preview?.result && (
@@ -227,61 +260,53 @@ const SendPdDialog = ({
               <div className="text-sm text-error">Preview decode failed.</div>
             ) : (
               <div className="grid gap-3">
-                <div className="grid gap-2 sm:grid-cols-4">
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="rounded-md border border-base-300 bg-base-100 px-3 py-2">
                     <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">SOP</div>
                     <div className="mt-1 font-mono text-xs">{preview.result.decoded.frame.sop}</div>
                   </div>
                   <div className="rounded-md border border-base-300 bg-base-100 px-3 py-2">
-                    <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Summary</div>
+                    <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Type</div>
                     <div className="mt-1 font-mono text-xs">{preview.result.decoded.messageType.name ?? preview.result.decoded.category}</div>
                   </div>
                   <div className="rounded-md border border-base-300 bg-base-100 px-3 py-2">
-                    <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Type</div>
-                    <div className="mt-1 font-mono text-xs">
-                      {preview.result.decoded.messageType.name ?? preview.result.decoded.category}
-                    </div>
+                    <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Payload</div>
+                    <div className="mt-1 font-mono text-xs">{preview.result.frame.bytes.length} B</div>
                   </div>
                   <div className="rounded-md border border-base-300 bg-base-100 px-3 py-2">
-                    <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Objects</div>
+                    <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Sections</div>
                     <div className="mt-1 font-mono text-xs">{preview.result.decoded.sections.length}</div>
                   </div>
                 </div>
 
-                {preview.result.decoded.header && (
-                  <div className="grid gap-2 sm:grid-cols-4">
-                    <div className="rounded-md border border-base-300 bg-base-100 px-3 py-2">
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Msg ID</div>
-                      <div className="mt-1 font-mono text-xs">{preview.result.decoded.header.messageId}</div>
-                    </div>
-                    <div className="rounded-md border border-base-300 bg-base-100 px-3 py-2">
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">NDO</div>
-                      <div className="mt-1 font-mono text-xs">{preview.result.decoded.header.numberOfDataObjects}</div>
-                    </div>
-                    <div className="rounded-md border border-base-300 bg-base-100 px-3 py-2">
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Spec Rev</div>
-                      <div className="mt-1 font-mono text-xs">{preview.result.decoded.header.specificationRevision}</div>
-                    </div>
-                    <div className="rounded-md border border-base-300 bg-base-100 px-3 py-2">
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Raw Header</div>
-                      <div className="mt-1 font-mono text-xs">{`0x${preview.result.decoded.header.raw16.toString(16).padStart(4, '0').toUpperCase()}`}</div>
-                    </div>
+                <div className="rounded-md border border-base-300 bg-base-100 px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Raw Payload</div>
+                  <div className="mt-2 break-all font-mono text-xs leading-5 text-base-content">
+                    {hexBytes(preview.result.frame.bytes)}
                   </div>
-                )}
+                  <div className="mt-2 text-[11px] text-base-content/55">
+                    CRC is not part of this TX preview. The PD PHY generates CRC during transmission.
+                  </div>
+                </div>
 
                 <div className="rounded-md border border-base-300 bg-base-100 px-3 py-2">
                   <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Parser Issues</div>
                   {preview.result.decoded.issues.length === 0 ? (
                     <div className="mt-1 text-xs text-success">No parser issues.</div>
                   ) : (
-                    <div className="mt-1 grid gap-1">
-                      {preview.result.decoded.issues.map((issue, index) => (
-                        <div key={`${issue.code}-${index}`} className="font-mono text-xs text-warning">
-                          {issue.code}: {issue.message}
-                        </div>
-                      ))}
+                    <div className="mt-2">
+                      <IssueList issues={preview.result.decoded.issues} />
                     </div>
                   )}
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  {preview.result.decoded.sections.map((section) => (
+                    <SectionView
+                      key={section.key}
+                      section={section}
+                    />
+                  ))}
                 </div>
               </div>
             )}
@@ -295,32 +320,6 @@ const SendPdDialog = ({
             </div>
           )}
 
-          {mode === 'raw' ? (
-            <button
-              className="btn btn-primary"
-              onClick={() => void handleSendRaw()}
-              disabled={!isConnected || isSending}
-            >
-              {isSending ? 'Sending...' : 'Send Raw'}
-            </button>
-          ) : mode === 'hard_reset' ? (
-            <button
-              className="btn btn-warning"
-              onClick={() => void handleSendHardReset()}
-              disabled={!isConnected || isSending}
-            >
-              {isSending ? 'Sending...' : 'Send Hard Reset'}
-            </button>
-          ) : (
-            <button
-              className="btn btn-warning btn-outline"
-              onClick={() => void handleSendCableReset()}
-              disabled={!isConnected || isSending}
-            >
-              {isSending ? 'Sending...' : 'Send Cable Reset'}
-            </button>
-          )}
-
           {!isConnected && (
             <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
               Connect the native monitor device before sending.
@@ -328,11 +327,6 @@ const SendPdDialog = ({
           )}
         </div>
 
-        <div className="modal-action">
-          <button className="btn btn-ghost" onClick={onClose} disabled={isSending}>
-            Close
-          </button>
-        </div>
       </div>
     </dialog>
   )

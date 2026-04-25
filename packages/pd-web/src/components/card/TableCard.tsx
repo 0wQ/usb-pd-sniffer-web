@@ -10,7 +10,9 @@ import SendPdDialog from '@/components/common/SendPdDialog'
 import ViewTabs, { type AppView } from '@/components/common/ViewTabs'
 import clsx from 'clsx'
 import { monitorEventName, type MonitorPdTxTarget } from '@usb-pd-sniffer/pd-monitor'
-import { decodeSingleRecord, recordToMessagePacket } from '@/lib/analyzer/decode'
+import { decodeSingleRecord } from '@/lib/analyzer/decode'
+import { decodeUfcsRecordType, formatUfcsSignal, formatUfcsTypeSummary } from '@/lib/ufcs/ufcsType'
+import { formatCompactPowerRoleOrCable, formatCompactSop } from '@/lib/display/pdTableFields'
 
 const ROW_HEIGHT = 30
 const THEME_STORAGE_KEY = 'usb-pd-sniffer-theme'
@@ -79,15 +81,14 @@ const COLUMNS = [
   { key: 'deltaTime', label: 'ΔTime', width: 100, align: 'right' as const },
   { key: 'vbus', label: 'Vbus', width: 60, align: 'right' as const },
   { key: 'ibus', label: 'Ibus', width: 60, align: 'right' as const },
-  { key: 'CC1', label: 'CC1', width: 50, align: 'center' as const },
-  { key: 'CC2', label: 'CC2', width: 50, align: 'center' as const },
-  { key: 'sop', label: 'SOP', width: 62, align: 'left' as const },
+  { key: 'cc', label: 'CC', width: 50, align: 'center' as const },
+  { key: 'sop', label: 'SOP', width: 60, align: 'left' as const },
   { key: 'drole', label: 'DRole', width: 60, align: 'center' as const },
   { key: 'prole', label: 'PRole', width: 70, align: 'center' as const },
   { key: 'ver', label: 'Ver', width: 40, align: 'center' as const },
   { key: 'numberOfDataObjects', label: 'Obj', width: 40, align: 'center' as const },
   { key: 'msgId', label: 'ID', width: 40, align: 'center' as const },
-  { key: 'type', label: 'Type', width: 140, align: 'left' as const },
+  { key: 'type', label: 'Type', width: 220, align: 'left' as const },
   { key: 'data', label: 'Data', width: null, align: 'left' as const, minWidth: 320 },
 ] satisfies ReadonlyArray<ColumnDefinition>
 
@@ -157,7 +158,13 @@ const formatHexData = (data: number[], dataLen: number): string => {
 
 const formatDeltaTime = (deltaTime: number | null): string => {
   if (deltaTime === null) return '0'
-  return `${deltaTime > 0 ? '+' : ''}${deltaTime}`
+  return `${deltaTime > 0 ? '+' : ''}${deltaTime.toLocaleString()}`
+}
+
+const formatActiveCc = (activeCc: number): string => {
+  if (activeCc === 1) return 'CC1'
+  if (activeCc === 2) return 'CC2'
+  return ''
 }
 
 // Converts a microsecond timestamp to MM:SS:MMM:UUU for readability.
@@ -189,6 +196,8 @@ const RowComponentInner = ({ ariaAttributes, index, style, records, onRowClick, 
     const previousRecord = recordIndex > 0 ? records[recordIndex - 1] : null
     const deltaTime = previousRecord ? record.timestamp_us - previousRecord.timestamp_us : null
     const decoded = decodeSingleRecord(record)
+    const ufcsDecoded = decoded === null ? decodeUfcsRecordType(record) : null
+    const ufcsSignal = decoded === null ? formatUfcsSignal(record) : null
     const timestampText = formatTimestamp(record.timestamp_us)
     const deltaTimeText = formatDeltaTime(deltaTime)
     const hexData = formatHexData(record.data, record.data_len)
@@ -196,14 +205,14 @@ const RowComponentInner = ({ ariaAttributes, index, style, records, onRowClick, 
     const versionText = decoded?.header?.specificationRevision ?? ''
     const typeDesc =
       decoded === null
-        ? monitorEventName(record.event_type)
+        ? (formatUfcsTypeSummary(ufcsDecoded) ?? monitorEventName(record.event_type))
         : (decoded.messageType.name ?? decoded.category)
-    const sopDesc = decoded === null ? monitorEventName(record.event_type) : decoded.frame.sop
+    const sopDesc = formatCompactSop(decoded?.frame.sop)
     const dataRole =
-      decoded?.header?.portDataRoleMeaning === null || decoded?.header?.portDataRoleMeaning === undefined
+      ufcsSignal ?? (decoded?.header?.portDataRoleMeaning === null || decoded?.header?.portDataRoleMeaning === undefined
         ? ''
-        : decoded.header.portDataRoleMeaning
-    const powerRole = decoded?.header?.portPowerRoleOrCablePlugMeaning ?? ''
+        : decoded.header.portDataRoleMeaning)
+    const powerRole = formatCompactPowerRoleOrCable(decoded?.frame.sop, decoded?.header)
 
     const cells: Record<ColumnKey, React.ReactNode> = {
       seq: record.recv_counter,
@@ -211,8 +220,7 @@ const RowComponentInner = ({ ariaAttributes, index, style, records, onRowClick, 
       deltaTime: deltaTimeText,
       vbus: record.vbus_mv,
       ibus: record.ibus_ma ?? '',
-      CC1: record.cc1_mv,
-      CC2: record.cc2_mv,
+      cc: formatActiveCc(record.active_cc),
       sop: sopDesc,
       drole: dataRole,
       prole: powerRole,
@@ -494,7 +502,7 @@ const Card = memo(({
       return null
     }
 
-    return recordToMessagePacket(selectedRecord)
+    return decodeSingleRecord(selectedRecord)?.frame ?? null
   }, [selectedRecord])
 
   const handleRowClick = useCallback((index: number) => {
@@ -591,14 +599,14 @@ const Card = memo(({
   return (
     <section className={clsx('flex min-w-0 flex-col min-h-0', className)}>
       <div className="relative z-20 shrink-0 overflow-visible p-5">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-2.5">
             <h2 className="card-title select-none">
               <span className="text-primary">USB PD Sniffer</span>
             </h2>
             <ViewTabs currentView={currentView} onViewChange={onViewChange} />
           </div>
-          <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-2 xl:w-auto">
+          <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-2 lg:w-auto">
             <div className="flex flex-wrap items-center gap-2">
               {isDeviceSupported && (
                 <button

@@ -4,6 +4,7 @@ import { explainExtendedDataBlocks } from "./extendedDataBlocks.js";
 import { decodeMessageHeader, explainMessageHeader } from "./messageHeader.js";
 import { lookupMessageTypeName } from "../registry/messageTypes.js";
 import { extractBits, readUint32Le } from "../utils/bits.js";
+import { calculatePdCrc32 } from "../utils/pdCrc32.js";
 import type {
   DecodeContext,
   DecodeContextMessage,
@@ -100,7 +101,7 @@ function expectedMessageByteLength(messageBytes: Uint8Array): number | null {
 }
 
 function splitMessagePacket(packet: MessagePacket): SplitPacketResult {
-  const hasFullCrc = packet.bytes.length >= 4;
+  const hasFullCrc = packet.bytes.length >= 6;
   const messageBytes = hasFullCrc
     ? packet.bytes.subarray(0, packet.bytes.length - 4)
     : packet.bytes;
@@ -108,6 +109,8 @@ function splitMessagePacket(packet: MessagePacket): SplitPacketResult {
     ? packet.bytes.subarray(packet.bytes.length - 4)
     : new Uint8Array(0);
   const expectedLength = expectedMessageByteLength(messageBytes);
+  const rawCrc32 = crcBytes.length === 4 ? readUint32Le(crcBytes, 0) : null;
+  const expectedCrc32 = hasFullCrc ? calculatePdCrc32(messageBytes) : null;
 
   return {
     message: {
@@ -121,10 +124,15 @@ function splitMessagePacket(packet: MessagePacket): SplitPacketResult {
       crcByteLength: crcBytes.length,
     },
     crc: {
-      raw32: crcBytes.length === 4 ? readUint32Le(crcBytes, 0) : null,
+      raw32: rawCrc32,
       rawBytes: crcBytes,
-      status: crcBytes.length === 4 ? "present" : "missing",
-      checkStatus: "not_checked",
+      status: hasFullCrc ? "present" : "missing",
+      checkStatus: rawCrc32 === null || expectedCrc32 === null
+        ? "not_applicable"
+        : rawCrc32 === expectedCrc32
+          ? "valid"
+          : "invalid",
+      expectedRaw32: expectedCrc32,
     },
   };
 }
@@ -179,11 +187,13 @@ function buildCrcSection(layout: PacketLayout, crc: PacketCrc): Section {
       code: "PD_CRC32_MISSING",
       message: "Packet does not include the 4-byte CRC32 after the message bytes.",
     });
-  } else if (crc.status === "partial") {
+  }
+
+  if (crc.checkStatus === "invalid") {
     issues.push({
-      severity: "warning",
-      code: "PD_CRC32_PARTIAL",
-      message: `Packet only includes ${crc.rawBytes.length} CRC byte(s); 4 bytes are required for a complete CRC32.`,
+      severity: "error",
+      code: "PD_CRC32_INVALID",
+      message: "CRC32 does not match the message bytes.",
     });
   }
 
@@ -207,7 +217,21 @@ function buildCrcSection(layout: PacketLayout, crc: PacketCrc): Section {
             rawValue: crc.raw32,
             decodedValue: `0x${crc.raw32.toString(16).toUpperCase().padStart(8, "0")}`,
             displayValue: `0x${crc.raw32.toString(16).toUpperCase().padStart(8, "0")}`,
+            note: `Check: ${crc.checkStatus}`,
           },
+          ...(crc.expectedRaw32 === null
+            ? []
+            : [
+                {
+                  key: "expected-crc32",
+                  label: "Expected CRC32",
+                  bitStart: 0,
+                  bitLength: 32,
+                  rawValue: crc.expectedRaw32,
+                  decodedValue: `0x${crc.expectedRaw32.toString(16).toUpperCase().padStart(8, "0")}`,
+                  displayValue: `0x${crc.expectedRaw32.toString(16).toUpperCase().padStart(8, "0")}`,
+                },
+              ]),
         ],
     issues,
   };
@@ -690,6 +714,14 @@ export function decodePacket(packet: MessagePacket, context: DecodeContext = {})
       severity: "error",
       code: "PD_PACKET_TOO_SHORT",
       message: "PD packet is shorter than 6 bytes, so it cannot contain both a 2-byte Message Header and a 4-byte CRC32.",
+    });
+  }
+
+  if (split.crc.checkStatus === "invalid") {
+    issues.push({
+      severity: "error",
+      code: "PD_CRC32_INVALID",
+      message: "CRC32 does not match the message bytes.",
     });
   }
 

@@ -36,9 +36,9 @@ describe("pd-monitor adapter", () => {
 
     expect(monitorEventSop(MONITOR_EVENT.PD_SOP0)).toBe("SOP");
     expect(monitorEventSop(MONITOR_EVENT.PD_SOP1)).toBe("SOP_PRIME");
-    expect(monitorEventSop(MONITOR_EVENT.PD_SOP1_DEBUG)).toBe("SOP_PRIME");
+    expect(monitorEventSop(MONITOR_EVENT.PD_SOP1_DEBUG)).toBe("SOP_PRIME_DEBUG");
     expect(monitorEventSop(MONITOR_EVENT.PD_SOP2)).toBe("SOP_DPRIME");
-    expect(monitorEventSop(MONITOR_EVENT.PD_SOP2_DEBUG)).toBe("SOP_DPRIME");
+    expect(monitorEventSop(MONITOR_EVENT.PD_SOP2_DEBUG)).toBe("SOP_DPRIME_DEBUG");
     expect(() => monitorEventSop(MONITOR_EVENT.HARD_RESET)).toThrow("does not map to a PD Start Of Packet");
     expect(() => monitorEventSop(MONITOR_EVENT.CABLE_RESET)).toThrow("does not map to a PD Start Of Packet");
     expect(() => monitorEventSop(MONITOR_EVENT.PD_ERROR)).toThrow("does not map to a PD Start Of Packet");

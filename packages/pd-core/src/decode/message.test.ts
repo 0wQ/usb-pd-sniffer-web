@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { describe, expect, test } from "vitest";
 import { decodeMessage, decodePacket } from "./message.js";
+import { calculatePdCrc32 } from "../utils/pdCrc32.js";
 
 describe("decodePacket", () => {
   test("splits CRC32 from the packet tail instead of truncating by header-derived length", () => {
@@ -13,8 +14,32 @@ describe("decodePacket", () => {
     expect(decoded.packetLayout.actualMessageByteLength).toBe(6);
     expect(decoded.packetLayout.expectedMessageByteLength).toBe(6);
     expect(Array.from(decoded.crc.rawBytes)).toEqual([0xE6, 0x1A, 0x4D, 0xE6]);
+    expect(decoded.crc.raw32).toBe(0xE64D1AE6);
+    expect(decoded.crc.expectedRaw32).toBe(0xE64D1AE6);
     expect(decoded.crc.status).toBe("present");
+    expect(decoded.crc.checkStatus).toBe("valid");
+    expect(calculatePdCrc32(decoded.frame.bytes)).toBe(0xE64D1AE6);
+    expect(decoded.issues.some((issue) => issue.code === "PD_CRC32_INVALID")).toBe(false);
     expect(decoded.sections.some((section) => section.title === "Trailing Raw Bytes")).toBe(false);
+  });
+
+  test("reports invalid CRC32 without changing packet tail splitting", () => {
+    const decoded = decodePacket({
+      sop: "SOP",
+      bytes: Uint8Array.from([0xB1, 0x9E, 0x00, 0x8C, 0x00, 0x00, 0xE7, 0x1A, 0x4D, 0xE6]),
+    });
+
+    expect(Array.from(decoded.frame.bytes)).toEqual([0xB1, 0x9E, 0x00, 0x8C, 0x00, 0x00]);
+    expect(decoded.crc.raw32).toBe(0xE64D1AE7);
+    expect(decoded.crc.expectedRaw32).toBe(0xE64D1AE6);
+    expect(decoded.crc.status).toBe("present");
+    expect(decoded.crc.checkStatus).toBe("invalid");
+    expect(decoded.issues.some((issue) => issue.code === "PD_CRC32_INVALID")).toBe(true);
+    expect(
+      decoded.sections
+        .find((section) => section.title === "CRC32")
+        ?.issues.some((issue) => issue.code === "PD_CRC32_INVALID"),
+    ).toBe(true);
   });
 
   test("does not emit empty generic payload container sections for Extended_Control", () => {
@@ -122,6 +147,13 @@ describe("decodePacket", () => {
     });
 
     expect(decoded.issues.some((issue) => issue.code === "PD_PACKET_TOO_SHORT")).toBe(true);
+    expect(decoded.crc.status).toBe("missing");
+    expect(decoded.crc.checkStatus).toBe("not_applicable");
+    expect(decoded.crc.raw32).toBeNull();
+    expect(decoded.crc.expectedRaw32).toBeNull();
+    expect(Array.from(decoded.crc.rawBytes)).toEqual([]);
+    expect(decoded.packetLayout.crcByteLength).toBe(0);
+    expect(decoded.packetLayout.crcByteOffset).toBeNull();
     expect(decoded.sections.some((section) => section.title === "Trailing Raw Bytes")).toBe(false);
   });
 
