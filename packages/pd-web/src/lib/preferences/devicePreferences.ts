@@ -1,17 +1,28 @@
+import {
+  DEFAULT_MONITOR_DEVICE_KIND,
+  isMonitorDeviceKind,
+  type MonitorDeviceKind,
+} from '@/lib/devices/monitorDrivers'
+
 const DEVICE_STORAGE_KEYS = {
   autoConnectOnLoad: 'usb-pd-device-autoConnectOnLoad',
   autoReconnectOnHotplug: 'usb-pd-device-autoReconnectOnHotplug',
   manualDisconnect: 'usb-pd-device-manualDisconnect',
+  selectedMonitorDeviceKind: 'usb-pd-device-selected-kind',
   lastDeviceFingerprint: 'usb-pd-device-lastDeviceFingerprint',
+  lastDeviceFingerprints: 'usb-pd-device-lastDeviceFingerprints',
   detailContextBacktrackRecords: 'usb-pd-detail-context-backtrack-records',
   powerCaptureEnabled: 'usb-pd-power-capture-enabled',
 } as const
+
+export type LastDeviceFingerprints = Partial<Record<MonitorDeviceKind, string>>
 
 export type DevicePreferences = {
   manualDisconnect: boolean
   autoConnectOnLoad: boolean
   autoReconnectOnHotplug: boolean
-  lastDeviceFingerprint: string | null
+  selectedMonitorDeviceKind: MonitorDeviceKind
+  lastDeviceFingerprints: LastDeviceFingerprints
   detailContextBacktrackRecords: number | null
   powerCaptureEnabled: boolean
 }
@@ -51,17 +62,39 @@ function readNullableNumber(key: string, fallback: number | null): number | null
   }
 }
 
-function writeValue(key: string, value: string): void {
+function readSelectedMonitorDeviceKind(): MonitorDeviceKind {
+  const value = readString(DEVICE_STORAGE_KEYS.selectedMonitorDeviceKind, DEFAULT_MONITOR_DEVICE_KIND)
+  return value !== null && isMonitorDeviceKind(value) ? value : DEFAULT_MONITOR_DEVICE_KIND
+}
+
+function readLastDeviceFingerprints(): LastDeviceFingerprints {
   try {
-    localStorage.setItem(key, value)
+    const raw = localStorage.getItem(DEVICE_STORAGE_KEYS.lastDeviceFingerprints)
+    const parsed = raw === null ? null : JSON.parse(raw)
+    const result: LastDeviceFingerprints = {}
+
+    if (parsed !== null && typeof parsed === 'object') {
+      for (const [kind, fingerprint] of Object.entries(parsed)) {
+        if (isMonitorDeviceKind(kind) && typeof fingerprint === 'string' && fingerprint.length > 0) {
+          result[kind] = fingerprint
+        }
+      }
+    }
+
+    const legacyFingerprint = readString(DEVICE_STORAGE_KEYS.lastDeviceFingerprint, null)
+    if (legacyFingerprint !== null && result.native === undefined) {
+      result.native = legacyFingerprint
+    }
+
+    return result
   } catch {
-    // ignore
+    return {}
   }
 }
 
-function removeValue(key: string): void {
+function writeValue(key: string, value: string): void {
   try {
-    localStorage.removeItem(key)
+    localStorage.setItem(key, value)
   } catch {
     // ignore
   }
@@ -72,7 +105,8 @@ export function readDevicePreferences(): DevicePreferences {
     manualDisconnect: readBool(DEVICE_STORAGE_KEYS.manualDisconnect, false),
     autoConnectOnLoad: readBool(DEVICE_STORAGE_KEYS.autoConnectOnLoad, true),
     autoReconnectOnHotplug: readBool(DEVICE_STORAGE_KEYS.autoReconnectOnHotplug, true),
-    lastDeviceFingerprint: readString(DEVICE_STORAGE_KEYS.lastDeviceFingerprint, null),
+    selectedMonitorDeviceKind: readSelectedMonitorDeviceKind(),
+    lastDeviceFingerprints: readLastDeviceFingerprints(),
     detailContextBacktrackRecords: readNullableNumber(DEVICE_STORAGE_KEYS.detailContextBacktrackRecords, null),
     powerCaptureEnabled: readBool(DEVICE_STORAGE_KEYS.powerCaptureEnabled, false),
   }
@@ -90,13 +124,12 @@ export function writeAutoReconnectOnHotplug(value: boolean): void {
   writeValue(DEVICE_STORAGE_KEYS.autoReconnectOnHotplug, String(value))
 }
 
-export function writeLastDeviceFingerprint(value: string | null): void {
-  if (value === null) {
-    removeValue(DEVICE_STORAGE_KEYS.lastDeviceFingerprint)
-    return
-  }
+export function writeSelectedMonitorDeviceKind(value: MonitorDeviceKind): void {
+  writeValue(DEVICE_STORAGE_KEYS.selectedMonitorDeviceKind, value)
+}
 
-  writeValue(DEVICE_STORAGE_KEYS.lastDeviceFingerprint, value)
+export function writeLastDeviceFingerprints(value: LastDeviceFingerprints): void {
+  writeValue(DEVICE_STORAGE_KEYS.lastDeviceFingerprints, JSON.stringify(value))
 }
 
 export function writeDetailContextBacktrackRecords(value: number | null): void {

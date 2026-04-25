@@ -3,7 +3,12 @@ import DecodeCard from '@/components/card/DecodeCard'
 import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels'
 import useDeviceStore from '@/stores/deviceStore'
 import type { AppView } from '@/components/common/ViewTabs'
-import type { MonitorPdTxTarget } from '@usb-pd-sniffer/pd-monitor'
+import type {
+  MonitorDeviceCapabilities,
+  MonitorDeviceDriver,
+  MonitorDeviceKind,
+  MonitorPdTxTarget,
+} from '@/lib/devices/monitorDrivers'
 
 const DEFAULT_TOP_SIZE = 88
 const MIN_TOP_SIZE = 28
@@ -17,6 +22,10 @@ type Props = {
   autoReconnectOnHotplug: boolean
   onAutoConnectOnLoadChange: (value: boolean) => void
   onAutoReconnectOnHotplugChange: (value: boolean) => void
+  selectedMonitorDeviceKind: MonitorDeviceKind
+  monitorDeviceOptions: MonitorDeviceDriver[]
+  monitorDeviceCapabilities: MonitorDeviceCapabilities
+  onMonitorDeviceKindChange: (kind: MonitorDeviceKind) => void
   onConnectBtnClick: () => void
   onSendRawPdFrame: (target: MonitorPdTxTarget, hexPayload: string) => Promise<void>
   onSendHardReset: () => Promise<void>
@@ -35,6 +44,10 @@ const Layout = ({
   autoReconnectOnHotplug,
   onAutoConnectOnLoadChange,
   onAutoReconnectOnHotplugChange,
+  selectedMonitorDeviceKind,
+  monitorDeviceOptions,
+  monitorDeviceCapabilities,
+  onMonitorDeviceKindChange,
   onConnectBtnClick,
   onSendRawPdFrame,
   onSendHardReset,
@@ -84,6 +97,10 @@ const Layout = ({
             autoReconnectOnHotplug={autoReconnectOnHotplug}
             onAutoConnectOnLoadChange={onAutoConnectOnLoadChange}
             onAutoReconnectOnHotplugChange={onAutoReconnectOnHotplugChange}
+            selectedMonitorDeviceKind={selectedMonitorDeviceKind}
+            monitorDeviceOptions={monitorDeviceOptions}
+            monitorDeviceCapabilities={monitorDeviceCapabilities}
+            onMonitorDeviceKindChange={onMonitorDeviceKindChange}
             onConnectBtnClick={onConnectBtnClick}
             onSendRawPdFrame={onSendRawPdFrame}
             onSendHardReset={onSendHardReset}

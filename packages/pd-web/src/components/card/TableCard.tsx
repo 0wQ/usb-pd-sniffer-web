@@ -9,10 +9,16 @@ import ImportDialog from '@/components/common/ImportDialog'
 import SendPdDialog from '@/components/common/SendPdDialog'
 import ViewTabs, { type AppView } from '@/components/common/ViewTabs'
 import clsx from 'clsx'
-import { monitorEventName, type MonitorPdTxTarget } from '@usb-pd-sniffer/pd-monitor'
+import { monitorEventName } from '@usb-pd-sniffer/pd-monitor'
 import { decodeSingleRecord } from '@/lib/analyzer/decode'
 import { decodeUfcsRecordType, formatUfcsSignal, formatUfcsTypeSummary } from '@/lib/ufcs/ufcsType'
 import { formatCompactPowerRoleOrCable, formatCompactSop } from '@/lib/display/pdTableFields'
+import type {
+  MonitorDeviceCapabilities,
+  MonitorDeviceDriver,
+  MonitorDeviceKind,
+  MonitorPdTxTarget,
+} from '@/lib/devices/monitorDrivers'
 
 const ROW_HEIGHT = 30
 const THEME_STORAGE_KEY = 'usb-pd-sniffer-theme'
@@ -452,6 +458,10 @@ type CardProps = {
   autoReconnectOnHotplug: boolean
   onAutoConnectOnLoadChange: (value: boolean) => void
   onAutoReconnectOnHotplugChange: (value: boolean) => void
+  selectedMonitorDeviceKind: MonitorDeviceKind
+  monitorDeviceOptions: MonitorDeviceDriver[]
+  monitorDeviceCapabilities: MonitorDeviceCapabilities
+  onMonitorDeviceKindChange: (kind: MonitorDeviceKind) => void
   onConnectBtnClick: () => void
   onSendRawPdFrame: (target: MonitorPdTxTarget, hexPayload: string) => Promise<void>
   onSendHardReset: () => Promise<void>
@@ -473,6 +483,10 @@ const Card = memo(({
   autoReconnectOnHotplug,
   onAutoConnectOnLoadChange,
   onAutoReconnectOnHotplugChange,
+  selectedMonitorDeviceKind,
+  monitorDeviceOptions,
+  monitorDeviceCapabilities,
+  onMonitorDeviceKindChange,
   onConnectBtnClick,
   onSendRawPdFrame,
   onSendHardReset,
@@ -494,8 +508,6 @@ const Card = memo(({
   const captureBuffer = useDeviceStore((state) => state.captureBuffer)
   const captureCount = useDeviceStore((state) => state.captureCount)
   const importRecords = useDeviceStore((state) => state.importRecords)
-  const detailContextBacktrackRecords = useDeviceStore((state) => state.detailContextBacktrackRecords)
-  const setDetailContextBacktrackRecords = useDeviceStore((state) => state.setDetailContextBacktrackRecords)
   const selectedRecord = selectedIndex === null ? null : (captureBuffer.get(selectedIndex) ?? null)
   const selectedFrameForTx = useMemo(() => {
     if (selectedRecord === null) {
@@ -637,8 +649,9 @@ const Card = memo(({
               <button
                 className={TOOLBAR_ICON_BUTTON_CLASS}
                 onClick={() => setTxDialogOpen(true)}
-                disabled={!isDeviceSupported || !isConnected || isSendingCommand}
+                disabled={!monitorDeviceCapabilities.tx || !isDeviceSupported || !isConnected || isSendingCommand}
                 aria-label="Native PD TX"
+                title={monitorDeviceCapabilities.tx ? 'Native PD TX' : 'Selected device does not support PD TX'}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -678,6 +691,11 @@ const Card = memo(({
                     <div className="px-1 pb-2 text-xs font-semibold text-base-content/60 select-none">
                       Monitor Device Settings
                     </div>
+                    {manualDisconnect && !isConnected && (
+                      <div className="mb-2 px-1 text-xs text-warning select-none">
+                        Auto-connect is paused until you click CONNECT.
+                      </div>
+                    )}
                     <label className="flex items-center justify-between gap-3 px-1 py-2">
                       <span className="text-sm select-none">Auto connect on load</span>
                       <input
@@ -696,38 +714,24 @@ const Card = memo(({
                         onChange={(e) => onAutoReconnectOnHotplugChange(e.target.checked)}
                       />
                     </label>
-                    {manualDisconnect && !isConnected && (
-                      <div className="mt-2 px-1 text-xs text-warning select-none">
-                        Auto-connect is paused until you click CONNECT.
-                      </div>
-                    )}
+                    <label className="flex items-center justify-between gap-3 px-1 py-2">
+                      <span className="text-sm select-none">Device</span>
+                      <select
+                        className="select select-bordered select-sm w-40"
+                        value={selectedMonitorDeviceKind}
+                        onChange={(event) => onMonitorDeviceKindChange(event.target.value as MonitorDeviceKind)}
+                        disabled={isConnecting}
+                        aria-label="Monitor device"
+                      >
+                        {monitorDeviceOptions.map((device) => (
+                          <option key={device.kind} value={device.kind}>
+                            {device.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                     </>
                   )}
-                  <div className={clsx('px-1 pb-2 text-xs font-semibold text-base-content/60 select-none', {
-                    'pt-3 mt-3 border-t border-base-300': isDeviceSupported,
-                  })}>
-                    Decode Settings
-                  </div>
-                  <label className="flex items-center justify-between gap-3 px-1 py-2">
-                    <span className="text-sm select-none">Context backtrack</span>
-                    <select
-                      className="select select-bordered select-sm w-40"
-                      value={detailContextBacktrackRecords === null ? 'unlimited' : String(detailContextBacktrackRecords)}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        setDetailContextBacktrackRecords(value === 'unlimited' ? null : Number.parseInt(value, 10))
-                      }}
-                    >
-                      <option value="unlimited">Full history</option>
-                      <option value="128">128 records</option>
-                      <option value="256">256 records</option>
-                      <option value="512">512 records</option>
-                      <option value="1024">1,024 records</option>
-                      <option value="2048">2,048 records</option>
-                      <option value="4096">4,096 records</option>
-                      <option value="8192">8,192 records</option>
-                    </select>
-                  </label>
                 </div>
               </div>
 

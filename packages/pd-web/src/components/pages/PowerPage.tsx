@@ -2,6 +2,9 @@ import clsx from 'clsx'
 import { lazy, Suspense, useMemo, useState } from 'react'
 import useDeviceStore from '@/stores/deviceStore'
 import ViewTabs, { type AppView } from '@/components/common/ViewTabs'
+import type {
+  MonitorDeviceCapabilities,
+} from '@/lib/devices/monitorDrivers'
 
 const PowerTelemetryCharts = lazy(() => import('@/components/power/PowerTelemetryCharts'))
 
@@ -43,6 +46,7 @@ function formatTimestampUs(timestampUs: number): string {
 type Props = {
   isConnected: boolean
   isConnecting: boolean
+  monitorDeviceCapabilities: MonitorDeviceCapabilities
   onConnectBtnClick: () => void
   isDeviceSupported: boolean
   currentView: AppView
@@ -52,6 +56,7 @@ type Props = {
 const PowerPage = ({
   isConnected,
   isConnecting,
+  monitorDeviceCapabilities,
   onConnectBtnClick,
   isDeviceSupported,
   currentView,
@@ -141,8 +146,10 @@ const PowerPage = ({
               <button
                 className={TOOLBAR_ICON_BUTTON_CLASS}
                 onClick={() => setPowerCaptureEnabled(!powerCaptureEnabled)}
+                disabled={!monitorDeviceCapabilities.powerTelemetry}
                 type="button"
                 aria-label={powerCaptureEnabled ? 'Pause power capture' : 'Start power capture'}
+                title={monitorDeviceCapabilities.powerTelemetry ? undefined : 'Selected device does not support power telemetry'}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -217,7 +224,9 @@ const PowerPage = ({
                   <div className="mt-1 text-sm text-base-content">
                     {!powerCaptureEnabled
                       ? 'Capture disabled'
-                      : powerCount === 0
+                      : !monitorDeviceCapabilities.powerTelemetry
+                        ? 'Unsupported by selected device'
+                        : powerCount === 0
                         ? 'Waiting for telemetry'
                         : 'Recording power telemetry'}
                   </div>
@@ -249,7 +258,9 @@ const PowerPage = ({
               </div>
               {recentSamples.length === 0 ? (
                 <div className="mt-3 rounded-xl border border-dashed border-base-300 bg-base-100/50 p-6 text-sm text-base-content/55">
-                  {powerCaptureEnabled
+                  {!monitorDeviceCapabilities.powerTelemetry
+                    ? 'Selected device does not provide power telemetry samples.'
+                    : powerCaptureEnabled
                     ? 'No `POWER_TELEMETRY` samples yet. Connect the device and wait for the telemetry side-channel to go idle-gap active.'
                     : 'Power capture is off. Turn on `Record Power` to start buffering telemetry samples.'}
                 </div>

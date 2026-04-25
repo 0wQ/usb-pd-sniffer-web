@@ -6,7 +6,7 @@ import { useMonitorDevice } from '@/hooks/useMonitorDevice'
 import { useBeforeUnloadWarning } from '@/hooks/useBeforeUnloadWarning'
 import useDeviceStore from '@/stores/deviceStore'
 import { useState } from 'react'
-import type { MonitorPdTxTarget } from '@usb-pd-sniffer/pd-monitor'
+import type { MonitorPdTxTarget } from '@/lib/devices/monitorDrivers'
 
 function App() {
   const [currentView, setCurrentView] = useState<AppView>('protocol')
@@ -15,6 +15,10 @@ function App() {
 
   // 初始化 monitor device hook
   const {
+    selectedMonitorDeviceKind,
+    monitorDeviceOptions,
+    monitorDeviceCapabilities,
+    selectMonitorDeviceKind,
     connectDevice,
     disconnectDevice,
     sendRawPdFrame,
@@ -98,6 +102,10 @@ function App() {
           autoReconnectOnHotplug={autoReconnectOnHotplug}
           onAutoConnectOnLoadChange={setAutoConnectOnLoad}
           onAutoReconnectOnHotplugChange={setAutoReconnectOnHotplug}
+          selectedMonitorDeviceKind={selectedMonitorDeviceKind}
+          monitorDeviceOptions={monitorDeviceOptions}
+          monitorDeviceCapabilities={monitorDeviceCapabilities}
+          onMonitorDeviceKindChange={selectMonitorDeviceKind}
           onConnectBtnClick={handleConnectBtnClick}
           onSendRawPdFrame={handleSendRawPdFrame}
           onSendHardReset={handleSendHardReset}
@@ -111,6 +119,7 @@ function App() {
         <PowerPage
           isConnected={isConnected}
           isConnecting={isConnecting}
+          monitorDeviceCapabilities={monitorDeviceCapabilities}
           onConnectBtnClick={handleConnectBtnClick}
           isDeviceSupported={isDeviceSupported}
           currentView={currentView}

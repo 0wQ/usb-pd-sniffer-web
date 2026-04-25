@@ -1,16 +1,18 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
+import { parsePdHexPayload } from '@usb-pd-sniffer/pd-monitor'
 import {
-  createMonitorDevice,
-  parsePdHexPayload,
-  type MonitorDevice,
-  type MonitorDeviceStatus,
+  getMonitorDeviceDriver,
+  MONITOR_DEVICE_OPTIONS,
+  type MonitorDeviceLike,
+  type MonitorDeviceStatusLike,
+  type MonitorDeviceKind,
   type MonitorPdTxTarget,
-} from '@usb-pd-sniffer/pd-monitor'
+} from '@/lib/devices/monitorDrivers'
 import useDeviceStore from '@/stores/deviceStore'
 
-function statusError(status: MonitorDeviceStatus): string | null {
+function statusError(status: MonitorDeviceStatusLike, apiName: string): string | null {
   if (!status.isSupported) {
-    return 'Monitor device API is not supported. Please use Chrome, Edge, or Opera.'
+    return `${apiName} is not supported. Please use Chrome, Edge, or Opera.`
   }
 
   return status.error
@@ -23,17 +25,21 @@ export function useMonitorDevice() {
   const setManualDisconnect = useDeviceStore((state) => state.setManualDisconnect)
   const autoConnectOnLoad = useDeviceStore((state) => state.autoConnectOnLoad)
   const autoReconnectOnHotplug = useDeviceStore((state) => state.autoReconnectOnHotplug)
-  const lastDeviceFingerprint = useDeviceStore((state) => state.lastDeviceFingerprint)
-  const setLastDeviceFingerprint = useDeviceStore((state) => state.setLastDeviceFingerprint)
+  const selectedMonitorDeviceKind = useDeviceStore((state) => state.selectedMonitorDeviceKind)
+  const setSelectedMonitorDeviceKind = useDeviceStore((state) => state.setSelectedMonitorDeviceKind)
+  const lastDeviceFingerprints = useDeviceStore((state) => state.lastDeviceFingerprints)
+  const setLastDeviceFingerprintForKind = useDeviceStore((state) => state.setLastDeviceFingerprintForKind)
   const addRecord = useDeviceStore((state) => state.addRecord)
   const addPowerSample = useDeviceStore((state) => state.addPowerSample)
   const powerCaptureEnabled = useDeviceStore((state) => state.powerCaptureEnabled)
   const resetDevice = useDeviceStore((state) => state.resetDevice)
+  const selectedDriver = getMonitorDeviceDriver(selectedMonitorDeviceKind)
+  const selectedFingerprint = lastDeviceFingerprints[selectedMonitorDeviceKind] ?? null
 
-  const deviceRef = useRef<MonitorDevice | null>(null)
+  const deviceRef = useRef<MonitorDeviceLike | null>(null)
   const latestPowerCaptureEnabled = useRef(powerCaptureEnabled)
   const latestAutoReconnect = useRef(autoReconnectOnHotplug)
-  const latestFingerprint = useRef(lastDeviceFingerprint)
+  const latestFingerprint = useRef(selectedFingerprint)
   const [isDeviceSupported, setIsDeviceSupported] = useState(false)
   const [deviceError, setDeviceError] = useState<string | null>(null)
   const [isSending, setIsSending] = useState(false)
@@ -44,12 +50,13 @@ export function useMonitorDevice() {
 
   useEffect(() => {
     latestAutoReconnect.current = autoReconnectOnHotplug
-    latestFingerprint.current = lastDeviceFingerprint
-    deviceRef.current?.setAutoReconnect(autoReconnectOnHotplug, lastDeviceFingerprint)
-  }, [autoReconnectOnHotplug, lastDeviceFingerprint])
+    latestFingerprint.current = selectedFingerprint
+    deviceRef.current?.setAutoReconnect(autoReconnectOnHotplug, selectedFingerprint)
+  }, [autoReconnectOnHotplug, selectedFingerprint])
 
   useEffect(() => {
-    const monitorDevice = createMonitorDevice()
+    const driver = getMonitorDeviceDriver(selectedMonitorDeviceKind)
+    const monitorDevice = driver.createDevice()
     deviceRef.current = monitorDevice
     monitorDevice.setAutoReconnect(latestAutoReconnect.current, latestFingerprint.current)
 
@@ -67,13 +74,13 @@ export function useMonitorDevice() {
 
     const offStatus = monitorDevice.onStatus((status) => {
       setIsDeviceSupported(status.isSupported)
-      setDeviceError(statusError(status))
+      setDeviceError(statusError(status, driver.apiName))
       setIsConnected(status.isConnected)
       setIsConnecting(status.isConnecting)
       setIsSending(status.isSending)
 
       if (status.fingerprint !== null) {
-        setLastDeviceFingerprint(status.fingerprint)
+        setLastDeviceFingerprintForKind(driver.kind, status.fingerprint)
       }
 
       if (!status.isConnected && !status.isConnecting) {
@@ -86,25 +93,34 @@ export function useMonitorDevice() {
       offPowerSample()
       offStatus()
       monitorDevice.dispose()
+      resetDevice()
       deviceRef.current = null
     }
-  }, [addPowerSample, addRecord, resetDevice, setIsConnected, setIsConnecting, setLastDeviceFingerprint])
+  }, [
+    addPowerSample,
+    addRecord,
+    resetDevice,
+    selectedMonitorDeviceKind,
+    setIsConnected,
+    setIsConnecting,
+    setLastDeviceFingerprintForKind,
+  ])
 
   const tryAutoConnectAuthorizedDevice = useCallback(async () => {
     if (manualDisconnect) return
     try {
-      await deviceRef.current?.connectAuthorized(lastDeviceFingerprint)
+      await deviceRef.current?.connectAuthorized(selectedFingerprint)
     } catch (err) {
       if (err instanceof Error) {
         setDeviceError(err.message)
       }
     }
-  }, [lastDeviceFingerprint, manualDisconnect])
+  }, [manualDisconnect, selectedFingerprint])
 
   const connectDevice = useCallback(async () => {
     const monitorDevice = deviceRef.current
     if (monitorDevice === null || !monitorDevice.isSupported) {
-      alert('Monitor device API is not supported in your browser. Please use Chrome, Edge, or Opera (version 89+).')
+      alert(`${selectedDriver.apiName} is not supported in your browser. Please use Chrome, Edge, or Opera.`)
       return
     }
 
@@ -121,7 +137,7 @@ export function useMonitorDevice() {
         alert(`Failed to connect: ${err.message}`)
       }
     }
-  }, [setManualDisconnect])
+  }, [selectedDriver.apiName, setManualDisconnect])
 
   const disconnectDevice = useCallback(async () => {
     setManualDisconnect(true)
@@ -130,17 +146,38 @@ export function useMonitorDevice() {
   }, [resetDevice, setManualDisconnect])
 
   const sendRawPdFrame = useCallback(async (target: MonitorPdTxTarget, hexPayload: string) => {
+    if (!selectedDriver.capabilities.tx) {
+      throw new Error(`${selectedDriver.label} does not support PD TX.`)
+    }
+
     const payload = parsePdHexPayload(hexPayload)
     await deviceRef.current?.sendRawPd(target, payload)
-  }, [])
+  }, [selectedDriver])
 
   const sendHardReset = useCallback(async () => {
+    if (!selectedDriver.capabilities.tx) {
+      throw new Error(`${selectedDriver.label} does not support PD TX.`)
+    }
+
     await deviceRef.current?.sendHardReset()
-  }, [])
+  }, [selectedDriver])
 
   const sendCableReset = useCallback(async () => {
+    if (!selectedDriver.capabilities.tx) {
+      throw new Error(`${selectedDriver.label} does not support PD TX.`)
+    }
+
     await deviceRef.current?.sendCableReset()
-  }, [])
+  }, [selectedDriver])
+
+  const selectMonitorDeviceKind = useCallback((kind: MonitorDeviceKind) => {
+    if (kind === selectedMonitorDeviceKind) return
+    setManualDisconnect(true)
+    void deviceRef.current?.disconnect().finally(() => {
+      setSelectedMonitorDeviceKind(kind)
+      resetDevice()
+    })
+  }, [resetDevice, selectedMonitorDeviceKind, setManualDisconnect, setSelectedMonitorDeviceKind])
 
   useEffect(() => {
     if (!isDeviceSupported) return
@@ -149,6 +186,11 @@ export function useMonitorDevice() {
   }, [autoConnectOnLoad, isDeviceSupported, tryAutoConnectAuthorizedDevice])
 
   return {
+    selectedMonitorDeviceKind,
+    selectedMonitorDeviceLabel: selectedDriver.label,
+    monitorDeviceOptions: MONITOR_DEVICE_OPTIONS,
+    monitorDeviceCapabilities: selectedDriver.capabilities,
+    selectMonitorDeviceKind,
     connectDevice,
     disconnectDevice,
     sendRawPdFrame,

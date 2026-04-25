@@ -22,6 +22,9 @@
       ],
       "@usb-pd-sniffer/pd-monitor": [
         "./packages/pd-monitor/src/index.ts"
+      ],
+      "@usb-pd-sniffer/pd-monitor-atk-c2": [
+        "./packages/pd-monitor-atk-c2/src/index.ts"
       ]
     }
   }

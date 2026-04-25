@@ -1,4 +1,28 @@
-import type { MonitorPowerSample, MonitorRecord } from '@usb-pd-sniffer/pd-monitor'
+export type CaptureRecord = {
+  timestamp_us: number
+  recv_counter: number
+  drop_count?: number
+  vbus_mv: number
+  ibus_ma: number
+  cc1_mv: number
+  cc2_mv: number
+  dp_mv: number
+  dm_mv: number
+  event_type: number
+  active_cc: number
+  data_len: number
+  data: number[]
+}
 
-export type CaptureRecord = MonitorRecord
-export type PowerSample = MonitorPowerSample
+export type PowerSample = {
+  timestamp_us: number
+  recv_counter: number
+  vbus_mv: number
+  ibus_ma: number
+  cc1_mv: number
+  cc2_mv: number
+  dp_mv: number
+  dm_mv: number
+  active_cc: number
+  event_type: number
+}

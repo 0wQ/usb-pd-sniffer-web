@@ -8,6 +8,9 @@
       "path": "./packages/pd-monitor"
     },
     {
+      "path": "./packages/pd-monitor-atk-c2"
+    },
+    {
       "path": "./packages/pd-web"
     }
   ]

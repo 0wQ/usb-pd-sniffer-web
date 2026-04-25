@@ -27,7 +27,8 @@
     "paths": {
       "@/*": ["./src/*"],
       "@usb-pd-sniffer/pd-core": ["../pd-core/src/index.ts"],
-      "@usb-pd-sniffer/pd-monitor": ["../pd-monitor/src/index.ts"]
+      "@usb-pd-sniffer/pd-monitor": ["../pd-monitor/src/index.ts"],
+      "@usb-pd-sniffer/pd-monitor-atk-c2": ["../pd-monitor-atk-c2/src/index.ts"]
     },
   },
   "include": ["src"],

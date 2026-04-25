@@ -23,6 +23,9 @@ export default defineConfig({
       "@usb-pd-sniffer/pd-monitor": fileURLToPath(
         new URL("../pd-monitor/src/index.ts", import.meta.url)
       ),
+      "@usb-pd-sniffer/pd-monitor-atk-c2": fileURLToPath(
+        new URL("../pd-monitor-atk-c2/src/index.ts", import.meta.url)
+      ),
     },
   },
 })

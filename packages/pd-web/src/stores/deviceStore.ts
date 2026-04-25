@@ -7,10 +7,13 @@ import {
   writeAutoConnectOnLoad,
   writeAutoReconnectOnHotplug,
   writeDetailContextBacktrackRecords,
-  writeLastDeviceFingerprint,
+  writeLastDeviceFingerprints,
   writeManualDisconnect,
   writePowerCaptureEnabled,
+  writeSelectedMonitorDeviceKind,
+  type LastDeviceFingerprints,
 } from '@/lib/preferences/devicePreferences'
+import type { MonitorDeviceKind } from '@/lib/devices/monitorDrivers'
 import type { CaptureRecord, PowerSample } from '@/types/pd'
 
 interface DeviceState {
@@ -21,7 +24,8 @@ interface DeviceState {
   // Auto connect preferences (persisted)
   autoConnectOnLoad: boolean
   autoReconnectOnHotplug: boolean
-  lastDeviceFingerprint: string | null
+  selectedMonitorDeviceKind: MonitorDeviceKind
+  lastDeviceFingerprints: LastDeviceFingerprints
   detailContextBacktrackRecords: number | null
   powerCaptureEnabled: boolean
   protocolSelectedIndex: number | null
@@ -38,7 +42,8 @@ interface DeviceState {
   setManualDisconnect: (manualDisconnect: boolean) => void
   setAutoConnectOnLoad: (autoConnectOnLoad: boolean) => void
   setAutoReconnectOnHotplug: (autoReconnectOnHotplug: boolean) => void
-  setLastDeviceFingerprint: (lastDeviceFingerprint: string | null) => void
+  setSelectedMonitorDeviceKind: (kind: MonitorDeviceKind) => void
+  setLastDeviceFingerprintForKind: (kind: MonitorDeviceKind, fingerprint: string | null) => void
   setDetailContextBacktrackRecords: (detailContextBacktrackRecords: number | null) => void
   setPowerCaptureEnabled: (powerCaptureEnabled: boolean) => void
   setProtocolSelectedIndex: (protocolSelectedIndex: number | null) => void
@@ -93,7 +98,8 @@ const useDeviceStore = create<DeviceState>()((set, get) => {
     manualDisconnect: initialPreferences.manualDisconnect,
     autoConnectOnLoad: initialPreferences.autoConnectOnLoad,
     autoReconnectOnHotplug: initialPreferences.autoReconnectOnHotplug,
-    lastDeviceFingerprint: initialPreferences.lastDeviceFingerprint,
+    selectedMonitorDeviceKind: initialPreferences.selectedMonitorDeviceKind,
+    lastDeviceFingerprints: initialPreferences.lastDeviceFingerprints,
     detailContextBacktrackRecords: initialPreferences.detailContextBacktrackRecords,
     powerCaptureEnabled: initialPreferences.powerCaptureEnabled,
     protocolSelectedIndex: null,
@@ -123,9 +129,22 @@ const useDeviceStore = create<DeviceState>()((set, get) => {
       set({ autoReconnectOnHotplug })
     },
 
-    setLastDeviceFingerprint: (lastDeviceFingerprint) => {
-      writeLastDeviceFingerprint(lastDeviceFingerprint)
-      set({ lastDeviceFingerprint })
+    setSelectedMonitorDeviceKind: (selectedMonitorDeviceKind) => {
+      writeSelectedMonitorDeviceKind(selectedMonitorDeviceKind)
+      set({ selectedMonitorDeviceKind })
+    },
+
+    setLastDeviceFingerprintForKind: (kind, fingerprint) => {
+      const lastDeviceFingerprints = { ...get().lastDeviceFingerprints }
+
+      if (fingerprint === null) {
+        delete lastDeviceFingerprints[kind]
+      } else {
+        lastDeviceFingerprints[kind] = fingerprint
+      }
+
+      writeLastDeviceFingerprints(lastDeviceFingerprints)
+      set({ lastDeviceFingerprints })
     },
 
     setDetailContextBacktrackRecords: (detailContextBacktrackRecords) => {

@@ -7,6 +7,8 @@ import { decodeRecordAtIndex, decodeSingleRecord } from '@/lib/analyzer/decode'
 import { decodeUfcsRecordType, formatUfcsTypeSummary, type UfcsTypeDecode } from '@/lib/ufcs/ufcsType'
 import { hexBytes, IssueList, SectionView } from '@/components/decode/DecodedSectionsView'
 
+const DETAIL_CONTEXT_BACKTRACK_RECORDS = 10_000
+
 type Props = {
   className?: string
   selectedIndex: number | null
@@ -92,7 +94,6 @@ function UfcsTypeView({ decoded }: UfcsTypeViewProps) {
 const DecodeCard = ({ className, selectedIndex }: Props) => {
   const captureBuffer = useDeviceStore((state) => state.captureBuffer)
   const captureVersion = useDeviceStore((state) => state.captureVersion)
-  const detailContextBacktrackRecords = useDeviceStore((state) => state.detailContextBacktrackRecords)
 
   const records = useMemo(() => {
     void captureVersion
@@ -104,8 +105,8 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
 
   const decodedFrame = useMemo(() => {
     if (selectedIndex === null) return null
-    return decodeRecordAtIndex(records, selectedIndex, detailContextBacktrackRecords)
-  }, [records, selectedIndex, detailContextBacktrackRecords])
+    return decodeRecordAtIndex(records, selectedIndex, DETAIL_CONTEXT_BACKTRACK_RECORDS)
+  }, [records, selectedIndex])
 
   const decodedWithoutContext = useMemo(() => {
     if (selectedRecord === null) return null
@@ -135,11 +136,7 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
             <div className="text-right text-[11px] text-base-content/55">
               <div>{decodedFrame.messageType.name ?? decodedFrame.category}</div>
               <div>{decodedFrame.frame.sop}</div>
-              <div>
-                {detailContextBacktrackRecords === null
-                  ? 'Context: Full History'
-                  : `Context: Last ${detailContextBacktrackRecords.toLocaleString()} Records`}
-              </div>
+              <div>{`Context: Last ${DETAIL_CONTEXT_BACKTRACK_RECORDS.toLocaleString()} Records`}</div>
             </div>
           )}
         </div>
