@@ -140,6 +140,40 @@ describe("decodePacket", () => {
     ]);
   });
 
+  test("shows Request Chunk payload bytes as padding", () => {
+    const decoded = decodePacket({
+      sop: "SOP",
+      bytes: Uint8Array.from([0xB1, 0x9E, 0x00, 0x8C, 0x00, 0x00, 0xE6, 0x1A, 0x4D, 0xE6]),
+    });
+
+    expect(decoded.explainContext.notes.some((note) => note.includes("requests chunk 1"))).toBe(true);
+    expect(decoded.sections.map((section) => section.title)).toEqual([
+      "Message Header",
+      "Extended Message Header",
+      "Padding",
+      "CRC32",
+    ]);
+
+    const paddingSection = decoded.sections.find((section) => section.title === "Padding");
+    expect(paddingSection?.byteOffset).toBe(4);
+    expect(paddingSection?.byteLength).toBe(2);
+    expect(Array.from(paddingSection?.rawBytes ?? [])).toEqual([0x00, 0x00]);
+    expect(paddingSection?.fields[0]?.label).toBe("Padding");
+    expect(paddingSection?.fields[0]?.displayValue).toBe("0");
+  });
+
+  test("reports non-zero Request Chunk padding bytes", () => {
+    const decoded = decodePacket({
+      sop: "SOP",
+      bytes: Uint8Array.from([0xB1, 0x9E, 0x00, 0x8C, 0x01, 0x00, 0xA7, 0x2B, 0x56, 0xFF]),
+    });
+
+    const paddingSection = decoded.sections.find((section) => section.title === "Padding");
+
+    expect(Array.from(paddingSection?.rawBytes ?? [])).toEqual([0x01, 0x00]);
+    expect(paddingSection?.issues.some((issue) => issue.code === "PD_EXTENDED_MESSAGE_PADDING_NONZERO")).toBe(true);
+  });
+
   test("reports packets shorter than message header plus CRC32", () => {
     const decoded = decodePacket({
       sop: "SOP",
@@ -197,6 +231,51 @@ describe("decodePacket", () => {
 });
 
 describe("decodeMessage", () => {
+  test("keeps Message Type meaning semantic without duplicating the raw value", () => {
+    const decoded = decodeMessage({
+      sop: "SOP",
+      bytes: Uint8Array.from([0x01, 0x00]),
+    });
+
+    const headerSection = decoded.sections.find((section) => section.title === "Message Header");
+    const messageTypeField = headerSection?.fields.find((field) => field.label === "Message Type");
+
+    expect(decoded.messageType.name).toBe("GoodCRC");
+    expect(messageTypeField?.rawValue).toBe(1);
+    expect(messageTypeField?.displayValue).toBe("GoodCRC");
+  });
+
+  test("shows Message Header B5 as Reserved for SOP prime packets", () => {
+    const decoded = decodeMessage({
+      sop: "SOP_PRIME",
+      bytes: Uint8Array.from([0x8F, 0x51]),
+    });
+
+    const headerSection = decoded.sections.find((section) => section.title === "Message Header");
+    const bit5Field = headerSection?.fields.find((field) => field.bitStart === 5);
+
+    expect(bit5Field?.label).toBe("Reserved");
+    expect(bit5Field?.rawValue).toBe(0);
+    expect(bit5Field?.displayValue).toBe("0");
+    expect(bit5Field?.note).toBeUndefined();
+    expect(headerSection?.issues).toHaveLength(0);
+  });
+
+  test("reports non-zero Message Header B5 for SOP prime packets", () => {
+    const decoded = decodeMessage({
+      sop: "SOP_PRIME",
+      bytes: Uint8Array.from([0xAF, 0x51]),
+    });
+
+    const headerSection = decoded.sections.find((section) => section.title === "Message Header");
+    const bit5Field = headerSection?.fields.find((field) => field.bitStart === 5);
+
+    expect(bit5Field?.label).toBe("Reserved");
+    expect(bit5Field?.rawValue).toBe(1);
+    expect(bit5Field?.displayValue).toBe("1");
+    expect(headerSection?.issues.some((issue) => issue.code === "PD_MESSAGE_HEADER_RESERVED_B5_NONZERO")).toBe(true);
+  });
+
   test("decodes all-zero Source_Capabilities objects as Empty PDO", () => {
     const decoded = decodeMessage({
       sop: "SOP",

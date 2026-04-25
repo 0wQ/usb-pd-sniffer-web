@@ -1,6 +1,6 @@
 import { extractBits, readUint16Le } from "../utils/bits.js";
 import { lookupMessageTypeName } from "../registry/messageTypes.js";
-import type { BitField, MessageCategory, MessageHeader, MessageFrame, Section, SpecificationRevision } from "../types.js";
+import type { BitField, DecodeIssue, MessageCategory, MessageHeader, MessageFrame, Section, SpecificationRevision } from "../types.js";
 
 function classifyCategory(
   extended: boolean,
@@ -37,11 +37,10 @@ function powerRoleOrCablePlugMeaning(
   return bit === 0 ? "DFP/UFP Port" : "Cable Plug / VPD";
 }
 
-function portDataRoleMeaning(bit: 0 | 1 | null): MessageHeader["portDataRoleMeaning"] {
-  if (bit === null) {
+function portDataRoleMeaning(bit: 0 | 1, sop: MessageFrame["sop"]): MessageHeader["portDataRoleMeaning"] {
+  if (sop !== "SOP") {
     return null;
   }
-
   return bit === 0 ? "UFP" : "DFP";
 }
 
@@ -66,6 +65,14 @@ function field(
   };
 }
 
+function createIssue(code: string, message: string): DecodeIssue {
+  return {
+    severity: "warning",
+    code,
+    message,
+  };
+}
+
 export function decodeMessageHeader(frame: MessageFrame): MessageHeader {
   const raw16 = readUint16Le(frame.bytes, 0);
   const extended = extractBits(raw16, 15, 1) === 1;
@@ -73,8 +80,7 @@ export function decodeMessageHeader(frame: MessageFrame): MessageHeader {
   const messageId = extractBits(raw16, 9, 3);
   const roleBit = extractBits(raw16, 8, 1) as 0 | 1;
   const specificationRevisionBits = extractBits(raw16, 6, 2) as 0 | 1 | 2 | 3;
-  const portDataRoleBit =
-    frame.sop === "SOP" ? (extractBits(raw16, 5, 1) as 0 | 1) : null;
+  const portDataRoleBit = extractBits(raw16, 5, 1) as 0 | 1;
   const messageType = extractBits(raw16, 0, 5);
 
   return {
@@ -87,7 +93,7 @@ export function decodeMessageHeader(frame: MessageFrame): MessageHeader {
     specificationRevisionBits,
     specificationRevision: decodeSpecificationRevision(specificationRevisionBits),
     portDataRoleBit,
-    portDataRoleMeaning: portDataRoleMeaning(portDataRoleBit),
+    portDataRoleMeaning: portDataRoleMeaning(portDataRoleBit, frame.sop),
     messageType,
     category: classifyCategory(extended, numberOfDataObjects),
   };
@@ -98,6 +104,12 @@ export function explainMessageHeader(
   frame: MessageFrame,
 ): Section {
   const messageTypeName = lookupMessageTypeName(header.category, header.messageType);
+  const issues: DecodeIssue[] = [];
+
+  if (frame.sop !== "SOP" && header.portDataRoleBit !== 0) {
+    issues.push(createIssue("PD_MESSAGE_HEADER_RESERVED_B5_NONZERO", "Message Header B5 is reserved for SOP'/SOP'' but is non-zero."));
+  }
+
   const fields: BitField[] = [
     field("extended", "Extended", 15, 1, header.extended ? 1 : 0, header.extended),
     field(
@@ -130,18 +142,17 @@ export function explainMessageHeader(
     ),
     field(
       "port_data_role",
-      "Port Data Role",
+      frame.sop === "SOP" ? "Port Data Role" : "Reserved",
       5,
       1,
-      header.portDataRoleBit ?? 0,
-      header.portDataRoleMeaning,
-      frame.sop === "SOP" ? undefined : "Reserved for SOP'/SOP''.",
+      header.portDataRoleBit,
+      frame.sop === "SOP" ? header.portDataRoleMeaning : header.portDataRoleBit,
     ),
     {
       ...field("message_type", "Message Type", 0, 5, header.messageType, header.messageType),
       displayValue: messageTypeName === null
-        ? `0x${header.messageType.toString(16).toUpperCase().padStart(2, "0")}`
-        : `0x${header.messageType.toString(16).toUpperCase().padStart(2, "0")} (${messageTypeName})`,
+        ? "Reserved"
+        : messageTypeName,
     },
   ];
 
@@ -154,6 +165,6 @@ export function explainMessageHeader(
     rawBytes: frame.bytes.slice(0, 2),
     rawValue: header.raw16,
     fields,
-    issues: [],
+    issues,
   };
 }

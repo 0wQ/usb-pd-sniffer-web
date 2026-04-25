@@ -106,8 +106,8 @@ function flagField(
   label: string,
   bitStart: number,
   rawValue: number,
-  whenTrue = "Supported",
-  whenFalse = "Not Supported",
+  whenTrue = "Yes",
+  whenFalse = "No",
   note?: string,
 ): BitField {
   return field(key, label, bitStart, 1, rawValue, rawValue === 1, {
@@ -172,7 +172,7 @@ function capabilityObjectTitle(messageTypeName: string | null, index: number): s
 function peakCurrentDisplay(bits: number): string {
   switch (bits) {
     case 0:
-      return "IoC only / see Source_Capabilities_Extended";
+      return "IoC only";
     case 1:
       return "150%/1ms, 125%/2ms, 110%/10ms";
     case 2:
@@ -245,9 +245,7 @@ function buildFixedPowerObject(
           extractBits(raw32, 24, 1),
         ),
         flagField("epr_mode_capable", "EPR Mode Capable", 23, extractBits(raw32, 23, 1)),
-        field("reserved", "Reserved", 22, 1, reserved22, reserved22, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved", "Reserved", 22, 1, reserved22, reserved22),
         field("peak_current", "Peak Current", 20, 2, extractBits(raw32, 20, 2), extractBits(raw32, 20, 2), {
           displayValue: peakCurrentDisplay(extractBits(raw32, 20, 2)),
         }),
@@ -280,9 +278,7 @@ function buildFixedPowerObject(
             displayValue: fastRoleSwapDisplay(extractBits(raw32, 23, 2)),
           },
         ),
-        field("reserved", "Reserved", 20, 3, extractBits(raw32, 20, 3), extractBits(raw32, 20, 3), {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved", "Reserved", 20, 3, extractBits(raw32, 20, 3), extractBits(raw32, 20, 3)),
         field("voltage", "Voltage", 10, 10, extractBits(raw32, 10, 10), voltage, {
           displayValue: `${voltage} mV`,
           unit: "mV",
@@ -455,30 +451,22 @@ function buildPpsPowerObject(
         field("apdo_type", "APDO Type", 28, 2, 0b00, "SPR PPS"),
         ...(role === "source"
           ? [flagField("pps_power_limited", "PPS Power Limited", 27, extractBits(raw32, 27, 1), "Power Limited", "Not Limited")]
-          : [field("reserved", "Reserved", 25, 3, extractBits(raw32, 25, 3), extractBits(raw32, 25, 3), {
-              note: "Shall be set to zero.",
-            })]),
+          : [field("reserved", "Reserved", 25, 3, extractBits(raw32, 25, 3), extractBits(raw32, 25, 3))]),
         ...(role === "source"
-          ? [field("reserved_high", "Reserved", 25, 2, extractBits(raw32, 25, 2), extractBits(raw32, 25, 2), {
-              note: "Shall be set to zero.",
-            })]
+          ? [field("reserved_high", "Reserved", 25, 2, extractBits(raw32, 25, 2), extractBits(raw32, 25, 2))]
           : []),
         field("maximum_voltage", "Maximum Voltage", 17, 8, extractBits(raw32, 17, 8), maximumVoltage, {
           displayValue: `${maximumVoltage} mV`,
           unit: "mV",
           note: "100mV units",
         }),
-        field("reserved_mid", "Reserved", 16, 1, reservedMid, reservedMid, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved_mid", "Reserved", 16, 1, reservedMid, reservedMid),
         field("minimum_voltage", "Minimum Voltage", 8, 8, extractBits(raw32, 8, 8), minimumVoltage, {
           displayValue: `${minimumVoltage} mV`,
           unit: "mV",
           note: "100mV units",
         }),
-        field("reserved_low", "Reserved", 7, 1, reservedLow, reservedLow, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved_low", "Reserved", 7, 1, reservedLow, reservedLow),
         field("maximum_current", "Maximum Current", 0, 7, extractBits(raw32, 0, 7), maximumCurrent, {
           displayValue: `${maximumCurrent} mA`,
           unit: "mA",
@@ -526,9 +514,7 @@ function buildSprAvsPowerObject(
           field("peak_current", "Peak Current", 26, 2, extractBits(raw32, 26, 2), extractBits(raw32, 26, 2), {
             displayValue: peakCurrentDisplay(extractBits(raw32, 26, 2)),
           }),
-          field("reserved", "Reserved", 20, 6, reserved, reserved, {
-            note: "Shall be set to zero.",
-          }),
+          field("reserved", "Reserved", 20, 6, reserved, reserved),
           field("maximum_current_15v", "Maximum Current 15V", 10, 10, extractBits(raw32, 10, 10), current15V, {
             displayValue: `${current15V} mA`,
             unit: "mA",
@@ -567,9 +553,7 @@ function buildSprAvsPowerObject(
       [
         field("supply_type", "Supply Type", 30, 2, 0b11, "Augmented PDO"),
         field("apdo_type", "APDO Type", 28, 2, 0b10, "SPR AVS"),
-        field("reserved", "Reserved", 20, 8, reserved, reserved, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved", "Reserved", 20, 8, reserved, reserved),
         field("maximum_current_15v", "Maximum Current 15V", 10, 10, extractBits(raw32, 10, 10), current15V, {
           displayValue: `${current15V} mA`,
           unit: "mA",
@@ -627,9 +611,7 @@ function buildEprAvsPowerObject(
             unit: "mV",
             note: "100mV units",
           }),
-          field("reserved_mid", "Reserved", 16, 1, reservedMid, reservedMid, {
-            note: "Shall be set to zero.",
-          }),
+          field("reserved_mid", "Reserved", 16, 1, reservedMid, reservedMid),
           field("minimum_voltage", "Minimum Voltage", 8, 8, extractBits(raw32, 8, 8), minimumVoltage, {
             displayValue: `${minimumVoltage} mV`,
             unit: "mV",
@@ -664,17 +646,13 @@ function buildEprAvsPowerObject(
       [
         field("supply_type", "Supply Type", 30, 2, 0b11, "Augmented PDO"),
         field("apdo_type", "APDO Type", 28, 2, 0b01, "EPR AVS"),
-        field("reserved_high", "Reserved", 26, 2, reservedHigh, reservedHigh, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved_high", "Reserved", 26, 2, reservedHigh, reservedHigh),
         field("maximum_voltage", "Maximum Voltage", 17, 9, extractBits(raw32, 17, 9), maximumVoltage, {
           displayValue: `${maximumVoltage} mV`,
           unit: "mV",
           note: "100mV units",
         }),
-        field("reserved_mid", "Reserved", 16, 1, reservedMid, reservedMid, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved_mid", "Reserved", 16, 1, reservedMid, reservedMid),
         field("minimum_voltage", "Minimum Voltage", 8, 8, extractBits(raw32, 8, 8), minimumVoltage, {
           displayValue: `${minimumVoltage} mV`,
           unit: "mV",
@@ -1219,7 +1197,7 @@ function cablePlugDisplay(bits: number): string {
 function connectorTypeDisplay(bits: number): string {
   switch (bits) {
     case 0:
-      return "Reserved for legacy compatibility";
+      return "Reserved";
     case 1:
       return "Reserved";
     case 2:
@@ -1568,9 +1546,7 @@ function buildVdmHeaderObject(
         field("command_type", "Command Type", 6, 2, commandType, commandType, {
           displayValue: vdmCommandTypeDisplay(commandType),
         }),
-        field("reserved", "Reserved", 5, 1, reserved, reserved, {
-          note: "Shall be set to zero and ignored.",
-        }),
+        field("reserved", "Reserved", 5, 1, reserved, reserved),
         field("command", "Command", 0, 5, command, command, {
           displayValue: vdmCommandDisplay(command),
         }),
@@ -1667,7 +1643,7 @@ function buildIdHeaderVdo(
           displayValue: productTypeDisplay,
         }),
         field("modal_operation_supported", "Modal Operation Supported", 26, 1, info.modalOperationSupported ? 1 : 0, info.modalOperationSupported, {
-          displayValue: boolDisplay(info.modalOperationSupported, "Supported", "Not Supported"),
+          displayValue: boolDisplay(info.modalOperationSupported, "Yes", "No"),
         }),
         field("product_type_dfp", sop === "SOP" ? "Product Type (DFP)" : "Reserved", 23, 3, info.productTypeDfp, info.productTypeDfp, {
           displayValue: sop === "SOP" ? dfpProductTypeDisplay(info.productTypeDfp) : "Reserved",
@@ -1676,9 +1652,7 @@ function buildIdHeaderVdo(
         field("connector_type", "Connector Type", 21, 2, info.connectorType, info.connectorType, {
           displayValue: connectorTypeDisplay(info.connectorType),
         }),
-        field("reserved", "Reserved", 16, 5, info.reserved, info.reserved, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved", "Reserved", 16, 5, info.reserved, info.reserved),
         field("usb_vendor_id", "USB Vendor ID", 0, 16, info.usbVendorId, hex(info.usbVendorId, 4)),
       ],
       issues,
@@ -1798,9 +1772,7 @@ function buildUfpVdo(
         field("ufp_vdo_version", "UFP VDO Version", 29, 3, version, version, {
           displayValue: vdoVersionDisplay(version),
         }),
-        field("reserved_28", "Reserved", 28, 1, reserved28, reserved28, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved_28", "Reserved", 28, 1, reserved28, reserved28),
         field("usb_2_device_capable", "USB 2.0 Device Capable", 24, 1, deviceCapability & 0x1, (deviceCapability & 0x1) === 1, {
           displayValue: boolDisplay((deviceCapability & 0x1) === 1, "Capable", "Not Capable"),
         }),
@@ -1814,12 +1786,10 @@ function buildUfpVdo(
           displayValue: boolDisplay(((deviceCapability >>> 3) & 0x1) === 1, "Capable", "Not Capable"),
         }),
         field("connector_type_legacy", "Connector Type (Legacy)", 22, 2, connectorTypeLegacy, connectorTypeLegacy, {
-          displayValue: connectorTypeLegacy === 0 ? "Deprecated / 00b" : "Deprecated / non-zero",
+          displayValue: connectorTypeLegacy === 0 ? "Deprecated" : "Deprecated / non-zero",
           note: "Deprecated. Shall be set to 00b.",
         }),
-        field("reserved_21_11", "Reserved", 11, 11, reserved, reserved, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved_21_11", "Reserved", 11, 11, reserved, reserved),
         field("vconn_power", "VCONN Power", 8, 3, vconnPower, vconnPower, {
           displayValue: vconnRequired === 1 ? vconnPowerDisplay(vconnPower) : "Reserved",
           note: vconnRequired === 1 ? undefined : "Reserved when VCONN Required is zero.",
@@ -1831,13 +1801,13 @@ function buildUfpVdo(
           displayValue: vbusRequired === 0 ? "Yes" : "No",
         }),
         field("supports_tbt3", "Supports TBT3 Alternate Mode", 3, 1, alternateModes & 0x1, (alternateModes & 0x1) === 1, {
-          displayValue: boolDisplay((alternateModes & 0x1) === 1, "Supported", "Not Supported"),
+          displayValue: boolDisplay((alternateModes & 0x1) === 1, "Yes", "No"),
         }),
         field("supports_typec_reconfig_modes", "Supports reconfiguring Alternate Modes", 4, 1, (alternateModes >>> 1) & 0x1, ((alternateModes >>> 1) & 0x1) === 1, {
-          displayValue: boolDisplay(((alternateModes >>> 1) & 0x1) === 1, "Supported", "Not Supported"),
+          displayValue: boolDisplay(((alternateModes >>> 1) & 0x1) === 1, "Yes", "No"),
         }),
         field("supports_typec_nonreconfig_modes", "Supports non-reconfiguring Alternate Modes", 5, 1, (alternateModes >>> 2) & 0x1, ((alternateModes >>> 2) & 0x1) === 1, {
-          displayValue: boolDisplay(((alternateModes >>> 2) & 0x1) === 1, "Supported", "Not Supported"),
+          displayValue: boolDisplay(((alternateModes >>> 2) & 0x1) === 1, "Yes", "No"),
         }),
         field("usb_highest_speed", "USB Highest Speed", 0, 3, usbHighestSpeed, usbHighestSpeed, {
           displayValue: usbHighestSpeedDisplay(usbHighestSpeed),
@@ -1892,9 +1862,7 @@ function buildDfpVdo(
         field("dfp_vdo_version", "DFP VDO Version", 29, 3, version, version, {
           displayValue: dfpVdoVersionDisplay(version),
         }),
-        field("reserved_28_27", "Reserved", 27, 2, reserved, reserved, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved_28_27", "Reserved", 27, 2, reserved, reserved),
         field("usb_2_host_capable", "USB 2.0 Host Capable", 24, 1, hostCapability & 0x1, (hostCapability & 0x1) === 1, {
           displayValue: boolDisplay((hostCapability & 0x1) === 1, "Capable", "Not Capable"),
         }),
@@ -1905,12 +1873,10 @@ function buildDfpVdo(
           displayValue: boolDisplay(((hostCapability >>> 2) & 0x1) === 1, "Capable", "Not Capable"),
         }),
         field("connector_type_legacy", "Connector Type (Legacy)", 22, 2, connectorTypeLegacy, connectorTypeLegacy, {
-          displayValue: connectorTypeLegacy === 0 ? "Deprecated / 00b" : "Deprecated / non-zero",
+          displayValue: connectorTypeLegacy === 0 ? "Deprecated" : "Deprecated / non-zero",
           note: "Deprecated. Shall be set to 00b.",
         }),
-        field("reserved_21_5", "Reserved", 5, 17, reservedLow, reservedLow, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved_21_5", "Reserved", 5, 17, reservedLow, reservedLow),
         field("port_number", "Port Number", 0, 5, portNumber, portNumber),
       ],
       issues,
@@ -1982,9 +1948,7 @@ function buildPassiveCableVdo(
         field("vdo_version", "VDO Version", 21, 3, version, version, {
           displayValue: version === 0 ? "Version 1.0" : "Reserved",
         }),
-        field("reserved_20", "Reserved", 20, 1, reserved20, reserved20, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved_20", "Reserved", 20, 1, reserved20, reserved20),
         field("plug_to_plug_or_captive", "USB Type-C plug to USB Type-C / Captive", 18, 2, plug, plug, {
           displayValue: cablePlugDisplay(plug),
         }),
@@ -2000,15 +1964,11 @@ function buildPassiveCableVdo(
         field("maximum_vbus_voltage", "Maximum VBUS Voltage", 9, 2, maxVbus, maxVbus, {
           displayValue: passiveCableMaxVbusDisplay(maxVbus),
         }),
-        field("reserved_8_7", "Reserved", 7, 2, reserved8_7, reserved8_7, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved_8_7", "Reserved", 7, 2, reserved8_7, reserved8_7),
         field("vbus_current_handling_capability", "VBUS Current Handling Capability", 5, 2, current, current, {
           displayValue: cableCurrentDisplay(current),
         }),
-        field("reserved_4_3", "Reserved", 3, 2, reserved4_3, reserved4_3, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved_4_3", "Reserved", 3, 2, reserved4_3, reserved4_3),
         field("usb_highest_speed", "USB Highest Speed", 0, 3, usbHighestSpeed, usbHighestSpeed, {
           displayValue: usbHighestSpeedDisplay(usbHighestSpeed),
         }),
@@ -2078,9 +2038,7 @@ function buildActiveCableVdo1(
         field("vdo_version", "VDO Version", 21, 3, version, version, {
           displayValue: version === 0 ? "Version 1.0" : "Reserved",
         }),
-        field("reserved_20", "Reserved", 20, 1, reserved20, reserved20, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved_20", "Reserved", 20, 1, reserved20, reserved20),
         field("plug_to_plug_or_captive", "USB Type-C plug to USB Type-C / Captive", 18, 2, plug, plug, {
           displayValue: cablePlugDisplay(plug),
         }),
@@ -2175,9 +2133,7 @@ function buildActiveCableVdo2(
           displayValue: `${extractBits(raw32, 16, 8)} C`,
           unit: "C",
         }),
-        field("reserved_15", "Reserved", 15, 1, reserved15, reserved15, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved_15", "Reserved", 15, 1, reserved15, reserved15),
         field("u3_cld_power", "U3 / CLd Power", 12, 3, u3CldPower, u3CldPower, {
           displayValue: u3CldPowerDisplay(u3CldPower),
         }),
@@ -2191,14 +2147,14 @@ function buildActiveCableVdo2(
           displayValue: extractBits(raw32, 9, 1) === 1 ? "Active Re-timer" : "Active Re-driver",
         }),
         field("usb4_supported", "USB4 Supported", 8, 1, usb4SupportedBit, usb4SupportedBit === 0, {
-          displayValue: usb4SupportedBit === 0 ? "Supported" : "Not Supported",
+          displayValue: usb4SupportedBit === 0 ? "Yes" : "No",
         }),
         field("usb_2_hub_hops_consumed", "USB 2.0 Hub Hops Consumed", 6, 2, hubHops, hubHops),
         field("usb_2_supported", "USB 2.0 Supported", 5, 1, usb2SupportedBit, usb2SupportedBit === 0, {
-          displayValue: usb2SupportedBit === 0 ? "Supported" : "Not Supported",
+          displayValue: usb2SupportedBit === 0 ? "Yes" : "No",
         }),
         field("usb_3_supported", "USB 3.2 Supported", 4, 1, extractBits(raw32, 4, 1), extractBits(raw32, 4, 1) === 0, {
-          displayValue: extractBits(raw32, 4, 1) === 0 ? "Supported" : "Not Supported",
+          displayValue: extractBits(raw32, 4, 1) === 0 ? "Yes" : "No",
         }),
         field("usb_lanes_supported", "USB Lanes Supported", 3, 1, extractBits(raw32, 3, 1), extractBits(raw32, 3, 1) === 1 ? "Two lanes" : "One lane", {
           displayValue: extractBits(raw32, 3, 1) === 1 ? "Two lanes" : "One lane",
@@ -2207,7 +2163,7 @@ function buildActiveCableVdo2(
           displayValue: boolDisplay(opticallyIsolated === 1, "Yes", "No"),
         }),
         field("usb4_asymmetric_mode_supported", "USB4 Asymmetric Mode Supported", 1, 1, asymmetricModeSupported, asymmetricModeSupported === 1, {
-          displayValue: boolDisplay(asymmetricModeSupported === 1, "Supported", "Not Supported"),
+          displayValue: boolDisplay(asymmetricModeSupported === 1, "Yes", "No"),
         }),
         field("usb_gen", "USB Gen", 0, 1, extractBits(raw32, 0, 1), extractBits(raw32, 0, 1) === 1 ? "Gen 2 or higher" : "Gen 1", {
           displayValue: extractBits(raw32, 0, 1) === 1 ? "Gen 2 or higher" : "Gen 1",
@@ -2274,9 +2230,7 @@ function buildVpdVdo(
         field("vdo_version", "VDO Version", 21, 3, version, version, {
           displayValue: version === 0 ? "Version 1.0" : "Reserved",
         }),
-        field("reserved_20_17", "Reserved", 17, 4, reserved20_17, reserved20_17, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved_20_17", "Reserved", 17, 4, reserved20_17, reserved20_17),
         field("maximum_vbus_voltage", "Maximum VBUS Voltage", 15, 2, maxVbus, maxVbus, {
           displayValue: vpdMaxVbusDisplay(maxVbus),
         }),
@@ -2286,9 +2240,7 @@ function buildVpdVdo(
             : "Reserved",
           note: chargeThroughSupport === 1 ? undefined : "Reserved when Charge Through Support = 0.",
         }),
-        field("reserved_13", "Reserved", 13, 1, reserved13, reserved13, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved_13", "Reserved", 13, 1, reserved13, reserved13),
         field("vbus_impedance", "VBUS Impedance", 7, 6, vbusImpedance, vbusImpedance * 2, {
           displayValue: chargeThroughSupport === 1 ? `${vbusImpedance * 2} mohm` : "Reserved",
           unit: "mohm",
@@ -2300,7 +2252,7 @@ function buildVpdVdo(
           note: chargeThroughSupport === 1 ? "1mohm increments." : "Reserved when Charge Through Support = 0.",
         }),
         field("charge_through_support", "Charge Through Support", 0, 1, chargeThroughSupport, chargeThroughSupport === 1, {
-          displayValue: boolDisplay(chargeThroughSupport === 1, "Supported", "Not Supported"),
+          displayValue: boolDisplay(chargeThroughSupport === 1, "Yes", "No"),
         }),
       ],
       issues,
@@ -2370,10 +2322,10 @@ function buildDiscoverSvidVdo(
       raw32,
       [
         field("svid_upper", "SVID n", 16, 16, upperSvid, hex(upperSvid, 4), {
-          displayValue: upperSvid === 0 ? "0x0000 (End of list)" : hex(upperSvid, 4),
+          displayValue: upperSvid === 0 ? "End of list" : hex(upperSvid, 4),
         }),
         field("svid_lower", "SVID n+1", 0, 16, lowerSvid, hex(lowerSvid, 4), {
-          displayValue: lowerSvid === 0 ? "0x0000 (End of list)" : hex(lowerSvid, 4),
+          displayValue: lowerSvid === 0 ? "End of list" : hex(lowerSvid, 4),
         }),
       ],
       issues,
@@ -2568,9 +2520,7 @@ function buildDisplayPortStatusVdo(
         field("irq_hpd", "IRQ HPD", 9, 1, irqHpd, irqHpd === 1, {
           displayValue: boolDisplay(irqHpd === 1, "Asserted", "Not Asserted"),
         }),
-        field("reserved", "Reserved", 10, 22, reserved, reserved, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved", "Reserved", 10, 22, reserved, reserved),
       ],
       issues,
       index,
@@ -2700,9 +2650,7 @@ function buildAlertDataObject(
         field("hot_swappable_batteries", "Hot Swappable Batteries", 16, 4, hotSwappableBatteries, hotSwappableBatteries, {
           displayValue: alertBatteryBitmapDisplay(hotSwappableBatteries, 4),
         }),
-        field("reserved", "Reserved", 4, 12, reserved, reserved, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved", "Reserved", 4, 12, reserved, reserved),
         field("extended_alert_event_type", "Extended Alert Event Type", 0, 4, extendedAlertEventType, extendedAlertEventType, {
           displayValue: alertExtendedEventTypeDisplay(extendedAlertEventType),
         }),
@@ -2796,9 +2744,7 @@ function buildBatteryStatusDataObject(
         field("invalid_battery_reference", "Invalid Battery Reference", 8, 1, invalidBatteryReference, invalidBatteryReference === 1, {
           displayValue: boolDisplay(invalidBatteryReference === 1, "Invalid", "Valid"),
         }),
-        field("reserved_low", "Reserved", 0, 8, reservedLow, reservedLow, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved_low", "Reserved", 0, 8, reservedLow, reservedLow),
       ],
       issues,
       index,
@@ -2920,24 +2866,18 @@ function buildEnterUsbDataObject(
       byteOffset,
       raw32,
       [
-        field("reserved_31", "Reserved", 31, 1, reserved31, reserved31, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved_31", "Reserved", 31, 1, reserved31, reserved31),
         field("usb_mode", "USB Mode", 28, 3, usbMode, usbMode, {
           displayValue: enterUsbModeDisplay(usbMode),
         }),
-        field("reserved_27", "Reserved", 27, 1, reserved27, reserved27, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved_27", "Reserved", 27, 1, reserved27, reserved27),
         field("usb4_drd", "USB4 DRD", 26, 1, usb4Drd, usb4Drd === 1, {
           displayValue: boolDisplay(usb4Drd === 1, "Capable", "Not Capable"),
         }),
         field("usb3_drd", "USB3 DRD", 25, 1, usb3Drd, usb3Drd === 1, {
           displayValue: boolDisplay(usb3Drd === 1, "Capable", "Not Capable"),
         }),
-        field("reserved_24", "Reserved", 24, 1, reserved24, reserved24, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved_24", "Reserved", 24, 1, reserved24, reserved24),
         field("cable_speed", "Cable Speed", 21, 3, cableSpeed, cableSpeed, {
           displayValue: enterUsbCableSpeedDisplay(cableSpeed),
         }),
@@ -2948,20 +2888,18 @@ function buildEnterUsbDataObject(
           displayValue: enterUsbCableCurrentDisplay(cableCurrent),
         }),
         field("pcie_support", "PCIe Support", 16, 1, pcieSupport, pcieSupport === 1, {
-          displayValue: boolDisplay(pcieSupport === 1, "Supported", "Not Supported"),
+          displayValue: boolDisplay(pcieSupport === 1, "Yes", "No"),
         }),
         field("dp_support", "DP Support", 15, 1, dpSupport, dpSupport === 1, {
-          displayValue: boolDisplay(dpSupport === 1, "Supported", "Not Supported"),
+          displayValue: boolDisplay(dpSupport === 1, "Yes", "No"),
         }),
         field("tbt_support", "TBT Support", 14, 1, tbtSupport, tbtSupport === 1, {
-          displayValue: boolDisplay(tbtSupport === 1, "Supported", "Not Supported"),
+          displayValue: boolDisplay(tbtSupport === 1, "Yes", "No"),
         }),
         field("host_present", "Host Present", 13, 1, hostPresent, hostPresent === 1, {
           displayValue: boolDisplay(hostPresent === 1, "Present", "Not Present"),
         }),
-        field("reserved_low", "Reserved", 0, 13, reservedLow, reservedLow, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved_low", "Reserved", 0, 13, reservedLow, reservedLow),
       ],
       issues,
       index,
@@ -3005,9 +2943,7 @@ function buildSourceInfoDataObject(
         field("port_type", "Port Type", 31, 1, portType, portType === 1, {
           displayValue: portType === 1 ? "Guaranteed Capability Port" : "Managed Capability Port",
         }),
-        field("reserved", "Reserved", 24, 7, reserved, reserved, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved", "Reserved", 24, 7, reserved, reserved),
         field("port_maximum_pdp", "Port Maximum PDP", 16, 8, portMaximumPdp, portMaximumPdp, {
           displayValue: `${portMaximumPdp} W`,
         }),
@@ -3069,9 +3005,7 @@ function buildRevisionDataObject(
         field("version_minor", "Version.minor", 16, 4, versionMinor, versionMinor, {
           displayValue: String(versionMinor),
         }),
-        field("reserved", "Reserved", 0, 16, reserved, reserved, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved", "Reserved", 0, 16, reserved, reserved),
       ],
       issues,
       index,
@@ -3118,9 +3052,7 @@ function buildGetCountryInfoDataObject(
           displayValue: asciiByteDisplay(secondCharacter),
           note: "ISO 3166 Alpha-2 country code character.",
         }),
-        field("reserved", "Reserved", 0, 16, reserved, reserved, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved", "Reserved", 0, 16, reserved, reserved),
       ],
       issues,
       index,
@@ -3202,9 +3134,7 @@ function buildEprModeDataObject(
     ? `${data} W`
     : action === 0x04
       ? eprModeEnterFailedDataDisplay(data)
-      : data === 0
-        ? "Reserved (0)"
-        : `Reserved (${hex(data, 2)})`;
+      : "Reserved";
 
   return {
     section: createSection(
@@ -3228,9 +3158,7 @@ function buildEprModeDataObject(
               ? "Enter Failed cause code."
               : "Reserved for this Action; shall be set to zero.",
         }),
-        field("reserved", "Reserved", 0, 16, reserved, reserved, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved", "Reserved", 0, 16, reserved, reserved),
       ],
       issues,
       index,
@@ -3294,9 +3222,7 @@ function buildBistDataObject(
         field("bist_mode", "BIST Mode", 28, 4, bistMode, bistMode, {
           displayValue: bistModeDisplay(bistMode),
         }),
-        field("reserved", "Reserved", 0, 28, reserved, reserved, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved", "Reserved", 0, 28, reserved, reserved),
       ],
       issues,
       index,

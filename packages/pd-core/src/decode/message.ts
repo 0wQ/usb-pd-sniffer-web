@@ -398,7 +398,7 @@ function resolveChunkedExtendedPayloadContext(
     return {
       mode: "single_frame",
       notes: [
-        `${messageTypeName ?? "Chunked Extended Message"} Request Chunk frame is shown as raw bytes only.`,
+        `${messageTypeName ?? "Chunked Extended Message"} Request Chunk frame requests chunk ${extendedHeader.chunkNumber}; Data Size is zero and the remaining payload bytes are padding.`,
       ],
       payloadBytes: currentPayloadBytes,
       rawOnly: true,

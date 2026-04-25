@@ -132,6 +132,46 @@ function buildRawExtendedDataBlock(
   };
 }
 
+function buildPaddingSection(
+  bytes: Uint8Array,
+  parentSectionKey: string,
+  byteOffset: number,
+): BuiltSection {
+  const rawValue = bytes.reduce((value, byte, index) => value | (BigInt(byte) << BigInt(index * 8)), 0n);
+  const decodedValue = rawValue <= BigInt(Number.MAX_SAFE_INTEGER)
+    ? Number(rawValue)
+    : rawValue.toString();
+  const issues: DecodeIssue[] = bytes.some((byte) => byte !== 0)
+    ? [
+        createIssue("PD_EXTENDED_MESSAGE_PADDING_NONZERO", "Extended Message padding bytes shall be zero."),
+      ]
+    : [];
+
+  return {
+    section: createDataBlockSection(
+      `${parentSectionKey}:padding`,
+      "Padding",
+      "padding",
+      byteOffset,
+      bytes,
+      bytes.length > 0
+        ? [
+            {
+              key: "padding",
+              label: "Padding",
+              bitStart: 0,
+              bitLength: bytes.length * 8,
+              rawValue,
+              decodedValue,
+              displayValue: String(decodedValue),
+            },
+          ]
+        : [],
+      issues,
+    ),
+  };
+}
+
 function readUint16Le(bytes: Uint8Array, offset: number): number {
   return (bytes[offset] ?? 0) | ((bytes[offset + 1] ?? 0) << 8);
 }
@@ -451,7 +491,7 @@ function buildStatusDataBlock(
             displayValue: boolDisplay(presentInputExternalPower === 1, "Present", "Not Present"),
           }),
           field("external_power_type", "External Power Type", 10, 1, presentInputExternalPowerType, presentInputExternalPowerType === 1, {
-            displayValue: presentInputExternalPower === 1 ? (presentInputExternalPowerType === 1 ? "AC" : "DC") : (presentInputExternalPowerType === 0 ? "Reserved (0)" : "Reserved"),
+            displayValue: presentInputExternalPower === 1 ? (presentInputExternalPowerType === 1 ? "AC" : "DC") : "Reserved",
             note: "Valid only when External Power is set.",
           }),
           field("internal_power_from_battery", "Internal Power from Battery", 11, 1, presentInputInternalBattery, presentInputInternalBattery === 1, {
@@ -745,7 +785,7 @@ function buildSourceCapabilitiesExtendedDataBlock(
       displayValue: boolDisplay(externalSupplyPresent === 1, "Present", "Not Present"),
     }),
     field("external_supply_type", "External Supply Type", 169, 1, externalSupplyUnconstrained, externalSupplyUnconstrained === 1, {
-      displayValue: externalSupplyPresent === 1 ? (externalSupplyUnconstrained === 1 ? "Unconstrained" : "Constrained") : (externalSupplyUnconstrained === 0 ? "Reserved (0)" : "Reserved"),
+      displayValue: externalSupplyPresent === 1 ? (externalSupplyUnconstrained === 1 ? "Unconstrained" : "Constrained") : "Reserved",
       note: "Valid only when External Supply Present is set.",
     }),
     field("internal_battery_present", "Internal Battery Present", 170, 1, internalBatteryPresent, internalBatteryPresent === 1, {
@@ -1171,7 +1211,7 @@ function buildGetManufacturerInfoDataBlock(
           displayValue: manufacturerInfoTargetDisplay(target),
         }),
         field("manufacturer_info_ref", "Manufacturer Info Ref", 8, 8, reference, reference, {
-          displayValue: target === 1 ? batteryReferenceDisplay(reference) : (reference === 0 ? "Reserved (0)" : `Reserved (${hex(reference, 2)})`),
+          displayValue: target === 1 ? batteryReferenceDisplay(reference) : "Reserved",
         }),
       ],
       issues,
@@ -1320,9 +1360,7 @@ function buildCountryCodesDataBlock(
       displayValue: `${length}`,
       note: "Number of Alpha-2 country codes in the message.",
     }),
-    field("reserved", "Reserved", 8, 8, reserved, reserved, {
-      note: "Shall be set to zero.",
-    }),
+    field("reserved", "Reserved", 8, 8, reserved, reserved),
   ];
 
   const codeCount = Math.max(0, Math.floor((decodeBytes.length - 2) / 2));
@@ -1395,9 +1433,7 @@ function buildCountryInfoDataBlock(
         field("second_character", "Second Character of Country Code", 8, 8, secondCharacter, secondCharacter, {
           displayValue: asciiByteDisplay(secondCharacter),
         }),
-        field("reserved", "Reserved", 16, 16, reserved, reserved, {
-          note: "Shall be set to zero.",
-        }),
+        field("reserved", "Reserved", 16, 16, reserved, reserved),
         field("country_specific_data", "Country Specific Data", 32, countrySpecificDataBytes.length * 8, countrySpecificDataBytes.length, countrySpecificData, {
           displayValue: `"${countrySpecificData}"`,
           note: "Country-defined 1..22 byte payload. Unsupported Code is returned as a null-terminated ASCII string.",
@@ -1439,7 +1475,7 @@ function buildExtendedControlDataBlock(
         }),
         field("data", "Data", 8, 8, data, data, {
           displayValue: hex(data, 2),
-          note: "Shall be set to zero when not used.",
+          note: "Set to zero when unused.",
         }),
       ],
       issues,
@@ -1463,6 +1499,12 @@ export function explainExtendedDataBlocks(
   const decodeBytes = payloadBytes.subarray(0, decodeLength);
 
   if (options.rawOnly) {
+    if (extendedHeader.requestChunk) {
+      return [
+        buildPaddingSection(payloadBytes, payloadSectionKey, payloadByteOffset).section,
+      ];
+    }
+
     return [
       buildRawExtendedDataBlock(decodeBytes, messageType.name, payloadSectionKey, payloadByteOffset).section,
     ];

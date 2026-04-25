@@ -71,7 +71,7 @@ export type MessageHeader = {
   portPowerRoleOrCablePlugMeaning: "Sink" | "Source" | "DFP/UFP Port" | "Cable Plug / VPD";
   specificationRevisionBits: 0 | 1 | 2 | 3;
   specificationRevision: SpecificationRevision;
-  portDataRoleBit: 0 | 1 | null;
+  portDataRoleBit: 0 | 1;
   portDataRoleMeaning: "UFP" | "DFP" | null;
   messageType: number;
   category: MessageCategory;
