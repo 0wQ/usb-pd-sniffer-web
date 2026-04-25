@@ -1,0 +1,29 @@
+{
+  "name": "@usb-pd-sniffer/pd-monitor-atk-c2",
+  "version": "0.1.0",
+  "description": "ATK C2 WebUSB monitor device support for USB PD capture.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "rm -rf dist *.tsbuildinfo && pnpm exec tsc -p tsconfig.json",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "typecheck": "pnpm exec tsc -p tsconfig.json --pretty false"
+  },
+  "dependencies": {
+    "@usb-pd-sniffer/pd-core": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
