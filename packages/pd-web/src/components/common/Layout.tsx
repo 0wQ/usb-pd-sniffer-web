@@ -25,7 +25,7 @@ const MIN_TABLE_SIZE = {
   horizontal: 35,
 } satisfies Record<DecodeLayoutMode, number>
 const MIN_DECODE_SIZE = {
-  vertical: '12%',
+  vertical: '11%',
   horizontal: '25%',
 } satisfies Record<DecodeLayoutMode, string>
 const MAX_DECODE_SIZE = {
