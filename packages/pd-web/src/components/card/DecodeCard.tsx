@@ -41,16 +41,16 @@ function contextDiffSummary(withContext: DecodedPacket, withoutContext: DecodedP
 
   if (withContext.messageType.name !== withoutContext.messageType.name) {
     differences.push(
-      `Type ${withoutContext.messageType.name ?? withoutContext.category} -> ${withContext.messageType.name ?? withContext.category}`
+      `Type changed from ${withoutContext.messageType.name ?? withoutContext.category} to ${withContext.messageType.name ?? withContext.category}`
     )
   }
 
   if (withContext.sections.length !== withoutContext.sections.length) {
-    differences.push(`Sections ${withoutContext.sections.length} -> ${withContext.sections.length}`)
+    differences.push(`Decoded sections increased from ${withoutContext.sections.length} to ${withContext.sections.length}`)
   }
 
   if (withContext.issues.length !== withoutContext.issues.length) {
-    differences.push(`Issues ${withoutContext.issues.length} -> ${withContext.issues.length}`)
+    differences.push(`Issue count changed from ${withoutContext.issues.length} to ${withContext.issues.length}`)
   }
 
   return differences.length === 0 ? null : differences.join(' | ')
@@ -103,10 +103,12 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
   const selectedRecord = selectedIndex !== null ? records[selectedIndex] : null
   const previousRecord = selectedIndex !== null && selectedIndex > 0 ? records[selectedIndex - 1] : null
 
-  const decodedFrame = useMemo(() => {
+  const decodeResult = useMemo(() => {
     if (selectedIndex === null) return null
     return decodeRecordAtIndex(records, selectedIndex, DETAIL_CONTEXT_BACKTRACK_RECORDS)
   }, [records, selectedIndex])
+  const decodedFrame = decodeResult?.decoded ?? null
+  const contextBacktrackUsed = decodeResult?.contextBacktrackUsed ?? 0
 
   const decodedWithoutContext = useMemo(() => {
     if (selectedRecord === null) return null
@@ -133,10 +135,12 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
         <div className="flex items-center justify-between gap-3">
           <h2 className="card-title select-none">DECODE</h2>
           {decodedFrame !== null && (
-            <div className="text-right text-[11px] text-base-content/55">
-              <div>{decodedFrame.messageType.name ?? decodedFrame.category}</div>
-              <div>{decodedFrame.frame.sop}</div>
-              <div>{`Context: Last ${DETAIL_CONTEXT_BACKTRACK_RECORDS.toLocaleString()} Records`}</div>
+            <div className="min-w-0 truncate text-right font-mono text-[11px] text-base-content/55">
+              {[
+                decodedFrame.messageType.name ?? decodedFrame.category,
+                decodedFrame.frame.sop,
+                `Backtrack ${contextBacktrackUsed.toLocaleString()}`,
+              ].join(' · ')}
             </div>
           )}
         </div>
@@ -146,7 +150,7 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
         ) : (
           <>
             <div className="rounded-xl border border-base-300 bg-base-100/80 p-3">
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-2">
                 <div>
                   <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Time</div>
                   <div className="mt-1 font-mono text-xs">{formatTimestampUs(selectedRecord.timestamp_us)}</div>
@@ -208,8 +212,13 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
 
             {contextDifference !== null && (
               <div className="rounded-xl border border-warning/35 bg-warning/8 p-3">
-                <div className="text-[10px] uppercase tracking-[0.14em] text-warning">Context Difference</div>
-                <div className="mt-2 font-mono text-xs leading-5 text-base-content/80">{contextDifference}</div>
+                <div className="text-[10px] uppercase tracking-[0.14em] text-warning">
+                  Context-Enhanced Decode
+                </div>
+                <div className="mt-2 text-xs leading-5 text-base-content/75">
+                  This row decodes differently after looking back for the required protocol context.
+                </div>
+                <div className="mt-1 text-xs leading-5 text-base-content/75">{contextDifference}</div>
               </div>
             )}
 

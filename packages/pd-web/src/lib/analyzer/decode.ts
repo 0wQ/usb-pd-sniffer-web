@@ -22,12 +22,26 @@ export function decodeSingleRecord(record: CaptureRecord): DecodedPacket | null 
   return packet === null ? null : decodePacket(packet)
 }
 
+type ContextLookupResult<T> = {
+  value: T | undefined
+  scannedRecords: number
+}
+
+export type DecodeRecordAtIndexResult = {
+  decoded: DecodedPacket
+  contextBacktrackUsed: number
+}
+
+function needsSourceCapabilitiesContext(decoded: DecodedPacket): boolean {
+  return decoded.messageType.name === 'Request'
+}
+
 function findPreviousChunkedExtendedPackets(
   records: readonly CaptureRecord[],
   targetIndex: number,
   startIndex: number,
   targetDecoded: DecodedPacket,
-): MessagePacket[] | undefined {
+): ContextLookupResult<MessagePacket[]> {
   const extendedHeader = targetDecoded.extendedHeader
   if (
     extendedHeader === null ||
@@ -35,12 +49,15 @@ function findPreviousChunkedExtendedPackets(
     extendedHeader.requestChunk ||
     extendedHeader.chunkNumber === 0
   ) {
-    return undefined
+    return { value: undefined, scannedRecords: 0 }
   }
 
   const previousChunks = new Array<MessagePacket | undefined>(extendedHeader.chunkNumber)
+  let scannedRecords = 0
 
   for (let index = targetIndex - 1; index >= startIndex; index -= 1) {
+    scannedRecords = targetIndex - index
+
     if (
       records[index]?.event_type === MONITOR_EVENT.HARD_RESET ||
       records[index]?.event_type === MONITOR_EVENT.CABLE_RESET
@@ -74,19 +91,23 @@ function findPreviousChunkedExtendedPackets(
     previousChunks[chunkNumber] = packet
 
     if (previousChunks.every((chunk) => chunk !== undefined)) {
-      return previousChunks as MessagePacket[]
+      return { value: previousChunks as MessagePacket[], scannedRecords }
     }
   }
 
-  return undefined
+  return { value: undefined, scannedRecords }
 }
 
 function findNearestSourceCapabilitiesFrame(
   records: readonly CaptureRecord[],
   targetIndex: number,
   startIndex: number,
-): MessagePacket | undefined {
+): ContextLookupResult<MessagePacket> {
+  let scannedRecords = 0
+
   for (let index = targetIndex - 1; index >= startIndex; index -= 1) {
+    scannedRecords = targetIndex - index
+
     if (
       records[index]?.event_type === MONITOR_EVENT.HARD_RESET ||
       records[index]?.event_type === MONITOR_EVENT.CABLE_RESET
@@ -101,18 +122,18 @@ function findNearestSourceCapabilitiesFrame(
 
     const decoded = decodePacket(packet)
     if (decoded.messageType.name === 'Source_Capabilities') {
-      return packet
+      return { value: packet, scannedRecords }
     }
   }
 
-  return undefined
+  return { value: undefined, scannedRecords }
 }
 
 export function decodeRecordAtIndex(
   records: readonly CaptureRecord[],
   targetIndex: number,
   backtrackRecords: number | null = null
-): DecodedPacket | null {
+): DecodeRecordAtIndexResult | null {
   if (targetIndex < 0 || targetIndex >= records.length) {
     return null
   }
@@ -127,7 +148,9 @@ export function decodeRecordAtIndex(
   const startIndex = backtrackRecords === null
     ? 0
     : Math.max(0, targetIndex - backtrackRecords)
-  const sourceCapabilities = findNearestSourceCapabilitiesFrame(records, targetIndex, startIndex)
+  const sourceCapabilities = needsSourceCapabilitiesContext(singleFrameDecoded)
+    ? findNearestSourceCapabilitiesFrame(records, targetIndex, startIndex)
+    : { value: undefined, scannedRecords: 0 }
   const previousChunkedExtendedPackets = findPreviousChunkedExtendedPackets(
     records,
     targetIndex,
@@ -135,20 +158,26 @@ export function decodeRecordAtIndex(
     singleFrameDecoded,
   )
 
-  return decodePacket(packet, {
-    sourceCapabilities: sourceCapabilities === undefined
+  return {
+    decoded: decodePacket(packet, {
+      sourceCapabilities: sourceCapabilities.value === undefined
       ? undefined
       : {
           kind: 'packet',
-          packet: sourceCapabilities,
+          packet: sourceCapabilities.value,
         },
-    chunkedExtendedMessage: previousChunkedExtendedPackets === undefined
+      chunkedExtendedMessage: previousChunkedExtendedPackets.value === undefined
       ? undefined
       : {
-          previousChunks: previousChunkedExtendedPackets.map((previousPacket) => ({
+          previousChunks: previousChunkedExtendedPackets.value.map((previousPacket) => ({
             kind: 'packet' as const,
             packet: previousPacket,
           })),
         },
-  })
+    }),
+    contextBacktrackUsed: Math.max(
+      sourceCapabilities.scannedRecords,
+      previousChunkedExtendedPackets.scannedRecords,
+    ),
+  }
 }

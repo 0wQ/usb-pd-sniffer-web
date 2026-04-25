@@ -9,6 +9,19 @@ import ImportDialog from '@/components/common/ImportDialog'
 import SendPdDialog from '@/components/common/SendPdDialog'
 import ViewTabs, { type AppView } from '@/components/common/ViewTabs'
 import clsx from 'clsx'
+import {
+  CirclePause,
+  CirclePlay,
+  Download,
+  Eraser,
+  MapPin,
+  Palette,
+  PanelBottom,
+  PanelRight,
+  Send,
+  Settings,
+  Upload,
+} from 'lucide-react'
 import { monitorEventName } from '@usb-pd-sniffer/pd-monitor'
 import { decodeSingleRecord } from '@/lib/analyzer/decode'
 import { decodeUfcsRecordType, formatUfcsSignal, formatUfcsTypeSummary } from '@/lib/ufcs/ufcsType'
@@ -23,6 +36,8 @@ import type {
 const ROW_HEIGHT = 30
 const THEME_STORAGE_KEY = 'usb-pd-sniffer-theme'
 const TOOLBAR_ICON_BUTTON_CLASS = 'btn btn-sm btn-square btn-ghost'
+const TOOLBAR_ICON_CLASS = 'h-5 w-5'
+type DecodeLayoutMode = 'vertical' | 'horizontal'
 
 const themes = [
   'light',
@@ -449,6 +464,8 @@ RecordCounterComponent.displayName = 'RecordCounterComponent'
 
 type CardProps = {
   className?: string
+  decodeLayoutMode: DecodeLayoutMode
+  onToggleDecodeLayoutMode: () => void
   onRowClick: (index: number) => void
   selectedIndex: number | null
   isConnected: boolean
@@ -474,6 +491,8 @@ type CardProps = {
 
 const Card = memo(({
   className,
+  decodeLayoutMode,
+  onToggleDecodeLayoutMode,
   onRowClick,
   selectedIndex,
   isConnected,
@@ -607,19 +626,26 @@ const Card = memo(({
     setImportDialogOpen(false)
     setPendingImportData(null)
   }, [])
+  const decodeLayoutButtonLabel = decodeLayoutMode === 'vertical'
+    ? 'Move decode panel to right side'
+    : 'Move decode panel to bottom'
+  const DecodeLayoutIcon = decodeLayoutMode === 'vertical'
+    ? PanelBottom
+    : PanelRight
+  const AutoScrollIcon = autoScroll ? CirclePause : CirclePlay
 
   return (
     <section className={clsx('flex min-w-0 flex-col min-h-0', className)}>
       <div className="relative z-20 shrink-0 overflow-visible p-5">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 flex-wrap items-center gap-2.5">
-            <h2 className="card-title select-none">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex min-w-max shrink-0 flex-nowrap items-center gap-2.5">
+            <h2 className="card-title shrink-0 select-none whitespace-nowrap">
               <span className="text-primary">USB PD Sniffer</span>
             </h2>
             <ViewTabs currentView={currentView} onViewChange={onViewChange} />
           </div>
-          <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-2 lg:w-auto">
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
               {isDeviceSupported && (
                 <button
                   className="btn btn-sm rounded-full gap-2"
@@ -645,45 +671,10 @@ const Card = memo(({
               <RecordCounterComponent />
             </div>
 
-            <div className="flex flex-wrap items-center gap-1">
-              <button
-                className={TOOLBAR_ICON_BUTTON_CLASS}
-                onClick={() => setTxDialogOpen(true)}
-                disabled={!monitorDeviceCapabilities.tx || !isDeviceSupported || !isConnected || isSendingCommand}
-                aria-label="Native PD TX"
-                title={monitorDeviceCapabilities.tx ? 'Native PD TX' : 'Selected device does not support PD TX'}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 11.5L21 3l-8.5 18-1.8-7.7L3 11.5z"
-                  />
-                </svg>
-              </button>
+            <div className="flex min-w-max shrink-0 flex-wrap items-center justify-end gap-1">
               <div className="dropdown dropdown-end">
                 <label tabIndex={0} role="button" className={TOOLBAR_ICON_BUTTON_CLASS}>
-                  <svg
-                    className="h-5 w-5 stroke-current"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                    />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
+                  <Settings className={TOOLBAR_ICON_CLASS} />
                 </label>
                 <div tabIndex={0} className="dropdown-content z-20 w-72 rounded-box bg-base-100 p-3 shadow-md">
                   {isDeviceSupported && (
@@ -734,25 +725,27 @@ const Card = memo(({
                   )}
                 </div>
               </div>
+              <button
+                className={TOOLBAR_ICON_BUTTON_CLASS}
+                onClick={() => setTxDialogOpen(true)}
+                disabled={!monitorDeviceCapabilities.tx || !isDeviceSupported || !isConnected || isSendingCommand}
+                aria-label="Native PD TX"
+                title={monitorDeviceCapabilities.tx ? 'Native PD TX' : 'Selected device does not support PD TX'}
+              >
+                <Send className={TOOLBAR_ICON_CLASS} />
+              </button>
+              <button
+                className={TOOLBAR_ICON_BUTTON_CLASS}
+                onClick={onToggleDecodeLayoutMode}
+                aria-label={decodeLayoutButtonLabel}
+                title={decodeLayoutButtonLabel}
+              >
+                <DecodeLayoutIcon className={TOOLBAR_ICON_CLASS} />
+              </button>
 
               <div className="dropdown dropdown-end">
                 <label tabIndex={0} role="button" className={TOOLBAR_ICON_BUTTON_CLASS}>
-                  <svg
-                    className="h-5 w-5 stroke-current"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M7 4h10a2 2 0 012 2v4a2 2 0 01-2 2h-1.5l-2.2 6.2a1 1 0 01-1.9-.2L10 12H7a2 2 0 01-2-2V6a2 2 0 012-2z"
-                    />
-                    <circle cx="8.5" cy="8" r="1" fill="currentColor" stroke="none" />
-                    <circle cx="12" cy="8" r="1" fill="currentColor" stroke="none" />
-                    <circle cx="15.5" cy="8" r="1" fill="currentColor" stroke="none" />
-                  </svg>
+                  <Palette className={TOOLBAR_ICON_CLASS} />
                 </label>
                 <ul tabIndex={-1} className="dropdown-content z-20 max-h-72 w-50 overflow-y-auto rounded-box bg-base-100 p-2 shadow-md menu">
                   {themes.map((theme) => (
@@ -764,29 +757,13 @@ const Card = memo(({
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1">
+            <div className="flex min-w-max shrink-0 flex-wrap items-center justify-end gap-1">
               <button
                 className={TOOLBAR_ICON_BUTTON_CLASS}
                 onClick={() => setAutoScroll(!autoScroll)}
                 aria-label="Auto Scroll"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d={autoScroll
-                      ? "M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                      : "M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    }
-                  />
-                </svg>
+                <AutoScrollIcon className={TOOLBAR_ICON_CLASS} />
               </button>
               <button
                 className={TOOLBAR_ICON_BUTTON_CLASS}
@@ -794,26 +771,7 @@ const Card = memo(({
                 disabled={selectedIndex === null}
                 aria-label="Scroll to selection"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
+                <MapPin className={TOOLBAR_ICON_CLASS} />
               </button>
               <button
                 className={TOOLBAR_ICON_BUTTON_CLASS}
@@ -821,20 +779,7 @@ const Card = memo(({
                 disabled={captureCount === 0 || isProcessing}
                 aria-label="Export to CSV"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                  />
-                </svg>
+                <Download className={TOOLBAR_ICON_CLASS} />
               </button>
               <button
                 className={TOOLBAR_ICON_BUTTON_CLASS}
@@ -842,40 +787,14 @@ const Card = memo(({
                 disabled={isProcessing}
                 aria-label="Import from CSV"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-                  />
-                </svg>
+                <Upload className={TOOLBAR_ICON_CLASS} />
               </button>
               <button
                 className={TOOLBAR_ICON_BUTTON_CLASS}
                 onClick={clearRecords}
                 aria-label="Clear"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
+                <Eraser className={TOOLBAR_ICON_CLASS} />
               </button>
             </div>
           </div>
