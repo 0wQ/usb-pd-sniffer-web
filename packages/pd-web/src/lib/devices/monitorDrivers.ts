@@ -54,6 +54,7 @@ export type MonitorDeviceLike = {
   sendRawPd(target: MonitorPdTxTarget, payload: Uint8Array): Promise<void>
   sendHardReset(): Promise<void>
   sendCableReset(): Promise<void>
+  setUfcsAttach(enabled: boolean): Promise<void>
   onRecord(listener: (record: MonitorRecordLike) => void): () => void
   onPowerSample(listener: (sample: MonitorPowerSampleLike) => void): () => void
   onStatus(listener: (status: MonitorDeviceStatusLike) => void): () => void

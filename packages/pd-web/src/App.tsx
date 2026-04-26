@@ -24,6 +24,7 @@ function App() {
     sendRawPdFrame,
     sendHardReset,
     sendCableReset,
+    setUfcsAttach,
     isSending,
     isDeviceSupported,
     deviceError,
@@ -53,6 +54,8 @@ function App() {
   const handleSendHardReset = () => sendHardReset()
 
   const handleSendCableReset = () => sendCableReset()
+
+  const handleSetUfcsAttach = (enabled: boolean) => setUfcsAttach(enabled)
 
   return (
     <div className="app bg-base-200 w-full h-screen min-h-200 flex flex-col">
@@ -110,6 +113,7 @@ function App() {
           onSendRawPdFrame={handleSendRawPdFrame}
           onSendHardReset={handleSendHardReset}
           onSendCableReset={handleSendCableReset}
+          onSetUfcsAttach={handleSetUfcsAttach}
           isSendingCommand={isSending}
           isDeviceSupported={isDeviceSupported}
           currentView={currentView}

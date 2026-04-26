@@ -483,6 +483,7 @@ type CardProps = {
   onSendRawPdFrame: (target: MonitorPdTxTarget, hexPayload: string) => Promise<void>
   onSendHardReset: () => Promise<void>
   onSendCableReset: () => Promise<void>
+  onSetUfcsAttach: (enabled: boolean) => Promise<void>
   isSendingCommand: boolean
   isDeviceSupported: boolean
   currentView: AppView
@@ -510,6 +511,7 @@ const Card = memo(({
   onSendRawPdFrame,
   onSendHardReset,
   onSendCableReset,
+  onSetUfcsAttach,
   isSendingCommand,
   isDeviceSupported,
   currentView,
@@ -626,6 +628,16 @@ const Card = memo(({
     setImportDialogOpen(false)
     setPendingImportData(null)
   }, [])
+
+  const handleSetUfcsAttach = useCallback(async (enabled: boolean) => {
+    try {
+      await onSetUfcsAttach(enabled)
+      toast.success(enabled ? 'Enabled UFCS attach.' : 'Disabled UFCS attach.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update UFCS attach.')
+    }
+  }, [onSetUfcsAttach])
+
   const decodeLayoutButtonLabel = decodeLayoutMode === 'vertical'
     ? 'Move decode panel to right side'
     : 'Move decode panel to bottom'
@@ -721,6 +733,34 @@ const Card = memo(({
                         ))}
                       </select>
                     </label>
+                    {monitorDeviceCapabilities.ufcs && (
+                      <div className="mt-2 border-t border-base-300/70 pt-2">
+                        <div className="px-1 pb-1 text-xs font-semibold text-base-content/60 select-none">
+                          UFCS
+                        </div>
+                        <div className="flex items-center justify-between gap-3 px-1 py-2">
+                          <span className="text-sm select-none">Attach</span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              className="btn btn-xs rounded-full border-success/30 bg-success/10 px-3 normal-case text-success hover:bg-success/15"
+                              onClick={() => void handleSetUfcsAttach(true)}
+                              disabled={!isConnected || isSendingCommand}
+                            >
+                              Enable
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-xs rounded-full border-warning/35 bg-warning/10 px-3 normal-case text-warning hover:bg-warning/15"
+                              onClick={() => void handleSetUfcsAttach(false)}
+                              disabled={!isConnected || isSendingCommand}
+                            >
+                              Disable
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     </>
                   )}
                 </div>

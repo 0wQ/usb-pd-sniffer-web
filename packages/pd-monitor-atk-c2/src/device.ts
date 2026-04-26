@@ -363,6 +363,9 @@ export function createAtkC2MonitorDevice(options: AtkC2MonitorDeviceOptions = {}
     async sendCableReset(): Promise<void> {
       throw new Error("ATK C2 WebUSB backend currently supports capture only; cable reset TX is not implemented.");
     },
+    async setUfcsAttach(_enabled: boolean): Promise<void> {
+      throw new Error("ATK C2 WebUSB backend does not support UFCS attach control.");
+    },
     onRecord(listener: (record: MonitorRecord) => void): () => void {
       recordListeners.add(listener);
       return () => recordListeners.delete(listener);

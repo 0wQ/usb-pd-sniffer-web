@@ -81,7 +81,7 @@ const SendPdDialog = ({
       toast.success(successMessage)
       onClose()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'TX command failed.')
+      toast.error(error instanceof Error ? error.message : 'Command failed.')
     }
   }
 

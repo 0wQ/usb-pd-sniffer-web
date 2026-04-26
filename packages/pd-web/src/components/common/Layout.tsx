@@ -49,6 +49,7 @@ type Props = {
   onSendRawPdFrame: (target: MonitorPdTxTarget, hexPayload: string) => Promise<void>
   onSendHardReset: () => Promise<void>
   onSendCableReset: () => Promise<void>
+  onSetUfcsAttach: (enabled: boolean) => Promise<void>
   isSendingCommand: boolean
   isDeviceSupported: boolean
   currentView: AppView
@@ -104,6 +105,7 @@ const Layout = ({
   onSendRawPdFrame,
   onSendHardReset,
   onSendCableReset,
+  onSetUfcsAttach,
   isSendingCommand,
   isDeviceSupported,
   currentView,
@@ -220,6 +222,7 @@ const Layout = ({
             onSendRawPdFrame={onSendRawPdFrame}
             onSendHardReset={onSendHardReset}
             onSendCableReset={onSendCableReset}
+            onSetUfcsAttach={onSetUfcsAttach}
             isSendingCommand={isSendingCommand}
             isDeviceSupported={isDeviceSupported}
             currentView={currentView}

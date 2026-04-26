@@ -162,6 +162,25 @@ describe("pd-monitor adapter", () => {
     expect(cableReset[1]).toBe(0);
   });
 
+  test("encodes UFCS attach command for native HID OUT", () => {
+    const enable = encodeNativeMonitorTxCommandBody({
+      opcode: MONITOR_TX_CMD.SET_UFCS_ATTACH,
+      enabled: true
+    });
+    const disable = encodeNativeMonitorTxCommandBody({
+      opcode: MONITOR_TX_CMD.SET_UFCS_ATTACH,
+      enabled: false
+    });
+
+    expect(enable.length).toBe(NATIVE_HID_REPORT_BODY_SIZE);
+    expect(enable[0]).toBe(MONITOR_TX_CMD.SET_UFCS_ATTACH);
+    expect(enable[1]).toBe(1);
+    expect(enable[2]).toBe(1);
+    expect(disable[0]).toBe(MONITOR_TX_CMD.SET_UFCS_ATTACH);
+    expect(disable[1]).toBe(1);
+    expect(disable[2]).toBe(0);
+  });
+
   test("keeps host raw-send echo compatible with neutral PD monitor events", () => {
     const payload = Uint8Array.from([0x42, 0x10, 0xaa, 0xbb]);
     const body = encodeNativeMonitorTxCommandBody({

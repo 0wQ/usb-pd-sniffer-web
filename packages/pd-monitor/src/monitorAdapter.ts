@@ -68,7 +68,8 @@ export const MONITOR_TX_CMD = {
   SEND_RAW_SOP2: 0x03,
   SEND_HARD_RESET: 0x04,
   SEND_CABLE_RESET: 0x05,
-  SET_ACTIVE_CC: 0x10
+  SET_ACTIVE_CC: 0x10,
+  SET_UFCS_ATTACH: 0x20
 } as const;
 
 export type NativeMonitorTxOpcode = typeof MONITOR_TX_CMD[keyof typeof MONITOR_TX_CMD];
@@ -76,7 +77,8 @@ export type NativeMonitorTxOpcode = typeof MONITOR_TX_CMD[keyof typeof MONITOR_T
 export type NativeMonitorTxCommand =
   | { opcode: typeof MONITOR_TX_CMD.SEND_RAW_SOP0 | typeof MONITOR_TX_CMD.SEND_RAW_SOP1 | typeof MONITOR_TX_CMD.SEND_RAW_SOP2; payload: Uint8Array }
   | { opcode: typeof MONITOR_TX_CMD.SEND_HARD_RESET | typeof MONITOR_TX_CMD.SEND_CABLE_RESET; payload?: Uint8Array | null }
-  | { opcode: typeof MONITOR_TX_CMD.SET_ACTIVE_CC; payload?: Uint8Array | null };
+  | { opcode: typeof MONITOR_TX_CMD.SET_ACTIVE_CC; payload?: Uint8Array | null }
+  | { opcode: typeof MONITOR_TX_CMD.SET_UFCS_ATTACH; enabled: boolean; payload?: Uint8Array | null };
 
 export type NativeMonitorHidReport = {
   timestampUs: number;
@@ -256,6 +258,13 @@ export function encodeNativeMonitorTxCommandBody(command: NativeMonitorTxCommand
       return body;
     case MONITOR_TX_CMD.SET_ACTIVE_CC:
       throw new Error("SET_ACTIVE_CC is reserved in firmware and must not be used.");
+    case MONITOR_TX_CMD.SET_UFCS_ATTACH:
+      if (payload.length !== 0) {
+        throw new Error(`UFCS attach command payload must be encoded from enabled, got ${payload.length} raw bytes.`);
+      }
+      body[1] = 1;
+      body[2] = command.enabled ? 1 : 0;
+      return body;
   }
 
   throw new Error("Unsupported native monitor TX command.");

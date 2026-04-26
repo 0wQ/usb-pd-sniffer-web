@@ -170,6 +170,14 @@ export function useMonitorDevice() {
     await deviceRef.current?.sendCableReset()
   }, [selectedDriver])
 
+  const setUfcsAttach = useCallback(async (enabled: boolean) => {
+    if (!selectedDriver.capabilities.ufcs) {
+      throw new Error(`${selectedDriver.label} does not support UFCS control.`)
+    }
+
+    await deviceRef.current?.setUfcsAttach(enabled)
+  }, [selectedDriver])
+
   const selectMonitorDeviceKind = useCallback((kind: MonitorDeviceKind) => {
     if (kind === selectedMonitorDeviceKind) return
     setManualDisconnect(true)
@@ -196,6 +204,7 @@ export function useMonitorDevice() {
     sendRawPdFrame,
     sendHardReset,
     sendCableReset,
+    setUfcsAttach,
     isSending,
     isDeviceSupported,
     deviceError
