@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MessageFrame } from '@usb-pd-sniffer/pd-core'
 import clsx from 'clsx'
 import { toast } from 'sonner'
-import type { MonitorPdTxTarget } from '@usb-pd-sniffer/pd-monitor'
+import type { MonitorActiveCCMode, MonitorCCMode, MonitorCCModeConfig, MonitorPdTxTarget } from '@/lib/devices/monitorDrivers'
 import { previewPdTxFrame } from '@/lib/analyzer/txPreview'
 import { hexBytes, IssueList, SectionView } from '@/components/decode/DecodedSectionsView'
 
@@ -23,6 +23,7 @@ type Props = {
   onSendRaw: (target: MonitorPdTxTarget, hexPayload: string) => Promise<void>
   onSendHardReset: () => Promise<void>
   onSendCableReset: () => Promise<void>
+  onSetCCMode: (config: MonitorCCModeConfig) => Promise<void>
 }
 
 const SendPdDialog = ({
@@ -34,11 +35,15 @@ const SendPdDialog = ({
   onSendRaw,
   onSendHardReset,
   onSendCableReset,
+  onSetCCMode,
 }: Props) => {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [mode, setMode] = useState<SendMode>('raw')
   const [target, setTarget] = useState<MonitorPdTxTarget>('SOP')
   const [hexPayload, setHexPayload] = useState('A7 00')
+  const [activeCCMode, setActiveCCMode] = useState<MonitorActiveCCMode>('auto')
+  const [cc1Mode, setCC1Mode] = useState<MonitorCCMode>('open')
+  const [cc2Mode, setCC2Mode] = useState<MonitorCCMode>('open')
   const preview = useMemo(() => {
     if (mode !== 'raw') {
       return null
@@ -85,6 +90,15 @@ const SendPdDialog = ({
     }
   }
 
+  const runInlineCommand = async (action: () => Promise<void>, successMessage: string) => {
+    try {
+      await action()
+      toast.success(successMessage)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Command failed.')
+    }
+  }
+
   const handleSendRaw = async () => {
     await runCommand(
       () => onSendRaw(target, hexPayload),
@@ -103,6 +117,13 @@ const SendPdDialog = ({
     await runCommand(
       onSendCableReset,
       'Sent cable reset.',
+    )
+  }
+
+  const handleSetCCMode = async () => {
+    await runInlineCommand(
+      () => onSetCCMode({ activeCC: activeCCMode, cc1: cc1Mode, cc2: cc2Mode }),
+      `Applied CC mode: Active ${activeCCMode.toUpperCase()}, CC1 ${cc1Mode.toUpperCase()}, CC2 ${cc2Mode.toUpperCase()}.`,
     )
   }
 
@@ -167,12 +188,73 @@ const SendPdDialog = ({
       onClose={onClose}
     >
       <div className="modal-box flex max-h-[calc(100vh-2rem)] max-w-5xl flex-col overflow-hidden">
-        <h3 className="text-lg font-bold">Native PD TX</h3>
+        <h3 className="text-lg font-bold">Native Controls</h3>
         <p className="mt-2 text-sm text-base-content/70">
-          Send raw PD bytes through the monitor device. Enter header + data objects only, without CRC.
+          Send raw PD bytes and control CC pull state through the monitor device.
         </p>
 
         <div className="mt-4 flex min-h-0 flex-1 flex-col gap-4">
+          <div className="rounded-lg border border-base-300 bg-base-200/70 p-3">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-sm font-semibold">CC Mode</div>
+                <div className="text-xs text-base-content/60">Apply active CC auto/force selection and independent Open / Rd / Ra state.</div>
+              </div>
+              <button
+                className="btn btn-sm rounded-full border-primary/30 bg-primary/10 px-4 normal-case text-primary hover:bg-primary/15"
+                onClick={() => void handleSetCCMode()}
+                disabled={!isConnected || isSending}
+                type="button"
+              >
+                Apply CC Mode
+              </button>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <label className="grid gap-1.5">
+                <span className="text-xs font-medium uppercase tracking-[0.14em] text-base-content/50">Active CC</span>
+                <select
+                  className="select select-bordered select-sm w-full"
+                  value={activeCCMode}
+                  onChange={(e) => setActiveCCMode(e.target.value as MonitorActiveCCMode)}
+                  disabled={!isConnected || isSending}
+                >
+                  <option value="auto">Auto</option>
+                  <option value="cc1">CC1</option>
+                  <option value="cc2">CC2</option>
+                </select>
+              </label>
+
+              <label className="grid gap-1.5">
+                <span className="text-xs font-medium uppercase tracking-[0.14em] text-base-content/50">CC1</span>
+                <select
+                  className="select select-bordered select-sm w-full"
+                  value={cc1Mode}
+                  onChange={(e) => setCC1Mode(e.target.value as MonitorCCMode)}
+                  disabled={!isConnected || isSending}
+                >
+                  <option value="open">Open</option>
+                  <option value="rd">Rd</option>
+                  <option value="ra">Ra</option>
+                </select>
+              </label>
+
+              <label className="grid gap-1.5">
+                <span className="text-xs font-medium uppercase tracking-[0.14em] text-base-content/50">CC2</span>
+                <select
+                  className="select select-bordered select-sm w-full"
+                  value={cc2Mode}
+                  onChange={(e) => setCC2Mode(e.target.value as MonitorCCMode)}
+                  disabled={!isConnected || isSending}
+                >
+                  <option value="open">Open</option>
+                  <option value="rd">Rd</option>
+                  <option value="ra">Ra</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="inline-flex w-fit items-center rounded-full border border-base-300/80 bg-base-200/70 p-1">
               {SEND_MODE_OPTIONS.map((option) => (

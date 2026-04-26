@@ -6,6 +6,7 @@ import {
   NATIVE_HID_REPORT_BODY_SIZE,
   NATIVE_HID_REPORT_ID,
   parseNativeMonitorHidReportBody,
+  type MonitorCCModeConfig,
   type NativeMonitorTxCommand,
 } from "./monitorAdapter.js";
 
@@ -101,7 +102,7 @@ export type MonitorDevice = {
   sendRawPd(target: MonitorPdTxTarget, payload: Uint8Array): Promise<void>;
   sendHardReset(): Promise<void>;
   sendCableReset(): Promise<void>;
-  setUfcsAttach(enabled: boolean): Promise<void>;
+  setCCMode(config: MonitorCCModeConfig): Promise<void>;
   onRecord(listener: (record: MonitorRecord) => void): () => void;
   onPowerSample(listener: (sample: MonitorPowerSample) => void): () => void;
   onStatus(listener: (status: MonitorDeviceStatus) => void): () => void;
@@ -211,7 +212,7 @@ function reportToRecord(reportId: number, data: DataView): MonitorRecord {
     dp_mv: report.snapshot.dpMv,
     dm_mv: report.snapshot.dmMv,
     event_type: report.eventType,
-    active_cc: report.activeCc,
+    active_cc: report.activeCC,
     data_len: report.payloadLen,
     data: Array.from(report.payload),
   };
@@ -574,8 +575,8 @@ export function createMonitorDevice(): MonitorDevice {
     async sendCableReset(): Promise<void> {
       await sendCommand({ opcode: MONITOR_TX_CMD.SEND_CABLE_RESET });
     },
-    async setUfcsAttach(enabled: boolean): Promise<void> {
-      await sendCommand({ opcode: MONITOR_TX_CMD.SET_UFCS_ATTACH, enabled });
+    async setCCMode(config: MonitorCCModeConfig): Promise<void> {
+      await sendCommand({ opcode: MONITOR_TX_CMD.SET_CC_MODE, activeCC: config.activeCC, cc1: config.cc1, cc2: config.cc2 });
     },
     onRecord(listener: (record: MonitorRecord) => void): () => void {
       recordListeners.add(listener);

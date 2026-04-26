@@ -6,6 +6,7 @@ import type { AppView } from '@/components/common/ViewTabs'
 import type {
   MonitorDeviceCapabilities,
   MonitorDeviceDriver,
+  MonitorCCModeConfig,
   MonitorDeviceKind,
   MonitorPdTxTarget,
 } from '@/lib/devices/monitorDrivers'
@@ -49,7 +50,7 @@ type Props = {
   onSendRawPdFrame: (target: MonitorPdTxTarget, hexPayload: string) => Promise<void>
   onSendHardReset: () => Promise<void>
   onSendCableReset: () => Promise<void>
-  onSetUfcsAttach: (enabled: boolean) => Promise<void>
+  onSetCCMode: (config: MonitorCCModeConfig) => Promise<void>
   isSendingCommand: boolean
   isDeviceSupported: boolean
   currentView: AppView
@@ -105,7 +106,7 @@ const Layout = ({
   onSendRawPdFrame,
   onSendHardReset,
   onSendCableReset,
-  onSetUfcsAttach,
+  onSetCCMode,
   isSendingCommand,
   isDeviceSupported,
   currentView,
@@ -222,7 +223,7 @@ const Layout = ({
             onSendRawPdFrame={onSendRawPdFrame}
             onSendHardReset={onSendHardReset}
             onSendCableReset={onSendCableReset}
-            onSetUfcsAttach={onSetUfcsAttach}
+            onSetCCMode={onSetCCMode}
             isSendingCommand={isSendingCommand}
             isDeviceSupported={isDeviceSupported}
             currentView={currentView}

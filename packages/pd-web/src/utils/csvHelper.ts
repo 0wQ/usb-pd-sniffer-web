@@ -138,8 +138,8 @@ function validateRow(row: Record<string, unknown>, rowIndex: number): Validation
   }
 
   if (row.active_cc !== undefined) {
-    const activeCc = Number(row.active_cc)
-    if (Number.isFinite(activeCc) && ![0, 1, 2].includes(activeCc)) {
+    const activeCC = Number(row.active_cc)
+    if (Number.isFinite(activeCC) && ![0, 1, 2].includes(activeCC)) {
       errors.push({
         row: rowIndex,
         field: 'active_cc',

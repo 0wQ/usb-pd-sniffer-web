@@ -6,7 +6,7 @@ import { useMonitorDevice } from '@/hooks/useMonitorDevice'
 import { useBeforeUnloadWarning } from '@/hooks/useBeforeUnloadWarning'
 import useDeviceStore from '@/stores/deviceStore'
 import { useState } from 'react'
-import type { MonitorPdTxTarget } from '@/lib/devices/monitorDrivers'
+import type { MonitorCCModeConfig, MonitorPdTxTarget } from '@/lib/devices/monitorDrivers'
 
 function App() {
   const [currentView, setCurrentView] = useState<AppView>('protocol')
@@ -24,7 +24,7 @@ function App() {
     sendRawPdFrame,
     sendHardReset,
     sendCableReset,
-    setUfcsAttach,
+    setCCMode,
     isSending,
     isDeviceSupported,
     deviceError,
@@ -55,7 +55,7 @@ function App() {
 
   const handleSendCableReset = () => sendCableReset()
 
-  const handleSetUfcsAttach = (enabled: boolean) => setUfcsAttach(enabled)
+  const handleSetCCMode = (config: MonitorCCModeConfig) => setCCMode(config)
 
   return (
     <div className="app bg-base-200 w-full h-screen min-h-200 flex flex-col">
@@ -113,7 +113,7 @@ function App() {
           onSendRawPdFrame={handleSendRawPdFrame}
           onSendHardReset={handleSendHardReset}
           onSendCableReset={handleSendCableReset}
-          onSetUfcsAttach={handleSetUfcsAttach}
+          onSetCCMode={handleSetCCMode}
           isSendingCommand={isSending}
           isDeviceSupported={isDeviceSupported}
           currentView={currentView}

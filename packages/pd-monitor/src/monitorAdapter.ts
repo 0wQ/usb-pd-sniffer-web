@@ -68,24 +68,32 @@ export const MONITOR_TX_CMD = {
   SEND_RAW_SOP2: 0x03,
   SEND_HARD_RESET: 0x04,
   SEND_CABLE_RESET: 0x05,
-  SET_ACTIVE_CC: 0x10,
-  SET_UFCS_ATTACH: 0x20
+  SET_CC_MODE: 0x10
 } as const;
+
+export type MonitorActiveCCMode = "auto" | "cc1" | "cc2";
+
+export type MonitorCCMode = "open" | "rd" | "ra";
+
+export type MonitorCCModeConfig = {
+  activeCC: MonitorActiveCCMode;
+  cc1: MonitorCCMode;
+  cc2: MonitorCCMode;
+};
 
 export type NativeMonitorTxOpcode = typeof MONITOR_TX_CMD[keyof typeof MONITOR_TX_CMD];
 
 export type NativeMonitorTxCommand =
   | { opcode: typeof MONITOR_TX_CMD.SEND_RAW_SOP0 | typeof MONITOR_TX_CMD.SEND_RAW_SOP1 | typeof MONITOR_TX_CMD.SEND_RAW_SOP2; payload: Uint8Array }
   | { opcode: typeof MONITOR_TX_CMD.SEND_HARD_RESET | typeof MONITOR_TX_CMD.SEND_CABLE_RESET; payload?: Uint8Array | null }
-  | { opcode: typeof MONITOR_TX_CMD.SET_ACTIVE_CC; payload?: Uint8Array | null }
-  | { opcode: typeof MONITOR_TX_CMD.SET_UFCS_ATTACH; enabled: boolean; payload?: Uint8Array | null };
+  | { opcode: typeof MONITOR_TX_CMD.SET_CC_MODE; activeCC: MonitorActiveCCMode; cc1: MonitorCCMode; cc2: MonitorCCMode; payload?: Uint8Array | null };
 
 export type NativeMonitorHidReport = {
   timestampUs: number;
   recvCount: number;
   snapshot: MonitorSnapshot;
   eventType: number;
-  activeCc: number;
+  activeCC: number;
   payloadLen: number;
   payload: Uint8Array;
 };
@@ -106,6 +114,28 @@ function getU32LE(bytes: Uint8Array, offset: number): number {
     (bytes[offset + 2] << 16) |
     (bytes[offset + 3] << 24)
   ) >>> 0;
+}
+
+function ccModeToByte(mode: MonitorCCMode): number {
+  switch (mode) {
+    case "open":
+      return 0;
+    case "rd":
+      return 1;
+    case "ra":
+      return 2;
+  }
+}
+
+function activeCCModeToByte(mode: MonitorActiveCCMode): number {
+  switch (mode) {
+    case "auto":
+      return 0;
+    case "cc1":
+      return 1;
+    case "cc2":
+      return 2;
+  }
 }
 
 function isPdSopFrameEvent(eventType: number): boolean {
@@ -227,7 +257,7 @@ export function parseNativeMonitorHidReportBody(body: Uint8Array): NativeMonitor
       dmMv: getU16LE(body, 22)
     },
     eventType: body[24] ?? 0,
-    activeCc: body[25] ?? 0,
+    activeCC: body[25] ?? 0,
     payloadLen,
     payload: body.slice(27, 27 + payloadLen)
   };
@@ -256,14 +286,14 @@ export function encodeNativeMonitorTxCommandBody(command: NativeMonitorTxCommand
       }
       body[1] = 0;
       return body;
-    case MONITOR_TX_CMD.SET_ACTIVE_CC:
-      throw new Error("SET_ACTIVE_CC is reserved in firmware and must not be used.");
-    case MONITOR_TX_CMD.SET_UFCS_ATTACH:
+    case MONITOR_TX_CMD.SET_CC_MODE:
       if (payload.length !== 0) {
-        throw new Error(`UFCS attach command payload must be encoded from enabled, got ${payload.length} raw bytes.`);
+        throw new Error(`CC mode command payload must be encoded from activeCC/cc1/cc2, got ${payload.length} raw bytes.`);
       }
-      body[1] = 1;
-      body[2] = command.enabled ? 1 : 0;
+      body[1] = 3;
+      body[2] = activeCCModeToByte(command.activeCC);
+      body[3] = ccModeToByte(command.cc1);
+      body[4] = ccModeToByte(command.cc2);
       return body;
   }
 

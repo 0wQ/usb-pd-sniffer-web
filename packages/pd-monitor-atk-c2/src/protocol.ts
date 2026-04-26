@@ -77,7 +77,7 @@ export type AtkC2CaptureSnapshot = {
   cc2Mv: number;
   dpMv: number;
   dmMv: number;
-  activeCc: number;
+  activeCC: number;
 };
 
 export type AtkC2ProtocolDecoderOptions = {
@@ -360,7 +360,7 @@ export class AtkC2ProtocolDecoder {
     cc2Mv: 0,
     dpMv: 0,
     dmMv: 0,
-    activeCc: 0,
+    activeCC: 0,
   };
 
   constructor(options: AtkC2ProtocolDecoderOptions = {}) {
@@ -401,7 +401,7 @@ export class AtkC2ProtocolDecoder {
       dp_mv: this.snapshot.dpMv,
       dm_mv: this.snapshot.dmMv,
       event_type: eventTypeForDecodedEvent(event),
-      active_cc: this.snapshot.activeCc,
+      active_cc: this.snapshot.activeCC,
       data_len: data.length,
       data,
     };
@@ -421,7 +421,7 @@ export class AtkC2ProtocolDecoder {
       cc2Mv: 0,
       dpMv: 0,
       dmMv: 0,
-      activeCc: payload[56] ?? 0,
+      activeCC: payload[56] ?? 0,
     };
   }
 }

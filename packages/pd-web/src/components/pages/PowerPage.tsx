@@ -20,9 +20,9 @@ function formatCurrentMa(ma: number): string {
 }
 
 
-function formatActiveCc(activeCc: number): string {
-  if (activeCc === 1) return 'CC1'
-  if (activeCc === 2) return 'CC2'
+function formatActiveCC(activeCC: number): string {
+  if (activeCC === 1) return 'CC1'
+  if (activeCC === 2) return 'CC2'
   return '-'
 }
 
@@ -246,7 +246,7 @@ const PowerPage = ({
                   <div className="mt-1 space-y-1 text-sm text-base-content/75">
                     <div>{latestSample ? formatTimestampUs(latestSample.timestamp_us) : '-'}</div>
                     <div>{latestSample ? `${formatVoltageMv(latestSample.vbus_mv)} / ${formatCurrentMa(latestSample.ibus_ma)}` : 'No data'}</div>
-                    <div>{latestSample ? formatActiveCc(latestSample.active_cc) : '-'}</div>
+                    <div>{latestSample ? formatActiveCC(latestSample.active_cc) : '-'}</div>
                   </div>
                 </div>
               </div>

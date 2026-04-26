@@ -103,7 +103,7 @@ describe("pd-monitor adapter", () => {
       dmMv: 1200
     });
     expect(report.eventType).toBe(MONITOR_EVENT.PD_SOP0);
-    expect(report.activeCc).toBe(1);
+    expect(report.activeCC).toBe(1);
     expect(report.payloadLen).toBe(4);
     expect(Array.from(report.payload)).toEqual([0xa1, 0x71, 0x2c, 0x91]);
   });
@@ -162,23 +162,21 @@ describe("pd-monitor adapter", () => {
     expect(cableReset[1]).toBe(0);
   });
 
-  test("encodes UFCS attach command for native HID OUT", () => {
-    const enable = encodeNativeMonitorTxCommandBody({
-      opcode: MONITOR_TX_CMD.SET_UFCS_ATTACH,
-      enabled: true
-    });
-    const disable = encodeNativeMonitorTxCommandBody({
-      opcode: MONITOR_TX_CMD.SET_UFCS_ATTACH,
-      enabled: false
+  test("encodes CC mode command for native HID OUT", () => {
+    const body = encodeNativeMonitorTxCommandBody({
+      opcode: MONITOR_TX_CMD.SET_CC_MODE,
+      activeCC: "cc2",
+      cc1: "rd",
+      cc2: "ra"
     });
 
-    expect(enable.length).toBe(NATIVE_HID_REPORT_BODY_SIZE);
-    expect(enable[0]).toBe(MONITOR_TX_CMD.SET_UFCS_ATTACH);
-    expect(enable[1]).toBe(1);
-    expect(enable[2]).toBe(1);
-    expect(disable[0]).toBe(MONITOR_TX_CMD.SET_UFCS_ATTACH);
-    expect(disable[1]).toBe(1);
-    expect(disable[2]).toBe(0);
+    expect(body.length).toBe(NATIVE_HID_REPORT_BODY_SIZE);
+    expect(body[0]).toBe(MONITOR_TX_CMD.SET_CC_MODE);
+    expect(body[0]).toBe(0x10);
+    expect(body[1]).toBe(3);
+    expect(body[2]).toBe(2);
+    expect(body[3]).toBe(1);
+    expect(body[4]).toBe(2);
   });
 
   test("keeps host raw-send echo compatible with neutral PD monitor events", () => {
@@ -209,11 +207,5 @@ describe("pd-monitor adapter", () => {
 
     expect(hardResetEcho).toBeNull();
     expect(cableResetEcho).toBeNull();
-  });
-
-  test("rejects reserved SET_ACTIVE_CC command", () => {
-    expect(() =>
-      encodeNativeMonitorTxCommandBody({ opcode: MONITOR_TX_CMD.SET_ACTIVE_CC })
-    ).toThrow("SET_ACTIVE_CC is reserved");
   });
 });

@@ -39,6 +39,16 @@ export type MonitorDeviceStatus = {
 
 export type MonitorPdTxTarget = "SOP" | "SOP_PRIME" | "SOP_DPRIME";
 
+export type MonitorActiveCCMode = "auto" | "cc1" | "cc2";
+
+export type MonitorCCMode = "open" | "rd" | "ra";
+
+export type MonitorCCModeConfig = {
+  activeCC: MonitorActiveCCMode;
+  cc1: MonitorCCMode;
+  cc2: MonitorCCMode;
+};
+
 export type MonitorDevice = {
   readonly isSupported: boolean;
   connect(): Promise<void>;
@@ -49,7 +59,7 @@ export type MonitorDevice = {
   sendRawPd(target: MonitorPdTxTarget, payload: Uint8Array): Promise<void>;
   sendHardReset(): Promise<void>;
   sendCableReset(): Promise<void>;
-  setUfcsAttach(enabled: boolean): Promise<void>;
+  setCCMode(config: MonitorCCModeConfig): Promise<void>;
   onRecord(listener: (record: MonitorRecord) => void): () => void;
   onPowerSample(listener: (sample: MonitorPowerSample) => void): () => void;
   onStatus(listener: (status: MonitorDeviceStatus) => void): () => void;

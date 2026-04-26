@@ -5,6 +5,7 @@ import {
   MONITOR_DEVICE_OPTIONS,
   type MonitorDeviceLike,
   type MonitorDeviceStatusLike,
+  type MonitorCCModeConfig,
   type MonitorDeviceKind,
   type MonitorPdTxTarget,
 } from '@/lib/devices/monitorDrivers'
@@ -170,12 +171,12 @@ export function useMonitorDevice() {
     await deviceRef.current?.sendCableReset()
   }, [selectedDriver])
 
-  const setUfcsAttach = useCallback(async (enabled: boolean) => {
-    if (!selectedDriver.capabilities.ufcs) {
-      throw new Error(`${selectedDriver.label} does not support UFCS control.`)
+  const setCCMode = useCallback(async (config: MonitorCCModeConfig) => {
+    if (!selectedDriver.capabilities.tx) {
+      throw new Error(`${selectedDriver.label} does not support CC mode control.`)
     }
 
-    await deviceRef.current?.setUfcsAttach(enabled)
+    await deviceRef.current?.setCCMode(config)
   }, [selectedDriver])
 
   const selectMonitorDeviceKind = useCallback((kind: MonitorDeviceKind) => {
@@ -204,7 +205,7 @@ export function useMonitorDevice() {
     sendRawPdFrame,
     sendHardReset,
     sendCableReset,
-    setUfcsAttach,
+    setCCMode,
     isSending,
     isDeviceSupported,
     deviceError

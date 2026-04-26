@@ -1,4 +1,5 @@
 import { createMonitorDevice } from '@usb-pd-sniffer/pd-monitor'
+import type { MonitorActiveCCMode, MonitorCCMode, MonitorCCModeConfig } from '@usb-pd-sniffer/pd-monitor'
 import { createAtkC2MonitorDevice } from '@usb-pd-sniffer/pd-monitor-atk-c2'
 
 export type MonitorDeviceKind = 'native' | 'atk-c2'
@@ -44,6 +45,8 @@ export type MonitorDeviceStatusLike = {
 
 export type MonitorPdTxTarget = 'SOP' | 'SOP_PRIME' | 'SOP_DPRIME'
 
+export type { MonitorActiveCCMode, MonitorCCMode, MonitorCCModeConfig }
+
 export type MonitorDeviceLike = {
   readonly isSupported: boolean
   connect(): Promise<void>
@@ -54,7 +57,7 @@ export type MonitorDeviceLike = {
   sendRawPd(target: MonitorPdTxTarget, payload: Uint8Array): Promise<void>
   sendHardReset(): Promise<void>
   sendCableReset(): Promise<void>
-  setUfcsAttach(enabled: boolean): Promise<void>
+  setCCMode(config: MonitorCCModeConfig): Promise<void>
   onRecord(listener: (record: MonitorRecordLike) => void): () => void
   onPowerSample(listener: (sample: MonitorPowerSampleLike) => void): () => void
   onStatus(listener: (status: MonitorDeviceStatusLike) => void): () => void
@@ -64,7 +67,6 @@ export type MonitorDeviceCapabilities = {
   capture: boolean
   tx: boolean
   powerTelemetry: boolean
-  ufcs: boolean
 }
 
 export type MonitorDeviceDriver = {
@@ -89,7 +91,6 @@ export const MONITOR_DEVICE_DRIVERS: Record<MonitorDeviceKind, MonitorDeviceDriv
       capture: true,
       tx: true,
       powerTelemetry: true,
-      ufcs: true,
     },
   },
   'atk-c2': {
@@ -102,7 +103,6 @@ export const MONITOR_DEVICE_DRIVERS: Record<MonitorDeviceKind, MonitorDeviceDriv
       capture: true,
       tx: false,
       powerTelemetry: false,
-      ufcs: false,
     },
   },
 }
