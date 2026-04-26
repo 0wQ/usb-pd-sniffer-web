@@ -16,8 +16,8 @@ import {
   Eraser,
   MapPin,
   Palette,
-  PanelBottom,
-  PanelRight,
+  PanelBottomOpen,
+  PanelRightOpen,
   Send,
   Settings,
   Upload,
@@ -630,8 +630,8 @@ const Card = memo(({
     ? 'Move decode panel to right side'
     : 'Move decode panel to bottom'
   const DecodeLayoutIcon = decodeLayoutMode === 'vertical'
-    ? PanelBottom
-    : PanelRight
+    ? PanelRightOpen
+    : PanelBottomOpen
   const AutoScrollIcon = autoScroll ? CirclePause : CirclePlay
 
   return (
@@ -640,7 +640,7 @@ const Card = memo(({
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex min-w-max shrink-0 flex-nowrap items-center gap-2.5">
             <h2 className="card-title shrink-0 select-none whitespace-nowrap">
-              <span className="text-primary">USB PD Sniffer</span>
+              <span className="text-primary">PD & UFCS Sniffer</span>
             </h2>
             <ViewTabs currentView={currentView} onViewChange={onViewChange} />
           </div>

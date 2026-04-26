@@ -88,7 +88,7 @@ const PowerPage = ({
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex min-w-0 flex-wrap items-center gap-2.5">
               <h2 className="card-title select-none">
-                <span className="text-primary">USB PD Sniffer</span>
+                <span className="text-primary">PD & UFCS Sniffer</span>
               </h2>
               <ViewTabs currentView={currentView} onViewChange={onViewChange} />
             </div>
