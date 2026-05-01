@@ -2,12 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { BitField, MessageFrame, Section } from '@usb-pd-sniffer/pd-core'
 import clsx from 'clsx'
 import { toast } from 'sonner'
+import { X } from 'lucide-react'
 import type { MonitorActiveCCMode, MonitorCCMode, MonitorCCModeConfig, MonitorPdTxTarget } from '@/lib/devices/monitorDrivers'
 import { applyFieldRawValue, formatEditedBytes } from '@/lib/analyzer/fieldEdit'
-import { previewPdTxFrame } from '@/lib/analyzer/txPreview'
+import { hasPdTxPayloadNewline, parsePdHexPayload, previewPdTxFrame, splitPdTxPayloadLines } from '@/lib/analyzer/txPreview'
 import { hexBytes, IssueList, SectionView } from '@/components/decode/DecodedSectionsView'
 
 type SendMode = 'raw' | 'hard_reset' | 'cable_reset'
+const MULTILINE_TX_INTERVAL_MS = 50
+const TX_DIALOG_DRAFT_STORAGE_KEY = 'usb-pd-tx-dialog-draft-v1'
 
 const SEND_MODE_OPTIONS: Array<{ key: SendMode; label: string }> = [
   { key: 'raw', label: 'Raw' },
@@ -15,10 +18,55 @@ const SEND_MODE_OPTIONS: Array<{ key: SendMode; label: string }> = [
   { key: 'cable_reset', label: 'Cable Reset' },
 ]
 
+const TX_TARGET_OPTIONS = ['SOP', 'SOP_PRIME', 'SOP_DPRIME'] as const satisfies readonly MonitorPdTxTarget[]
+
+type TxDialogDraft = {
+  mode: SendMode
+  target: MonitorPdTxTarget
+  hexPayload: string
+}
+
+const DEFAULT_TX_DIALOG_DRAFT: TxDialogDraft = {
+  mode: 'raw',
+  target: 'SOP',
+  hexPayload: 'A7 00',
+}
+
+function isSendMode(value: unknown): value is SendMode {
+  return value === 'raw' || value === 'hard_reset' || value === 'cable_reset'
+}
+
+function isTxTarget(value: unknown): value is MonitorPdTxTarget {
+  return typeof value === 'string' && TX_TARGET_OPTIONS.includes(value as MonitorPdTxTarget)
+}
+
+function readTxDialogDraft(): TxDialogDraft {
+  try {
+    const rawValue = localStorage.getItem(TX_DIALOG_DRAFT_STORAGE_KEY)
+    if (rawValue === null) return DEFAULT_TX_DIALOG_DRAFT
+
+    const parsed = JSON.parse(rawValue) as Partial<TxDialogDraft>
+    return {
+      mode: isSendMode(parsed.mode) ? parsed.mode : DEFAULT_TX_DIALOG_DRAFT.mode,
+      target: isTxTarget(parsed.target) ? parsed.target : DEFAULT_TX_DIALOG_DRAFT.target,
+      hexPayload: typeof parsed.hexPayload === 'string' ? parsed.hexPayload : DEFAULT_TX_DIALOG_DRAFT.hexPayload,
+    }
+  } catch {
+    return DEFAULT_TX_DIALOG_DRAFT
+  }
+}
+
+function writeTxDialogDraft(value: TxDialogDraft): void {
+  try {
+    localStorage.setItem(TX_DIALOG_DRAFT_STORAGE_KEY, JSON.stringify(value))
+  } catch {
+    // Ignore unavailable storage.
+  }
+}
+
 type Props = {
   isOpen: boolean
   isConnected: boolean
-  isSending: boolean
   selectedFrame: MessageFrame | null
   onClose: () => void
   onSendRaw: (target: MonitorPdTxTarget, hexPayload: string) => Promise<void>
@@ -30,7 +78,6 @@ type Props = {
 const SendPdDialog = ({
   isOpen,
   isConnected,
-  isSending,
   selectedFrame,
   onClose,
   onSendRaw,
@@ -39,14 +86,29 @@ const SendPdDialog = ({
   onSetCCMode,
 }: Props) => {
   const dialogRef = useRef<HTMLDialogElement>(null)
-  const [mode, setMode] = useState<SendMode>('raw')
-  const [target, setTarget] = useState<MonitorPdTxTarget>('SOP')
-  const [hexPayload, setHexPayload] = useState('A7 00')
+  const initialDraftRef = useRef<TxDialogDraft | null>(null)
+  if (initialDraftRef.current === null) {
+    initialDraftRef.current = readTxDialogDraft()
+  }
+
+  const [mode, setMode] = useState<SendMode>(initialDraftRef.current.mode)
+  const [target, setTarget] = useState<MonitorPdTxTarget>(initialDraftRef.current.target)
+  const [hexPayload, setHexPayload] = useState(initialDraftRef.current.hexPayload)
   const [activeCCMode, setActiveCCMode] = useState<MonitorActiveCCMode>('auto')
   const [cc1Mode, setCC1Mode] = useState<MonitorCCMode>('open')
   const [cc2Mode, setCC2Mode] = useState<MonitorCCMode>('open')
+  const [isTxCommandSending, setIsTxCommandSending] = useState(false)
+  const [isBatchSending, setIsBatchSending] = useState(false)
+  const [isApplyingCCMode, setIsApplyingCCMode] = useState(false)
+  const isSendBusy = isTxCommandSending || isBatchSending
+  const hasMultilinePayload = hasPdTxPayloadNewline(hexPayload)
+  const payloadLines = useMemo(() => splitPdTxPayloadLines(hexPayload), [hexPayload])
   const preview = useMemo(() => {
     if (mode !== 'raw') {
+      return null
+    }
+
+    if (hasMultilinePayload) {
       return null
     }
 
@@ -62,6 +124,10 @@ const SendPdDialog = ({
         error: error instanceof Error ? error.message : 'Preview decode failed.',
       }
     }
+  }, [hasMultilinePayload, hexPayload, mode, target])
+
+  useEffect(() => {
+    writeTxDialogDraft({ mode, target, hexPayload })
   }, [hexPayload, mode, target])
 
   useEffect(() => {
@@ -75,36 +141,61 @@ const SendPdDialog = ({
     }
   }, [isOpen])
 
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDialogElement>) => {
-    if (e.target === e.currentTarget) {
+  const handlePointerDown = (event: React.PointerEvent<HTMLDialogElement>) => {
+    if (event.target === event.currentTarget) {
       onClose()
     }
   }
 
   const runCommand = async (action: () => Promise<void>, successMessage: string) => {
     try {
+      setIsTxCommandSending(true)
       await action()
       toast.success(successMessage)
-      onClose()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Command failed.')
+    } finally {
+      setIsTxCommandSending(false)
     }
   }
 
-  const runInlineCommand = async (action: () => Promise<void>, successMessage: string) => {
-    try {
-      await action()
-      toast.success(successMessage)
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Command failed.')
-    }
-  }
+  const delay = (milliseconds: number) => new Promise<void>((resolve) => {
+    window.setTimeout(resolve, milliseconds)
+  })
 
   const handleSendRaw = async () => {
-    await runCommand(
-      () => onSendRaw(target, hexPayload),
-      `Sent raw ${target} payload.`,
-    )
+    if (!hasMultilinePayload) {
+      await runCommand(
+        () => onSendRaw(target, hexPayload),
+        `Sent raw ${target} payload.`,
+      )
+      return
+    }
+
+    if (payloadLines.length === 0) {
+      toast.error('Enter at least one raw payload line.')
+      return
+    }
+
+    try {
+      for (const line of payloadLines) {
+        parsePdHexPayload(line)
+      }
+
+      setIsBatchSending(true)
+      for (const [index, line] of payloadLines.entries()) {
+        await onSendRaw(target, line)
+        if (index < payloadLines.length - 1) {
+          await delay(MULTILINE_TX_INTERVAL_MS)
+        }
+      }
+
+      toast.success(`Sent ${payloadLines.length} raw ${target} payloads.`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Command failed.')
+    } finally {
+      setIsBatchSending(false)
+    }
   }
 
   const handleSendHardReset = async () => {
@@ -122,10 +213,15 @@ const SendPdDialog = ({
   }
 
   const handleSetCCMode = async () => {
-    await runInlineCommand(
-      () => onSetCCMode({ activeCC: activeCCMode, cc1: cc1Mode, cc2: cc2Mode }),
-      `Applied CC mode: Active ${activeCCMode.toUpperCase()}, CC1 ${cc1Mode.toUpperCase()}, CC2 ${cc2Mode.toUpperCase()}.`,
-    )
+    try {
+      setIsApplyingCCMode(true)
+      await onSetCCMode({ activeCC: activeCCMode, cc1: cc1Mode, cc2: cc2Mode })
+      toast.success(`Applied CC mode: Active ${activeCCMode.toUpperCase()}, CC1 ${cc1Mode.toUpperCase()}, CC2 ${cc2Mode.toUpperCase()}.`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Command failed.')
+    } finally {
+      setIsApplyingCCMode(false)
+    }
   }
 
   const handlePreviewFieldEdit = (section: Section, field: BitField, rawValue: bigint) => {
@@ -166,12 +262,12 @@ const SendPdDialog = ({
 
   const sendButtonLabel =
     mode === 'raw'
-      ? (isSending ? 'Sending...' : 'Send Raw')
+      ? (isSendBusy ? 'Sending...' : hasMultilinePayload ? `Send ${payloadLines.length} Raw` : 'Send Raw')
       : mode === 'hard_reset'
-        ? (isSending ? 'Sending...' : 'Send Hard Reset')
-        : (isSending ? 'Sending...' : 'Send Cable Reset')
+        ? (isSendBusy ? 'Sending...' : 'Send Hard Reset')
+        : (isSendBusy ? 'Sending...' : 'Send Cable Reset')
   const sendButtonClass = clsx(
-    'btn btn-sm rounded-full gap-2 px-4 normal-case',
+    'btn btn-sm min-w-[9rem] rounded-full gap-2 px-4 normal-case',
     mode === 'raw'
       ? 'border-primary/30 bg-primary/10 text-primary hover:bg-primary/15'
       : 'border-warning/35 bg-warning/10 text-warning hover:bg-warning/15',
@@ -194,40 +290,49 @@ const SendPdDialog = ({
     <dialog
       ref={dialogRef}
       className="modal"
-      onClick={handleBackdropClick}
+      onPointerDown={handlePointerDown}
       onClose={onClose}
     >
       <div className="modal-box flex max-h-[calc(100vh-2rem)] max-w-5xl flex-col overflow-hidden">
-        <h3 className="text-lg font-bold">Native Controls</h3>
-        <p className="mt-2 text-sm text-base-content/70">
-          Send raw PD bytes and control CC pull state through the monitor device.
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-bold">Native Controls</h3>
+          </div>
+          <button
+            className="btn btn-sm btn-square btn-ghost shrink-0"
+            onClick={onClose}
+            aria-label="Close TX controls"
+            title="Close"
+            type="button"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
 
         <div className="mt-4 flex min-h-0 flex-1 flex-col gap-4">
           <div className="rounded-lg border border-base-300 bg-base-200/70 p-3">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div>
                 <div className="text-sm font-semibold">CC Mode</div>
-                <div className="text-xs text-base-content/60">Apply active CC auto/force selection and independent Open / Rd / Ra state.</div>
               </div>
               <button
                 className="btn btn-sm rounded-full border-primary/30 bg-primary/10 px-4 normal-case text-primary hover:bg-primary/15"
                 onClick={() => void handleSetCCMode()}
-                disabled={!isConnected || isSending}
+                disabled={!isConnected || isApplyingCCMode}
                 type="button"
               >
-                Apply CC Mode
+                {isApplyingCCMode ? 'Applying...' : 'Apply CC Mode'}
               </button>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
               <label className="grid gap-1.5">
-                <span className="text-xs font-medium uppercase tracking-[0.14em] text-base-content/50">Active CC</span>
+                <span className="text-xs font-medium uppercase text-base-content/50">Active CC</span>
                 <select
                   className="select select-bordered select-sm w-full"
                   value={activeCCMode}
                   onChange={(e) => setActiveCCMode(e.target.value as MonitorActiveCCMode)}
-                  disabled={!isConnected || isSending}
+                  disabled={!isConnected}
                 >
                   <option value="auto">Auto</option>
                   <option value="cc1">CC1</option>
@@ -236,30 +341,32 @@ const SendPdDialog = ({
               </label>
 
               <label className="grid gap-1.5">
-                <span className="text-xs font-medium uppercase tracking-[0.14em] text-base-content/50">CC1</span>
+                <span className="text-xs font-medium uppercase text-base-content/50">CC1</span>
                 <select
                   className="select select-bordered select-sm w-full"
                   value={cc1Mode}
                   onChange={(e) => setCC1Mode(e.target.value as MonitorCCMode)}
-                  disabled={!isConnected || isSending}
+                  disabled={!isConnected}
                 >
                   <option value="open">Open</option>
                   <option value="rd">Rd</option>
                   <option value="ra">Ra</option>
+                  <option value="rp">Rp</option>
                 </select>
               </label>
 
               <label className="grid gap-1.5">
-                <span className="text-xs font-medium uppercase tracking-[0.14em] text-base-content/50">CC2</span>
+                <span className="text-xs font-medium uppercase text-base-content/50">CC2</span>
                 <select
                   className="select select-bordered select-sm w-full"
                   value={cc2Mode}
                   onChange={(e) => setCC2Mode(e.target.value as MonitorCCMode)}
-                  disabled={!isConnected || isSending}
+                  disabled={!isConnected}
                 >
                   <option value="open">Open</option>
                   <option value="rd">Rd</option>
                   <option value="ra">Ra</option>
+                  <option value="rp">Rp</option>
                 </select>
               </label>
             </div>
@@ -278,7 +385,7 @@ const SendPdDialog = ({
                     },
                   )}
                   onClick={() => setMode(option.key)}
-                  disabled={isSending}
+                  disabled={isSendBusy}
                   type="button"
                 >
                   <span className="select-none">{option.label}</span>
@@ -290,14 +397,14 @@ const SendPdDialog = ({
               <button
                 className="btn btn-sm rounded-full border-base-300 bg-base-100 px-4 normal-case text-base-content/70 hover:bg-base-200"
                 onClick={fillFromSelected}
-                disabled={selectedFrame === null || isSending || mode !== 'raw'}
+                disabled={selectedFrame === null || isSendBusy || mode !== 'raw'}
               >
                 Fill From Selected
               </button>
               <button
                 className={sendButtonClass}
                 onClick={handleSendCurrentMode}
-                disabled={!isConnected || isSending}
+                disabled={!isConnected || isSendBusy || (mode === 'raw' && hasMultilinePayload && payloadLines.length === 0)}
               >
                 {sendButtonLabel}
               </button>
@@ -312,11 +419,13 @@ const SendPdDialog = ({
               className="select select-bordered w-full"
               value={target}
               onChange={(e) => setTarget(e.target.value as MonitorPdTxTarget)}
-              disabled={!isConnected || isSending}
+              disabled={!isConnected}
             >
-              <option value="SOP">SOP</option>
-              <option value="SOP_PRIME">SOP'</option>
-              <option value="SOP_DPRIME">SOP''</option>
+              {TX_TARGET_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option === 'SOP' ? 'SOP' : option === 'SOP_PRIME' ? "SOP'" : "SOP''"}
+                </option>
+              ))}
             </select>
           </label>
 
@@ -327,10 +436,10 @@ const SendPdDialog = ({
               placeholder="42 10 aa bb"
               value={hexPayload}
               onChange={(e) => setHexPayload(e.target.value)}
-              disabled={!isConnected || isSending}
+              disabled={!isConnected}
             />
             <span className="text-xs text-base-content/60">
-              Accepts spaced or compact hex. Send header + data objects only. CRC is handled below the host TX command path.
+              Accepts spaced or compact hex. Multiple non-empty lines are sent in order with a {MULTILINE_TX_INTERVAL_MS}ms interval and are not locally decoded.
             </span>
           </label>
 
@@ -344,7 +453,11 @@ const SendPdDialog = ({
               )}
             </div>
 
-            {preview === null ? (
+            {hasMultilinePayload ? (
+              <div className="rounded-md border border-base-300 bg-base-100 px-3 py-2 text-sm text-base-content/70">
+                Multiline payload mode: {payloadLines.length} non-empty line{payloadLines.length === 1 ? '' : 's'} will be sent in order with a {MULTILINE_TX_INTERVAL_MS}ms interval. Local decode preview is disabled for multiline input.
+              </div>
+            ) : preview === null ? (
               <div className="text-sm text-base-content/60">Enter raw payload hex to preview the decode.</div>
             ) : preview.error ? (
               <div className="text-sm text-error">{preview.error}</div>
@@ -397,7 +510,7 @@ const SendPdDialog = ({
                     <SectionView
                       key={section.key}
                       section={section}
-                      onFieldEdit={!isConnected || isSending ? undefined : handlePreviewFieldEdit}
+                      onFieldEdit={!isConnected ? undefined : handlePreviewFieldEdit}
                     />
                   ))}
                 </div>

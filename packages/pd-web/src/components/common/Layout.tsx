@@ -1,8 +1,10 @@
 import TableCard from '@/components/card/TableCard'
 import DecodeCard from '@/components/card/DecodeCard'
+import SendPdDialog from '@/components/common/SendPdDialog'
 import { Group, Panel, Separator, useDefaultLayout, usePanelCallbackRef, type PanelSize } from 'react-resizable-panels'
 import useDeviceStore from '@/stores/deviceStore'
 import type { AppView } from '@/components/common/ViewTabs'
+import { decodeSingleRecord } from '@/lib/analyzer/decode'
 import type {
   MonitorDeviceCapabilities,
   MonitorDeviceDriver,
@@ -114,8 +116,10 @@ const Layout = ({
 }: Props) => {
   const selectedIndex = useDeviceStore((state) => state.protocolSelectedIndex)
   const setSelectedIndex = useDeviceStore((state) => state.setProtocolSelectedIndex)
+  const captureBuffer = useDeviceStore((state) => state.captureBuffer)
   const [decodeLayoutMode, setDecodeLayoutMode] = useState<DecodeLayoutMode>(() => readDecodeLayoutMode())
   const [decodeCollapsed, setDecodeCollapsed] = useState(() => readDecodeCollapsed())
+  const [txDialogOpen, setTxDialogOpen] = useState(false)
   const [decodePanel, setDecodePanel] = usePanelCallbackRef()
   const layoutId = `pd-web-main-layout-${decodeLayoutMode}`
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
@@ -177,7 +181,21 @@ const Layout = ({
     setDecodeCollapsed(panelSize.asPercentage <= 0.001)
   }, [])
 
+  const handleOpenTxDialog = useCallback(() => {
+    setTxDialogOpen(true)
+  }, [])
+
+  const handleCloseTxDialog = useCallback(() => {
+    setTxDialogOpen(false)
+  }, [])
+
   const defaultLayoutForMode = useMemo(() => defaultLayout, [defaultLayout])
+  const selectedRecord = selectedIndex === null ? null : (captureBuffer.get(selectedIndex) ?? null)
+  const selectedFrameForTx = useMemo(() => {
+    if (selectedRecord === null) return null
+
+    return decodeSingleRecord(selectedRecord)?.frame ?? null
+  }, [selectedRecord])
 
   return (
     <main
@@ -220,10 +238,7 @@ const Layout = ({
             monitorDeviceCapabilities={monitorDeviceCapabilities}
             onMonitorDeviceKindChange={onMonitorDeviceKindChange}
             onConnectBtnClick={onConnectBtnClick}
-            onSendRawPdFrame={onSendRawPdFrame}
-            onSendHardReset={onSendHardReset}
-            onSendCableReset={onSendCableReset}
-            onSetCCMode={onSetCCMode}
+            onOpenTxDialog={handleOpenTxDialog}
             isSendingCommand={isSendingCommand}
             isDeviceSupported={isDeviceSupported}
             currentView={currentView}
@@ -231,7 +246,7 @@ const Layout = ({
           />
         </Panel>
 
-        <Separator className={separatorClassName}>
+        <Separator className={separatorClassName} disabled={txDialogOpen}>
           <span className={separatorTrackClassName} />
         </Separator>
 
@@ -249,6 +264,17 @@ const Layout = ({
           <DecodeCard className="card bg-base-100 h-full min-h-0" selectedIndex={selectedIndex} />
         </Panel>
       </Group>
+
+      <SendPdDialog
+        isOpen={txDialogOpen}
+        isConnected={isConnected}
+        selectedFrame={selectedFrameForTx}
+        onClose={handleCloseTxDialog}
+        onSendRaw={onSendRawPdFrame}
+        onSendHardReset={onSendHardReset}
+        onSendCableReset={onSendCableReset}
+        onSetCCMode={onSetCCMode}
+      />
     </main>
   )
 }

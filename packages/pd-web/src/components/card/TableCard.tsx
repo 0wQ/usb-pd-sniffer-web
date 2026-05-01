@@ -6,7 +6,6 @@ import type { CaptureRecord } from '@/types/pd'
 import type { ImportMode } from '@/types/csv'
 import { exportToCsv, importFromCsv, generateFilename, downloadCsv, readFile } from '@/utils/csvHelper'
 import ImportDialog from '@/components/common/ImportDialog'
-import SendPdDialog from '@/components/common/SendPdDialog'
 import ViewTabs, { type AppView } from '@/components/common/ViewTabs'
 import clsx from 'clsx'
 import {
@@ -29,9 +28,7 @@ import { formatCompactPowerRoleOrCable, formatCompactSop } from '@/lib/display/p
 import type {
   MonitorDeviceCapabilities,
   MonitorDeviceDriver,
-  MonitorCCModeConfig,
   MonitorDeviceKind,
-  MonitorPdTxTarget,
 } from '@/lib/devices/monitorDrivers'
 
 const ROW_HEIGHT = 30
@@ -481,10 +478,7 @@ type CardProps = {
   monitorDeviceCapabilities: MonitorDeviceCapabilities
   onMonitorDeviceKindChange: (kind: MonitorDeviceKind) => void
   onConnectBtnClick: () => void
-  onSendRawPdFrame: (target: MonitorPdTxTarget, hexPayload: string) => Promise<void>
-  onSendHardReset: () => Promise<void>
-  onSendCableReset: () => Promise<void>
-  onSetCCMode: (config: MonitorCCModeConfig) => Promise<void>
+  onOpenTxDialog: () => void
   isSendingCommand: boolean
   isDeviceSupported: boolean
   currentView: AppView
@@ -509,10 +503,7 @@ const Card = memo(({
   monitorDeviceCapabilities,
   onMonitorDeviceKindChange,
   onConnectBtnClick,
-  onSendRawPdFrame,
-  onSendHardReset,
-  onSendCableReset,
-  onSetCCMode,
+  onOpenTxDialog,
   isSendingCommand,
   isDeviceSupported,
   currentView,
@@ -521,7 +512,6 @@ const Card = memo(({
   const [autoScroll, setAutoScroll] = useState(true)
   const [scrollRequest, setScrollRequest] = useState(0)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
-  const [txDialogOpen, setTxDialogOpen] = useState(false)
   const [pendingImportData, setPendingImportData] = useState<CaptureRecord[] | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -530,14 +520,6 @@ const Card = memo(({
   const captureBuffer = useDeviceStore((state) => state.captureBuffer)
   const captureCount = useDeviceStore((state) => state.captureCount)
   const importRecords = useDeviceStore((state) => state.importRecords)
-  const selectedRecord = selectedIndex === null ? null : (captureBuffer.get(selectedIndex) ?? null)
-  const selectedFrameForTx = useMemo(() => {
-    if (selectedRecord === null) {
-      return null
-    }
-
-    return decodeSingleRecord(selectedRecord)?.frame ?? null
-  }, [selectedRecord])
 
   const handleRowClick = useCallback((index: number) => {
     if (AUTO_SCROLL_CONFIG.STOP_ON_ROW_CLICK) {
@@ -731,7 +713,7 @@ const Card = memo(({
               </div>
               <button
                 className={TOOLBAR_ICON_BUTTON_CLASS}
-                onClick={() => setTxDialogOpen(true)}
+                onClick={onOpenTxDialog}
                 disabled={!monitorDeviceCapabilities.tx || !isDeviceSupported || !isConnected || isSendingCommand}
                 aria-label="Native PD TX"
                 title={monitorDeviceCapabilities.tx ? 'Native PD TX' : 'Selected device does not support PD TX'}
@@ -835,17 +817,6 @@ const Card = memo(({
         onConfirm={handleImportConfirm}
       />
 
-      <SendPdDialog
-        isOpen={txDialogOpen}
-        isConnected={isConnected}
-        isSending={isSendingCommand}
-        selectedFrame={selectedFrameForTx}
-        onClose={() => setTxDialogOpen(false)}
-        onSendRaw={onSendRawPdFrame}
-        onSendHardReset={onSendHardReset}
-        onSendCableReset={onSendCableReset}
-        onSetCCMode={onSetCCMode}
-      />
     </section>
   )
 })

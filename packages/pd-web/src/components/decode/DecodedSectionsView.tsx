@@ -65,6 +65,7 @@ function issueTone(issue: DecodeIssue): string {
 type FieldRowProps = {
   field: BitField
   section: Section
+  fieldEditDisabled?: boolean
   onFieldEdit?: (section: Section, field: BitField, rawValue: bigint) => void
 }
 
@@ -73,10 +74,11 @@ const fieldGridClassName = 'grid gap-x-3 md:grid-cols-[60px_minmax(0,1.5fr)_minm
 type FieldEditorProps = {
   field: BitField
   mode: FieldEditMode
+  disabled?: boolean
   onApply: (rawValue: bigint) => void
 }
 
-function FieldEditor({ field, mode, onApply }: FieldEditorProps) {
+function FieldEditor({ field, mode, disabled = false, onApply }: FieldEditorProps) {
   const [value, setValue] = useState(() => formatFieldEditValue(field, mode))
   const [error, setError] = useState<string | null>(null)
 
@@ -106,6 +108,7 @@ function FieldEditor({ field, mode, onApply }: FieldEditorProps) {
         onChange={(event) => setValue(event.target.value)}
         onBlur={applyEdit}
         onFocus={(event) => event.currentTarget.select()}
+        disabled={disabled}
         onKeyDown={(event) => {
           if (event.key === 'Enter') {
             event.currentTarget.blur()
@@ -120,7 +123,7 @@ function FieldEditor({ field, mode, onApply }: FieldEditorProps) {
   )
 }
 
-function FieldRow({ field, section, onFieldEdit }: FieldRowProps) {
+function FieldRow({ field, section, fieldEditDisabled = false, onFieldEdit }: FieldRowProps) {
   const applyFieldEdit = (rawValue: bigint) => {
     onFieldEdit?.(section, field, rawValue)
   }
@@ -137,7 +140,7 @@ function FieldRow({ field, section, onFieldEdit }: FieldRowProps) {
       </div>
       <div className="min-w-0 break-all font-mono text-xs text-base-content">{formatFieldMeaning(field)}</div>
       {isEditable ? (
-        <FieldEditor field={field} mode="raw" onApply={applyFieldEdit} />
+        <FieldEditor field={field} mode="raw" disabled={fieldEditDisabled} onApply={applyFieldEdit} />
       ) : (
         <div className="break-all font-mono text-[11px] text-right text-base-content/50">{formatFieldRawValue(field)}</div>
       )}
@@ -174,10 +177,11 @@ export function IssueList({ issues }: IssueListProps) {
 
 type SectionViewProps = {
   section: Section
+  fieldEditDisabled?: boolean
   onFieldEdit?: (section: Section, field: BitField, rawValue: bigint) => void
 }
 
-export function SectionView({ section, onFieldEdit }: SectionViewProps) {
+export function SectionView({ section, fieldEditDisabled = false, onFieldEdit }: SectionViewProps) {
   const showEmptyState = section.fields.length === 0
 
   return (
@@ -231,7 +235,7 @@ export function SectionView({ section, onFieldEdit }: SectionViewProps) {
             <div className={clsx(fieldGridClassName, 'border-b border-base-300/80 bg-base-200/55 px-3 py-2 text-[10px] uppercase tracking-[0.14em] text-base-content/45')}>
               <div>Bits</div>
               <div>Name</div>
-              <div>Meaning</div>
+              <div>Value</div>
               <div className="text-right">Raw</div>
             </div>
             {section.fields.map((field) => (
@@ -239,6 +243,7 @@ export function SectionView({ section, onFieldEdit }: SectionViewProps) {
                 key={`${section.key}-${field.key}-${field.bitStart}-${field.bitLength}`}
                 field={field}
                 section={section}
+                fieldEditDisabled={fieldEditDisabled}
                 onFieldEdit={onFieldEdit}
               />
             ))}
