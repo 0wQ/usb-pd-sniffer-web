@@ -44,8 +44,8 @@ All native OUT commands use a fixed 64-byte body.
 | Offset | Size | Field | Type | Notes |
 | ---: | ---: | --- | --- | --- |
 | 0 | 1 | `opcode` | `uint8` | Native monitor TX command. `0` is ignored by firmware. |
-| 1 | 1 | `len` | `uint8` | Payload length. Raw PD TX accepts `2..34`. Reset commands require `0`. |
-| 2 | 62 | `payload` | `uint8[62]` | Raw command payload. For raw PD TX only the first `len` bytes are used. |
+| 1 | 1 | `len` | `uint8` | Payload length. Raw PD TX accepts `2..34`. Reset commands require `0`. `SET_CC_MODE` uses `3`. |
+| 2 | 62 | `payload` | `uint8[62]` | Raw command payload. For raw PD TX only the first `len` bytes are used. For `SET_CC_MODE`, bytes 2..4 are active CC, CC1 mode, CC2 mode. |
 
 Native OUT opcodes:
 
@@ -56,7 +56,24 @@ Native OUT opcodes:
 | `0x03` | `SEND_RAW_SOP2` | Raw PD packet bytes for SOP''. |
 | `0x04` | `SEND_HARD_RESET` | Empty. |
 | `0x05` | `SEND_CABLE_RESET` | Empty. |
-| `0x10` | `SET_ACTIVE_CC` | Reserved. Host must not send it. Firmware ignores it. |
+| `0x10` | `SET_CC_MODE` | Three bytes: active CC, CC1 mode, CC2 mode. |
+
+`SET_CC_MODE` active CC values:
+
+| Value | Name |
+| ---: | --- |
+| `0x00` | `AUTO` |
+| `0x01` | `CC1` |
+| `0x02` | `CC2` |
+
+`SET_CC_MODE` CC mode values:
+
+| Value | Name |
+| ---: | --- |
+| `0x00` | `OPEN` |
+| `0x01` | `RD` |
+| `0x02` | `RA` |
+| `0x03` | `RP` |
 
 Raw PD TX payloads are expected to include the PD packet bytes required by the firmware TX path. The host does not synthesize CRC32 in this ABI layer.
 

@@ -73,7 +73,14 @@ export const MONITOR_TX_CMD = {
 
 export type MonitorActiveCCMode = "auto" | "cc1" | "cc2";
 
-export type MonitorCCMode = "open" | "rd" | "ra";
+export const MONITOR_CC_MODE = {
+  OPEN: 0x00,
+  RD: 0x01,
+  RA: 0x02,
+  RP: 0x03
+} as const;
+
+export type MonitorCCMode = "open" | "rd" | "ra" | "rp";
 
 export type MonitorCCModeConfig = {
   activeCC: MonitorActiveCCMode;
@@ -119,11 +126,13 @@ function getU32LE(bytes: Uint8Array, offset: number): number {
 function ccModeToByte(mode: MonitorCCMode): number {
   switch (mode) {
     case "open":
-      return 0;
+      return MONITOR_CC_MODE.OPEN;
     case "rd":
-      return 1;
+      return MONITOR_CC_MODE.RD;
     case "ra":
-      return 2;
+      return MONITOR_CC_MODE.RA;
+    case "rp":
+      return MONITOR_CC_MODE.RP;
   }
 }
 

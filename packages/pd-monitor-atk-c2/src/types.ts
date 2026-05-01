@@ -41,7 +41,7 @@ export type MonitorPdTxTarget = "SOP" | "SOP_PRIME" | "SOP_DPRIME";
 
 export type MonitorActiveCCMode = "auto" | "cc1" | "cc2";
 
-export type MonitorCCMode = "open" | "rd" | "ra";
+export type MonitorCCMode = "open" | "rd" | "ra" | "rp";
 
 export type MonitorCCModeConfig = {
   activeCC: MonitorActiveCCMode;

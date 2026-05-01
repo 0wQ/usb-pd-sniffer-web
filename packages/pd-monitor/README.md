@@ -163,7 +163,7 @@ The device layer emits power samples whenever firmware sends them. UI/store code
 ```ts
 type MonitorPdTxTarget = 'SOP' | 'SOP_PRIME' | 'SOP_DPRIME'
 type MonitorActiveCCMode = 'auto' | 'cc1' | 'cc2'
-type MonitorCCMode = 'open' | 'rd' | 'ra'
+type MonitorCCMode = 'open' | 'rd' | 'ra' | 'rp'
 type MonitorCCModeConfig = {
   activeCC: MonitorActiveCCMode
   cc1: MonitorCCMode
@@ -174,7 +174,7 @@ type MonitorCCModeConfig = {
 - `sendRawPd(target, payload)` sends raw PD packet bytes through the native firmware TX command.
 - `sendHardReset()` sends a native Hard Reset command.
 - `sendCableReset()` sends a native Cable Reset command.
-- `setCCMode({ activeCC, cc1, cc2 })` applies active CC auto/force selection and independent CC Open / Rd / Ra state.
+- `setCCMode({ activeCC, cc1, cc2 })` applies active CC auto/force selection and independent CC Open / Rd / Ra / Rp state.
 - Only one TX command may be in flight at a time.
 
 Use `parsePdHexPayload()` if UI code needs to convert user-entered hex into bytes before calling `sendRawPd()`.

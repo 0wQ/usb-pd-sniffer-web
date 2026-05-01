@@ -167,7 +167,7 @@ describe("pd-monitor adapter", () => {
       opcode: MONITOR_TX_CMD.SET_CC_MODE,
       activeCC: "cc2",
       cc1: "rd",
-      cc2: "ra"
+      cc2: "rp"
     });
 
     expect(body.length).toBe(NATIVE_HID_REPORT_BODY_SIZE);
@@ -176,7 +176,7 @@ describe("pd-monitor adapter", () => {
     expect(body[1]).toBe(3);
     expect(body[2]).toBe(2);
     expect(body[3]).toBe(1);
-    expect(body[4]).toBe(2);
+    expect(body[4]).toBe(3);
   });
 
   test("keeps host raw-send echo compatible with neutral PD monitor events", () => {
