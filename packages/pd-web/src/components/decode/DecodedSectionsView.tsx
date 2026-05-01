@@ -1,5 +1,7 @@
 import clsx from 'clsx'
+import { useEffect, useState } from 'react'
 import type { BitField, DecodeIssue, Section } from '@usb-pd-sniffer/pd-core'
+import { formatFieldEditValue, parseFieldEditValue, type FieldEditMode } from '@/lib/analyzer/fieldEdit'
 
 export function hexBytes(bytes: readonly number[] | Uint8Array): string {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0').toUpperCase()).join(' ')
@@ -22,6 +24,12 @@ function formatRawValue(rawValue: number | bigint | undefined): string {
 
   const normalized = rawValue >>> 0
   return `0x${normalized.toString(16).toUpperCase()}`
+}
+
+function formatFieldRawValue(field: BitField): string {
+  const normalized = typeof field.rawValue === 'bigint' ? field.rawValue : BigInt(field.rawValue >>> 0)
+
+  return normalized.toString(2).padStart(field.bitLength, '0')
 }
 
 function formatFieldMeaning(field: BitField): string {
@@ -56,11 +64,68 @@ function issueTone(issue: DecodeIssue): string {
 
 type FieldRowProps = {
   field: BitField
+  section: Section
+  onFieldEdit?: (section: Section, field: BitField, rawValue: bigint) => void
 }
 
-const fieldGridClassName = 'grid gap-x-3 md:grid-cols-[60px_minmax(0,2fr)_minmax(0,1fr)_60px]'
+const fieldGridClassName = 'grid gap-x-3 md:grid-cols-[60px_minmax(0,1.5fr)_minmax(0,1fr)_minmax(140px,1.4fr)]'
 
-function FieldRow({ field }: FieldRowProps) {
+type FieldEditorProps = {
+  field: BitField
+  mode: FieldEditMode
+  onApply: (rawValue: bigint) => void
+}
+
+function FieldEditor({ field, mode, onApply }: FieldEditorProps) {
+  const [value, setValue] = useState(() => formatFieldEditValue(field, mode))
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setValue(formatFieldEditValue(field, mode))
+    setError(null)
+  }, [field, mode])
+
+  const applyEdit = () => {
+    try {
+      const rawValue = parseFieldEditValue(field, mode, value)
+      onApply(rawValue)
+      setError(null)
+    } catch (applyError) {
+      setError(applyError instanceof Error ? applyError.message : 'Invalid field value.')
+    }
+  }
+
+  return (
+    <div className="min-w-0">
+      <input
+        className={clsx(
+          'input input-xs input-bordered h-7 w-full min-w-0 font-mono text-xs',
+          error !== null && 'input-error',
+        )}
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        onBlur={applyEdit}
+        onFocus={(event) => event.currentTarget.select()}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.currentTarget.blur()
+          }
+        }}
+        title="Edit raw field bits as binary."
+      />
+      {error !== null && (
+        <div className="mt-1 text-[10px] leading-3 text-error">{error}</div>
+      )}
+    </div>
+  )
+}
+
+function FieldRow({ field, section, onFieldEdit }: FieldRowProps) {
+  const applyFieldEdit = (rawValue: bigint) => {
+    onFieldEdit?.(section, field, rawValue)
+  }
+  const isEditable = onFieldEdit !== undefined
+
   return (
     <div className={clsx(fieldGridClassName, 'gap-y-1 border-b border-base-300/70 px-3 py-2 last:border-b-0')}>
       <div className="font-mono text-[11px] text-base-content/55">{bitRangeLabel(field.bitStart, field.bitLength)}</div>
@@ -70,8 +135,12 @@ function FieldRow({ field }: FieldRowProps) {
           <div className="mt-1 text-[11px] leading-4 text-base-content/55">{field.note}</div>
         )}
       </div>
-      <div className="min-w-0 font-mono text-xs text-base-content break-all">{formatFieldMeaning(field)}</div>
-      <div className="font-mono text-[11px] text-right text-base-content/50">{formatRawValue(field.rawValue)}</div>
+      <div className="min-w-0 break-all font-mono text-xs text-base-content">{formatFieldMeaning(field)}</div>
+      {isEditable ? (
+        <FieldEditor field={field} mode="raw" onApply={applyFieldEdit} />
+      ) : (
+        <div className="break-all font-mono text-[11px] text-right text-base-content/50">{formatFieldRawValue(field)}</div>
+      )}
     </div>
   )
 }
@@ -105,9 +174,10 @@ export function IssueList({ issues }: IssueListProps) {
 
 type SectionViewProps = {
   section: Section
+  onFieldEdit?: (section: Section, field: BitField, rawValue: bigint) => void
 }
 
-export function SectionView({ section }: SectionViewProps) {
+export function SectionView({ section, onFieldEdit }: SectionViewProps) {
   const showEmptyState = section.fields.length === 0
 
   return (
@@ -168,6 +238,8 @@ export function SectionView({ section }: SectionViewProps) {
               <FieldRow
                 key={`${section.key}-${field.key}-${field.bitStart}-${field.bitLength}`}
                 field={field}
+                section={section}
+                onFieldEdit={onFieldEdit}
               />
             ))}
           </div>

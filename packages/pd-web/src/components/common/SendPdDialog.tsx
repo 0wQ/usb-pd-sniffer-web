@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { MessageFrame } from '@usb-pd-sniffer/pd-core'
+import type { BitField, MessageFrame, Section } from '@usb-pd-sniffer/pd-core'
 import clsx from 'clsx'
 import { toast } from 'sonner'
 import type { MonitorActiveCCMode, MonitorCCMode, MonitorCCModeConfig, MonitorPdTxTarget } from '@/lib/devices/monitorDrivers'
+import { applyFieldRawValue, formatEditedBytes } from '@/lib/analyzer/fieldEdit'
 import { previewPdTxFrame } from '@/lib/analyzer/txPreview'
 import { hexBytes, IssueList, SectionView } from '@/components/decode/DecodedSectionsView'
 
@@ -125,6 +126,15 @@ const SendPdDialog = ({
       () => onSetCCMode({ activeCC: activeCCMode, cc1: cc1Mode, cc2: cc2Mode }),
       `Applied CC mode: Active ${activeCCMode.toUpperCase()}, CC1 ${cc1Mode.toUpperCase()}, CC2 ${cc2Mode.toUpperCase()}.`,
     )
+  }
+
+  const handlePreviewFieldEdit = (section: Section, field: BitField, rawValue: bigint) => {
+    if (preview?.result === undefined || preview.result === null) {
+      throw new Error('Preview is not available for field editing.')
+    }
+
+    const editedBytes = applyFieldRawValue(preview.result.frame.bytes, section, field, rawValue)
+    setHexPayload(formatEditedBytes(editedBytes))
   }
 
   const fillFromSelected = () => {
@@ -387,6 +397,7 @@ const SendPdDialog = ({
                     <SectionView
                       key={section.key}
                       section={section}
+                      onFieldEdit={!isConnected || isSending ? undefined : handlePreviewFieldEdit}
                     />
                   ))}
                 </div>
