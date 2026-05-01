@@ -35,6 +35,8 @@ const ROW_HEIGHT = 30
 const THEME_STORAGE_KEY = 'usb-pd-sniffer-theme'
 const TOOLBAR_ICON_BUTTON_CLASS = 'btn btn-sm btn-square btn-ghost'
 const TOOLBAR_ICON_CLASS = 'h-5 w-5'
+const SMOOTH_FOLLOW_MIN_INTERVAL_MS = 180
+const SMOOTH_FOLLOW_MAX_RECORD_DELTA = 4
 type DecodeLayoutMode = 'vertical' | 'horizontal'
 
 const themes = [
@@ -330,18 +332,31 @@ const TableComponent = memo(({
   const isProgrammaticScroll = useRef(false)
   const lastScrollTop = useRef(0)
   const userScrollIntent = useRef<'up' | 'down' | null>(null)
+  const lastFollowScrollAt = useRef(0)
+  const lastFollowRecordCount = useRef(0)
 
   const records = captureBuffer.getAll()
   const recordCount = captureCount
 
   useEffect(() => {
     if (autoScroll && recordCount > 1) {
+      const now = performance.now()
+      const recordDelta = recordCount - lastFollowRecordCount.current
+      const elapsed = now - lastFollowScrollAt.current
+      const followBehavior =
+        elapsed >= SMOOTH_FOLLOW_MIN_INTERVAL_MS &&
+        recordDelta > 0 &&
+        recordDelta <= SMOOTH_FOLLOW_MAX_RECORD_DELTA
+          ? 'smooth'
+          : 'auto'
+
       isProgrammaticScroll.current = true
       list?.scrollToRow({
-        behavior: 'auto',
+        behavior: followBehavior,
         index: recordCount - 1,
       })
-      // Reset flag after a short delay to allow scroll to complete
+      lastFollowScrollAt.current = now
+      lastFollowRecordCount.current = recordCount
       setTimeout(() => {
         isProgrammaticScroll.current = false
       }, 100)
@@ -360,7 +375,6 @@ const TableComponent = memo(({
       index: selectedIndex,
     })
     lastScrollRequest.current = scrollRequest
-    // Reset flag after a short delay to allow scroll to complete
     setTimeout(() => {
       isProgrammaticScroll.current = false
     }, 100)
@@ -390,7 +404,7 @@ const TableComponent = memo(({
     // Check if scrolled to bottom
     const isAtBottom = scrollHeight - (currentScrollTop + clientHeight) <= AUTO_SCROLL_CONFIG.BOTTOM_THRESHOLD
 
-    if ((intent === 'up' || isScrollingUp) && AUTO_SCROLL_CONFIG.STOP_ON_MANUAL_SCROLL && autoScroll) {
+    if (intent === 'up' && AUTO_SCROLL_CONFIG.STOP_ON_MANUAL_SCROLL && autoScroll) {
       isProgrammaticScroll.current = false
       setAutoScroll(false)
     } else if (isProgrammaticScroll.current) {
@@ -402,8 +416,8 @@ const TableComponent = memo(({
         setAutoScroll(true)
       }
     } else if (AUTO_SCROLL_CONFIG.STOP_ON_MANUAL_SCROLL && autoScroll) {
-      // Stop auto-scroll when manually scrolling upward
-      if (currentScrollTop < lastScrollTop.current) {
+      // Fallback for non-wheel upward navigation like scrollbar dragging.
+      if (isScrollingUp) {
         setAutoScroll(false)
       }
     }
