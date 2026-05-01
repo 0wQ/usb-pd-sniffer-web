@@ -14,6 +14,7 @@ import {
 } from '@/lib/preferences/devicePreferences'
 import type { MonitorDeviceKind } from '@/lib/devices/monitorDrivers'
 import type { CaptureRecord, PowerSample } from '@/types/pd'
+import { downloadCsv, exportToCsv, generateFilename } from '@/utils/csvHelper'
 
 interface DeviceState {
   isConnected: boolean
@@ -59,11 +60,62 @@ interface DeviceState {
 const CAPTURE_BATCH_SIZE = 1000
 const CAPTURE_BATCH_TIMEOUT = 50
 const CAPTURE_BUFFER_CAPACITY = 500_000
+const CAPTURE_AUTO_EXPORT_RECORD_LIMIT = 100_000
 const POWER_BUFFER_CAPACITY = 500_000
 const POWER_BATCH_SIZE = 200
 const POWER_BATCH_TIMEOUT = 50
 
 const initialPreferences = readDevicePreferences()
+
+function autoExportAndClearCaptureBuffer(captureBuffer: CaptureBuffer): boolean {
+  if (captureBuffer.length < CAPTURE_AUTO_EXPORT_RECORD_LIMIT) return false
+
+  const records = captureBuffer.getAll()
+  if (records.length === 0) return false
+
+  try {
+    const filename = generateFilename()
+    downloadCsv(exportToCsv(records), filename)
+  } catch (error) {
+    console.error('Auto export failed:', error)
+  }
+
+  captureBuffer.clear()
+  return true
+}
+
+function addCaptureRecordsWithAutoExport(captureBuffer: CaptureBuffer, records: CaptureRecord[]): boolean {
+  let exported = false
+  let offset = 0
+
+  while (offset < records.length) {
+    if (captureBuffer.length >= CAPTURE_AUTO_EXPORT_RECORD_LIMIT) {
+      const didExport = autoExportAndClearCaptureBuffer(captureBuffer)
+      exported = didExport || exported
+      if (!didExport) {
+        captureBuffer.addBatch(records.slice(offset))
+        break
+      }
+      continue
+    }
+
+    const remainingCapacity = CAPTURE_AUTO_EXPORT_RECORD_LIMIT - captureBuffer.length
+    const chunkEnd = Math.min(records.length, offset + remainingCapacity)
+    captureBuffer.addBatch(records.slice(offset, chunkEnd))
+    offset = chunkEnd
+
+    if (captureBuffer.length >= CAPTURE_AUTO_EXPORT_RECORD_LIMIT) {
+      const didExport = autoExportAndClearCaptureBuffer(captureBuffer)
+      exported = didExport || exported
+      if (!didExport) {
+        captureBuffer.addBatch(records.slice(offset))
+        break
+      }
+    }
+  }
+
+  return exported
+}
 
 const useDeviceStore = create<DeviceState>()((set, get) => {
   const captureQueue = createBatchedQueue<CaptureRecord>({
@@ -71,8 +123,11 @@ const useDeviceStore = create<DeviceState>()((set, get) => {
     timeoutMs: CAPTURE_BATCH_TIMEOUT,
     onFlush(records) {
       const { captureBuffer } = get()
-      captureBuffer.addBatch(records)
+
+      const autoExported = addCaptureRecordsWithAutoExport(captureBuffer, records)
+
       set({
+        protocolSelectedIndex: autoExported ? null : get().protocolSelectedIndex,
         captureVersion: captureBuffer.currentVersion,
         captureCount: captureBuffer.length,
       })
