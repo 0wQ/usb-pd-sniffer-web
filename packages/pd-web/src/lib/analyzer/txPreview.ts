@@ -3,6 +3,17 @@ import { parsePdHexPayload, type MonitorPdTxTarget } from '@usb-pd-sniffer/pd-mo
 
 export { parsePdHexPayload } from '@usb-pd-sniffer/pd-monitor'
 
+export function hasPdTxPayloadNewline(hexPayload: string): boolean {
+  return /[\r\n]/.test(hexPayload)
+}
+
+export function splitPdTxPayloadLines(hexPayload: string): string[] {
+  return hexPayload
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+}
+
 function sopForTarget(target: MonitorPdTxTarget): MessageFrame['sop'] {
   switch (target) {
     case 'SOP':
