@@ -119,6 +119,7 @@ const Layout = ({
   const captureBuffer = useDeviceStore((state) => state.captureBuffer)
   const [decodeLayoutMode, setDecodeLayoutMode] = useState<DecodeLayoutMode>(() => readDecodeLayoutMode())
   const [decodeCollapsed, setDecodeCollapsed] = useState(() => readDecodeCollapsed())
+  const [decodeHandleHighlighted, setDecodeHandleHighlighted] = useState(false)
   const [txDialogOpen, setTxDialogOpen] = useState(false)
   const [decodePanel, setDecodePanel] = usePanelCallbackRef()
   const layoutId = `pd-web-main-layout-${decodeLayoutMode}`
@@ -127,12 +128,12 @@ const Layout = ({
     panelIds: ['table', 'decode'],
   })
   const tablePanelClassName = clsx('min-h-0 min-w-0 overflow-visible', {
-    'pb-1.5': decodeLayoutMode === 'vertical',
-    'pr-1.5': decodeLayoutMode === 'horizontal',
+    'pr-5': decodeLayoutMode === 'vertical',
+    'pb-5': decodeLayoutMode === 'horizontal',
   })
   const decodePanelClassName = clsx('min-h-0 min-w-0', {
-    'pt-1.5': decodeLayoutMode === 'vertical',
-    'pl-1.5': decodeLayoutMode === 'horizontal',
+    'pb-5': decodeLayoutMode === 'vertical' && !decodeCollapsed,
+    'pr-5': decodeLayoutMode === 'horizontal' && !decodeCollapsed,
   })
   const groupClassName = clsx('flex h-full min-h-0 gap-0', {
     'flex-col': decodeLayoutMode === 'vertical',
@@ -141,12 +142,13 @@ const Layout = ({
   const separatorClassName = clsx(
     'group relative flex shrink-0 items-center justify-center outline-none focus:outline-none focus-visible:outline-none',
     {
-      'h-3 cursor-row-resize': decodeLayoutMode === 'vertical',
-      'w-3 cursor-col-resize': decodeLayoutMode === 'horizontal',
+      'h-5 cursor-row-resize': decodeLayoutMode === 'vertical',
+      'w-5 cursor-col-resize': decodeLayoutMode === 'horizontal',
     },
   )
   const separatorTrackClassName = clsx(
     'rounded-full bg-base-300 transition-colors group-hover:bg-primary/50 group-data-[active]:bg-primary/70',
+    decodeHandleHighlighted && 'bg-primary/50',
     {
       'h-1.5 w-24': decodeLayoutMode === 'vertical',
       'h-24 w-1.5': decodeLayoutMode === 'horizontal',
@@ -169,16 +171,31 @@ const Layout = ({
         decodePanel.expand()
       }
     } catch {
-      // Layout mode changes remount the group; ignore stale panel handles from the previous group.
+      // Ignore stale panel handles from layout updates.
     }
   }, [decodeCollapsed, decodePanel])
 
   const toggleDecodeLayoutMode = useCallback(() => {
     setDecodeLayoutMode((current) => current === 'vertical' ? 'horizontal' : 'vertical')
+    setDecodeHandleHighlighted(true)
   }, [])
+
+  useEffect(() => {
+    if (!decodeHandleHighlighted) return
+
+    const timeoutId = window.setTimeout(() => {
+      setDecodeHandleHighlighted(false)
+    }, 900)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [decodeHandleHighlighted])
 
   const handleDecodeResize = useCallback((panelSize: PanelSize) => {
     setDecodeCollapsed(panelSize.asPercentage <= 0.001)
+  }, [])
+
+  const handleDecodeSeparatorDoubleClick = useCallback(() => {
+    setDecodeCollapsed((current) => !current)
   }, [])
 
   const handleOpenTxDialog = useCallback(() => {
@@ -200,14 +217,13 @@ const Layout = ({
   return (
     <main
       className="
-        flex-1 min-h-0
+        relative flex-1 min-h-0
         z-10
-        p-5
+        pl-5 pt-5
         overflow-visible
       "
     >
       <Group
-        key={decodeLayoutMode}
         id={layoutId}
         orientation={decodeLayoutMode}
         defaultLayout={defaultLayoutForMode}
@@ -246,7 +262,12 @@ const Layout = ({
           />
         </Panel>
 
-        <Separator className={separatorClassName} disabled={txDialogOpen}>
+        <Separator
+          className={separatorClassName}
+          disabled={txDialogOpen}
+          disableDoubleClick
+          onDoubleClick={handleDecodeSeparatorDoubleClick}
+        >
           <span className={separatorTrackClassName} />
         </Separator>
 
