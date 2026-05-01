@@ -329,6 +329,7 @@ const TableComponent = memo(({
   const lastScrollRequest = useRef(0)
   const isProgrammaticScroll = useRef(false)
   const lastScrollTop = useRef(0)
+  const userScrollIntent = useRef<'up' | 'down' | null>(null)
 
   const records = captureBuffer.getAll()
   const recordCount = captureCount
@@ -337,7 +338,7 @@ const TableComponent = memo(({
     if (autoScroll && recordCount > 1) {
       isProgrammaticScroll.current = true
       list?.scrollToRow({
-        behavior: 'smooth',
+        behavior: 'auto',
         index: recordCount - 1,
       })
       // Reset flag after a short delay to allow scroll to complete
@@ -365,20 +366,39 @@ const TableComponent = memo(({
     }, 100)
   }, [scrollRequest, selectedIndex, list, recordCount])
 
-  const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
-    if (isProgrammaticScroll.current) return
+  const handleWheelCapture = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+    if (event.deltaY < 0) {
+      userScrollIntent.current = 'up'
+      isProgrammaticScroll.current = false
+      if (autoScroll && AUTO_SCROLL_CONFIG.STOP_ON_MANUAL_SCROLL) {
+        setAutoScroll(false)
+      }
+    } else if (event.deltaY > 0) {
+      userScrollIntent.current = 'down'
+    }
+  }, [autoScroll, setAutoScroll])
 
+  const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
     const target = event.currentTarget
     const currentScrollTop = target.scrollTop
     const scrollHeight = target.scrollHeight
     const clientHeight = target.clientHeight
+    const isScrollingDown = currentScrollTop > lastScrollTop.current
+    const isScrollingUp = currentScrollTop < lastScrollTop.current
+    const intent = userScrollIntent.current
 
     // Check if scrolled to bottom
     const isAtBottom = scrollHeight - (currentScrollTop + clientHeight) <= AUTO_SCROLL_CONFIG.BOTTOM_THRESHOLD
 
-    if (isAtBottom) {
-      // Resume auto-scroll when at bottom
-      if (AUTO_SCROLL_CONFIG.RESUME_ON_SCROLL_TO_BOTTOM && !autoScroll) {
+    if ((intent === 'up' || isScrollingUp) && AUTO_SCROLL_CONFIG.STOP_ON_MANUAL_SCROLL && autoScroll) {
+      isProgrammaticScroll.current = false
+      setAutoScroll(false)
+    } else if (isProgrammaticScroll.current) {
+      // Ignore programmatic follow-scroll events so they cannot undo an explicit pause.
+    } else if (isAtBottom) {
+      // Resume auto-scroll only when the user scrolls down to bottom.
+      // Otherwise clicking the toolbar pause button while already at bottom can be undone by the next scroll event.
+      if (AUTO_SCROLL_CONFIG.RESUME_ON_SCROLL_TO_BOTTOM && !autoScroll && isScrollingDown && intent === 'down') {
         setAutoScroll(true)
       }
     } else if (AUTO_SCROLL_CONFIG.STOP_ON_MANUAL_SCROLL && autoScroll) {
@@ -389,6 +409,7 @@ const TableComponent = memo(({
     }
 
     lastScrollTop.current = currentScrollTop
+    userScrollIntent.current = null
   }, [autoScroll, setAutoScroll])
 
   const rowProps = useMemo<RowData>(
@@ -410,7 +431,7 @@ const TableComponent = memo(({
             ))}
           </div>
 
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0" onWheelCapture={handleWheelCapture}>
             {recordCount === 0 ? (
               <div className="grid h-full place-items-center px-6 text-center text-xs text-base-content/55">
                 No records yet.
@@ -746,7 +767,7 @@ const Card = memo(({
             <div className="flex min-w-max shrink-0 flex-wrap items-center justify-end gap-1">
               <button
                 className={TOOLBAR_ICON_BUTTON_CLASS}
-                onClick={() => setAutoScroll(!autoScroll)}
+                onClick={() => setAutoScroll((current) => !current)}
                 aria-label="Auto Scroll"
               >
                 <AutoScrollIcon className={TOOLBAR_ICON_CLASS} />
