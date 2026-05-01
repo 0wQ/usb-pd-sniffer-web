@@ -12,7 +12,6 @@ const DEVICE_STORAGE_KEYS = {
   lastDeviceFingerprint: 'usb-pd-device-lastDeviceFingerprint',
   lastDeviceFingerprints: 'usb-pd-device-lastDeviceFingerprints',
   detailContextBacktrackRecords: 'usb-pd-detail-context-backtrack-records',
-  powerCaptureEnabled: 'usb-pd-power-capture-enabled',
 } as const
 
 export type LastDeviceFingerprints = Partial<Record<MonitorDeviceKind, string>>
@@ -24,7 +23,6 @@ export type DevicePreferences = {
   selectedMonitorDeviceKind: MonitorDeviceKind
   lastDeviceFingerprints: LastDeviceFingerprints
   detailContextBacktrackRecords: number | null
-  powerCaptureEnabled: boolean
 }
 
 function readBool(key: string, fallback: boolean): boolean {
@@ -108,7 +106,6 @@ export function readDevicePreferences(): DevicePreferences {
     selectedMonitorDeviceKind: readSelectedMonitorDeviceKind(),
     lastDeviceFingerprints: readLastDeviceFingerprints(),
     detailContextBacktrackRecords: readNullableNumber(DEVICE_STORAGE_KEYS.detailContextBacktrackRecords, null),
-    powerCaptureEnabled: readBool(DEVICE_STORAGE_KEYS.powerCaptureEnabled, false),
   }
 }
 
@@ -137,8 +134,4 @@ export function writeDetailContextBacktrackRecords(value: number | null): void {
     DEVICE_STORAGE_KEYS.detailContextBacktrackRecords,
     value === null ? 'unlimited' : String(value),
   )
-}
-
-export function writePowerCaptureEnabled(value: boolean): void {
-  writeValue(DEVICE_STORAGE_KEYS.powerCaptureEnabled, String(value))
 }

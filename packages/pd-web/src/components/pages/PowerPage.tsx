@@ -8,8 +8,14 @@ import type {
 
 const PowerTelemetryCharts = lazy(() => import('@/components/power/PowerTelemetryCharts'))
 
-const POWER_WINDOW_OPTIONS = [2000, 5000, 10000, 20000, 50000] as const
+const POWER_WINDOW_OPTIONS = [1000, 100000, 500000] as const
 const TOOLBAR_ICON_BUTTON_CLASS = 'btn btn-sm btn-square btn-ghost'
+
+function formatWindowOption(value: number): string {
+  if (value >= 1_000_000) return `${value / 1_000_000}M`
+  if (value >= 1_000) return `${value / 1_000}K`
+  return value.toString()
+}
 
 function formatVoltageMv(mv: number): string {
   return `${(mv / 1000).toFixed(2)} V`
@@ -62,7 +68,7 @@ const PowerPage = ({
   currentView,
   onViewChange,
 }: Props) => {
-  const [windowSize, setWindowSize] = useState<number>(10000)
+  const [windowSize, setWindowSize] = useState<number>(1000)
   const captureCount = useDeviceStore((state) => state.captureCount)
   const powerBuffer = useDeviceStore((state) => state.powerBuffer)
   const powerVersion = useDeviceStore((state) => state.powerVersion)
@@ -139,7 +145,7 @@ const PowerPage = ({
                     onClick={() => setWindowSize(option)}
                     type="button"
                   >
-                    {option >= 1000 ? `${option / 1000}k` : option}
+                    {formatWindowOption(option)}
                   </button>
                 ))}
               </div>

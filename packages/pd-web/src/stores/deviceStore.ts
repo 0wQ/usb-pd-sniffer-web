@@ -9,7 +9,6 @@ import {
   writeDetailContextBacktrackRecords,
   writeLastDeviceFingerprints,
   writeManualDisconnect,
-  writePowerCaptureEnabled,
   writeSelectedMonitorDeviceKind,
   type LastDeviceFingerprints,
 } from '@/lib/preferences/devicePreferences'
@@ -59,7 +58,8 @@ interface DeviceState {
 
 const CAPTURE_BATCH_SIZE = 1000
 const CAPTURE_BATCH_TIMEOUT = 50
-const POWER_BUFFER_CAPACITY = 50_000
+const CAPTURE_BUFFER_CAPACITY = 500_000
+const POWER_BUFFER_CAPACITY = 500_000
 const POWER_BATCH_SIZE = 200
 const POWER_BATCH_TIMEOUT = 50
 
@@ -101,9 +101,9 @@ const useDeviceStore = create<DeviceState>()((set, get) => {
     selectedMonitorDeviceKind: initialPreferences.selectedMonitorDeviceKind,
     lastDeviceFingerprints: initialPreferences.lastDeviceFingerprints,
     detailContextBacktrackRecords: initialPreferences.detailContextBacktrackRecords,
-    powerCaptureEnabled: initialPreferences.powerCaptureEnabled,
+    powerCaptureEnabled: false,
     protocolSelectedIndex: null,
-    captureBuffer: createCaptureBuffer(),
+    captureBuffer: createCaptureBuffer(CAPTURE_BUFFER_CAPACITY),
     powerBuffer: createPowerSamplesBuffer(POWER_BUFFER_CAPACITY),
     captureVersion: 0,
     powerVersion: 0,
@@ -153,8 +153,6 @@ const useDeviceStore = create<DeviceState>()((set, get) => {
     },
 
     setPowerCaptureEnabled: (powerCaptureEnabled) => {
-      writePowerCaptureEnabled(powerCaptureEnabled)
-
       if (!powerCaptureEnabled) {
         powerQueue.clear()
       }

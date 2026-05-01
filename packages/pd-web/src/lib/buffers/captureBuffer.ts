@@ -10,27 +10,61 @@ export type CaptureBuffer = {
   getAll(): CaptureRecord[]
 }
 
-export function createCaptureBuffer(): CaptureBuffer {
-  let buffer: CaptureRecord[] = []
+export function createCaptureBuffer(capacity: number): CaptureBuffer {
+  let buffer = new Array<CaptureRecord>(capacity)
+  let head = 0
+  let count = 0
   let version = 0
+  let orderedCache: CaptureRecord[] | null = null
+  let orderedCacheVersion = -1
+
+  const push = (record: CaptureRecord) => {
+    buffer[head] = record
+    head = (head + 1) % capacity
+    count = Math.min(count + 1, capacity)
+  }
+
+  const getLogicalIndex = (index: number) => {
+    if (index < 0 || index >= count) return -1
+    return (head - count + index + capacity) % capacity
+  }
+
+  const invalidate = () => {
+    version++
+    orderedCache = null
+    orderedCacheVersion = -1
+  }
 
   return {
     add(record) {
-      buffer.push(record)
-      version++
+      push(record)
+      invalidate()
     },
 
     addBatch(records) {
-      buffer.push(...records)
-      version++
+      if (records.length === 0) return
+
+      if (records.length >= capacity) {
+        const start = records.length - capacity
+        buffer = records.slice(start)
+        head = 0
+        count = capacity
+      } else {
+        for (const record of records) {
+          push(record)
+        }
+      }
+
+      invalidate()
     },
 
     get(index) {
-      return buffer[index]
+      const physicalIndex = getLogicalIndex(index)
+      return physicalIndex === -1 ? undefined : buffer[physicalIndex]
     },
 
     get length() {
-      return buffer.length
+      return count
     },
 
     get currentVersion() {
@@ -38,13 +72,24 @@ export function createCaptureBuffer(): CaptureBuffer {
     },
 
     clear() {
-      buffer = []
-      version++
+      buffer = new Array<CaptureRecord>(capacity)
+      head = 0
+      count = 0
+      invalidate()
     },
 
-    // Return the backing array intentionally; virtualized views use version for invalidation.
+    // Return records in visible order: oldest retained record first, newest last.
     getAll() {
-      return buffer
+      if (orderedCache && orderedCacheVersion === version) return orderedCache
+
+      const result = new Array<CaptureRecord>(count)
+      for (let index = 0; index < count; index += 1) {
+        result[index] = buffer[(head - count + index + capacity) % capacity]
+      }
+
+      orderedCache = result
+      orderedCacheVersion = version
+      return result
     },
   }
 }
