@@ -1,4 +1,4 @@
-import { MONITOR_EVENT } from '@usb-pd-sniffer/pd-monitor'
+import { MONITOR_EVENT } from '@usb-pd-sniffer/pd-device-native-hid'
 import type { CaptureRecord } from '@/types/pd'
 
 const UFCS_TRAINING_BYTE = 0xAA

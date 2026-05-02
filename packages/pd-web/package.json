@@ -13,8 +13,8 @@
   "dependencies": {
     "@tailwindcss/vite": "4.2.2",
     "@usb-pd-sniffer/pd-core": "workspace:*",
-    "@usb-pd-sniffer/pd-monitor": "workspace:*",
-    "@usb-pd-sniffer/pd-monitor-atk-c2": "workspace:*",
+    "@usb-pd-sniffer/pd-device-native-hid": "workspace:*",
+    "@usb-pd-sniffer/pd-device-atk-c2": "workspace:*",
     "clsx": "^2.1.1",
     "lucide-react": "^1.14.0",
     "papaparse": "^5.5.3",

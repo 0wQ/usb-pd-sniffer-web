@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
-import { parsePdHexPayload } from '@usb-pd-sniffer/pd-monitor'
+import { parsePdHexPayload } from '@usb-pd-sniffer/pd-device-native-hid'
 import {
   getMonitorDeviceDriver,
   MONITOR_DEVICE_OPTIONS,

@@ -15,7 +15,7 @@ import {
   toPdObservedFrameFromMonitorEvent
 } from "./monitorAdapter.js";
 
-describe("pd-monitor adapter", () => {
+describe("pd-device-native-hid adapter", () => {
   test("keeps native monitor event numbering aligned with firmware groups", () => {
     expect(MONITOR_EVENT.POWER_TELEMETRY).toBe(10);
     expect(MONITOR_EVENT.PD_SOP0).toBe(20);

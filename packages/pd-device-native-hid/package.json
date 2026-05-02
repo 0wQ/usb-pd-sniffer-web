@@ -1,7 +1,7 @@
 {
-  "name": "@usb-pd-sniffer/pd-monitor-atk-c2",
+  "name": "@usb-pd-sniffer/pd-device-native-hid",
   "version": "0.1.0",
-  "description": "ATK C2 WebUSB monitor device support for USB PD capture.",
+  "description": "Native WebHID device backend and native monitor-event helpers for USB PD capture.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

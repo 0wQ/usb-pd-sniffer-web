@@ -23,9 +23,9 @@ importers:
 
   packages/pd-core: {}
 
-  packages/pd-monitor: {}
+  packages/pd-device-native-hid: {}
 
-  packages/pd-monitor-atk-c2: {}
+  packages/pd-device-atk-c2: {}
 
   packages/pd-web:
     dependencies:
@@ -35,12 +35,12 @@ importers:
       '@usb-pd-sniffer/pd-core':
         specifier: workspace:*
         version: link:../pd-core
-      '@usb-pd-sniffer/pd-monitor':
+      '@usb-pd-sniffer/pd-device-native-hid':
         specifier: workspace:*
-        version: link:../pd-monitor
-      '@usb-pd-sniffer/pd-monitor-atk-c2':
+        version: link:../pd-device-native-hid
+      '@usb-pd-sniffer/pd-device-atk-c2':
         specifier: workspace:*
-        version: link:../pd-monitor-atk-c2
+        version: link:../pd-device-atk-c2
       clsx:
         specifier: ^2.1.1
         version: 2.1.1

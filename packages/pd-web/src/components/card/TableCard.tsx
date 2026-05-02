@@ -21,7 +21,7 @@ import {
   Settings,
   Upload,
 } from 'lucide-react'
-import { monitorEventName } from '@usb-pd-sniffer/pd-monitor'
+import { monitorEventName } from '@usb-pd-sniffer/pd-device-native-hid'
 import { decodeSingleRecord } from '@/lib/analyzer/decode'
 import { decodeUfcsRecordType, formatUfcsSignal, formatUfcsTypeSummary } from '@/lib/ufcs/ufcsType'
 import { formatCompactPowerRoleOrCable, formatCompactSop } from '@/lib/display/pdTableFields'

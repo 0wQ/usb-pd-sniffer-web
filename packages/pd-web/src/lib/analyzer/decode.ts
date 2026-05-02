@@ -6,7 +6,7 @@ import {
 import {
   MONITOR_EVENT,
   toPdObservedFrameFromMonitorEvent,
-} from '@usb-pd-sniffer/pd-monitor'
+} from '@usb-pd-sniffer/pd-device-native-hid'
 import type { CaptureRecord } from '@/types/pd'
 
 export function recordToMessagePacket(record: CaptureRecord) {

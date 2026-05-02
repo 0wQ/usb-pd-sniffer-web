@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { MONITOR_EVENT } from '@usb-pd-sniffer/pd-monitor'
+import { MONITOR_EVENT } from '@usb-pd-sniffer/pd-device-native-hid'
 import { decodeUfcsRecordType, decodeUfcsType, formatUfcsSignal, formatUfcsTypeSummary } from './ufcsType'
 import type { CaptureRecord } from '@/types/pd'
 

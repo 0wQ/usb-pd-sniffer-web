@@ -1,12 +1,12 @@
-# @usb-pd-sniffer/pd-monitor
+# @usb-pd-sniffer/pd-device-native-hid
 
 Device support package for the current USB PD Sniffer native firmware monitor.
 
-`pd-monitor` owns the host-side native monitor device boundary. `pd-web` should use this package as its only device entry point and must not parse HID report bodies or hold `HIDDevice` directly.
+`pd-device-native-hid` owns the host-side native HID monitor device boundary. `pd-web` should use this package as its native HID entry point and must not parse HID report bodies or hold `HIDDevice` directly.
 
 ## Responsibilities
 
-`pd-monitor` owns:
+`pd-device-native-hid` owns:
 
 - WebHID device lifecycle for the current native firmware device.
 - Native HID report body parse/encode.
@@ -14,7 +14,7 @@ Device support package for the current USB PD Sniffer native firmware monitor.
 - Conversion from native monitor events to upper-layer records and power samples.
 - Raw PD TX command dispatch through the native firmware HID OUT report.
 
-`pd-monitor` does not own:
+`pd-device-native-hid` does not own:
 
 - React state, Zustand stores, table selection, chart buffers, or UI behavior.
 - PD protocol semantic decoding. Use `@usb-pd-sniffer/pd-core` for PD packet decoding.
@@ -22,10 +22,10 @@ Device support package for the current USB PD Sniffer native firmware monitor.
 
 ## Main Interface
 
-Use `createMonitorDevice()` from `@usb-pd-sniffer/pd-monitor`.
+Use `createMonitorDevice()` from `@usb-pd-sniffer/pd-device-native-hid`.
 
 ```ts
-import { createMonitorDevice } from '@usb-pd-sniffer/pd-monitor'
+import { createMonitorDevice } from '@usb-pd-sniffer/pd-device-native-hid'
 
 const device = createMonitorDevice()
 
@@ -180,7 +180,7 @@ type MonitorCCModeConfig = {
 Use `parsePdHexPayload()` if UI code needs to convert user-entered hex into bytes before calling `sendRawPd()`.
 
 ```ts
-import { parsePdHexPayload } from '@usb-pd-sniffer/pd-monitor'
+import { parsePdHexPayload } from '@usb-pd-sniffer/pd-device-native-hid'
 
 await device.sendRawPd('SOP', parsePdHexPayload('42 10 aa bb'))
 ```

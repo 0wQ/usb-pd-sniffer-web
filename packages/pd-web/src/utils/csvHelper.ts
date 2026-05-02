@@ -1,7 +1,7 @@
 import Papa from 'papaparse'
 import type { CaptureRecord } from '@/types/pd'
 import type { ValidationError, ImportResult } from '@/types/csv'
-import { MONITOR_EVENT, monitorEventName } from '@usb-pd-sniffer/pd-monitor'
+import { MONITOR_EVENT, monitorEventName } from '@usb-pd-sniffer/pd-device-native-hid'
 
 const CSV_HEADERS = [
   'timestamp_us',

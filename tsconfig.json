@@ -5,10 +5,10 @@
       "path": "./packages/pd-core"
     },
     {
-      "path": "./packages/pd-monitor"
+      "path": "./packages/pd-device-native-hid"
     },
     {
-      "path": "./packages/pd-monitor-atk-c2"
+      "path": "./packages/pd-device-atk-c2"
     },
     {
       "path": "./packages/pd-web"

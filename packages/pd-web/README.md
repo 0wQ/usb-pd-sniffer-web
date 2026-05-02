@@ -2,7 +2,7 @@
 
 `pd-web` is the browser UI for `usb-pd-sniffer-web-v2`.
 
-It owns browser UI state, capture buffers, protocol table rendering, generic decode detail rendering, power telemetry display, and PD transmit controls. Native device access is delegated to `@usb-pd-sniffer/pd-monitor`. Protocol payload meaning should come from `@usb-pd-sniffer/pd-core`, not from view-layer special cases.
+It owns browser UI state, capture buffers, protocol table rendering, generic decode detail rendering, power telemetry display, and PD transmit controls. Native HID device access is delegated to `@usb-pd-sniffer/pd-device-native-hid`; ATK C2 device access is delegated to `@usb-pd-sniffer/pd-device-atk-c2`. Protocol payload meaning should come from `@usb-pd-sniffer/pd-core`, not from view-layer special cases.
 
 ## Source Layout
 

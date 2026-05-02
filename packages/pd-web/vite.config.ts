@@ -20,11 +20,11 @@ export default defineConfig({
       "@usb-pd-sniffer/pd-core": fileURLToPath(
         new URL("../pd-core/src/index.ts", import.meta.url)
       ),
-      "@usb-pd-sniffer/pd-monitor": fileURLToPath(
-        new URL("../pd-monitor/src/index.ts", import.meta.url)
+      "@usb-pd-sniffer/pd-device-native-hid": fileURLToPath(
+        new URL("../pd-device-native-hid/src/index.ts", import.meta.url)
       ),
-      "@usb-pd-sniffer/pd-monitor-atk-c2": fileURLToPath(
-        new URL("../pd-monitor-atk-c2/src/index.ts", import.meta.url)
+      "@usb-pd-sniffer/pd-device-atk-c2": fileURLToPath(
+        new URL("../pd-device-atk-c2/src/index.ts", import.meta.url)
       ),
     },
   },

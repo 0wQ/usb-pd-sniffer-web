@@ -1,7 +1,7 @@
 import { decodeMessage, type DecodedMessage, type MessageFrame } from '@usb-pd-sniffer/pd-core'
-import { parsePdHexPayload, type MonitorPdTxTarget } from '@usb-pd-sniffer/pd-monitor'
+import { parsePdHexPayload, type MonitorPdTxTarget } from '@usb-pd-sniffer/pd-device-native-hid'
 
-export { parsePdHexPayload } from '@usb-pd-sniffer/pd-monitor'
+export { parsePdHexPayload } from '@usb-pd-sniffer/pd-device-native-hid'
 
 export function hasPdTxPayloadNewline(hexPayload: string): boolean {
   return /[\r\n]/.test(hexPayload)

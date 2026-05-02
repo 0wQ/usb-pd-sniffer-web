@@ -1,6 +1,6 @@
-import { createMonitorDevice } from '@usb-pd-sniffer/pd-monitor'
-import type { MonitorActiveCCMode, MonitorCCMode, MonitorCCModeConfig } from '@usb-pd-sniffer/pd-monitor'
-import { createAtkC2MonitorDevice } from '@usb-pd-sniffer/pd-monitor-atk-c2'
+import { createMonitorDevice } from '@usb-pd-sniffer/pd-device-native-hid'
+import type { MonitorActiveCCMode, MonitorCCMode, MonitorCCModeConfig } from '@usb-pd-sniffer/pd-device-native-hid'
+import { createAtkC2MonitorDevice } from '@usb-pd-sniffer/pd-device-atk-c2'
 
 export type MonitorDeviceKind = 'native' | 'atk-c2'
 

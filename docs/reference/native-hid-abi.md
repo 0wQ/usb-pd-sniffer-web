@@ -7,7 +7,7 @@ It is intentionally a reference document, not a planning document. Update it in 
 ## Scope
 
 - Firmware source of truth: `usb-pd-sniffer-firmware/src/usb_device/variant/usb_variant_native.c`
-- Host source of truth: `packages/pd-monitor/src/monitorAdapter.ts`
+- Host source of truth: `packages/pd-device-native-hid/src/monitorAdapter.ts`
 - Native USB VID/PID: `0x1A86:0x2333`
 - Native WebHID `reportId`: `0`
 - Native HID IN report body size: `64` bytes
@@ -109,7 +109,7 @@ The web CSV import/export format may choose to reject chunked UFCS events, but t
 
 - WebHID must call `sendReport(0, body)` for native OUT commands.
 - WebHID input must reject non-zero `reportId` for native devices.
-- Host code must use `@usb-pd-sniffer/pd-monitor` for native HID constants and native report parsing instead of duplicating byte offsets in `pd-web`.
+- Host code must use `@usb-pd-sniffer/pd-device-native-hid` for native HID constants and native report parsing instead of duplicating byte offsets in `pd-web`.
 - Host code must treat `payload_len` as the authoritative valid payload length and ignore zero padding after `payload_len`.
 - Host code must not infer PD direction from `event_type`; native monitor events are direction-neutral observations.
 

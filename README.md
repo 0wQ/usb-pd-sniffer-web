@@ -9,8 +9,9 @@ The current priority is `pd-core-v2` correctness and an ET240-style detail view.
 | Path | Role |
 | --- | --- |
 | `packages/pd-core` | Protocol-only USB PD decoder. No WebHID, host transport, table aliases, or UI projection. |
-| `packages/pd-monitor` | Shared monitor-event adapter that converts firmware/HID monitor records into core input frames. |
-| `packages/pd-web` | React + WebHID application that consumes `pd-core` output directly. |
+| `packages/pd-device-native-hid` | Native WebHID device backend and native monitor-event helpers. |
+| `packages/pd-device-atk-c2` | ATK C2 WebUSB capture backend that emits monitor-shaped records. |
+| `packages/pd-web` | React browser application that consumes `pd-core` output directly. |
 | `.docs/planning` | Local scope, policy, and decoder coverage tracking. |
 | `.docs/reference` | Local format notes for external files and host-facing compatibility. |
 
@@ -40,8 +41,9 @@ Known post-MVP branches are tracked in `.docs/planning/pd-core-v2-coverage-by-ty
 ## Package Boundaries
 
 - `pd-core` stays protocol-only and parse-first.
-- `pd-monitor` owns firmware monitor-event normalization.
-- `pd-web` owns WebHID, capture buffers, power telemetry charts, table rendering, and detail rendering.
+- `pd-device-native-hid` owns native WebHID lifecycle, native HID ABI handling, and firmware monitor-event normalization.
+- `pd-device-atk-c2` owns ATK C2 WebUSB lifecycle and capture decoding into monitor-shaped records.
+- `pd-web` owns browser UI state, capture buffers, power telemetry charts, table rendering, and detail rendering.
 - Explicit context, when needed, is provided by callers; `pd-core` does not keep hidden rolling state.
 
 ## Commands
@@ -60,6 +62,8 @@ Package-specific checks:
 ```bash
 pnpm -C packages/pd-core typecheck
 pnpm -C packages/pd-core build
+pnpm -C packages/pd-device-native-hid typecheck
+pnpm -C packages/pd-device-atk-c2 typecheck
 pnpm -C packages/pd-web typecheck
 pnpm -C packages/pd-web build
 ```

@@ -1,7 +1,7 @@
 {
-  "name": "@usb-pd-sniffer/pd-monitor",
+  "name": "@usb-pd-sniffer/pd-device-atk-c2",
   "version": "0.1.0",
-  "description": "Shared monitor-event adapter helpers for the USB PD sniffer workspace.",
+  "description": "ATK C2 WebUSB device backend for USB PD capture.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

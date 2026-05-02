@@ -20,11 +20,11 @@
       "@usb-pd-sniffer/pd-core": [
         "./packages/pd-core/src/index.ts"
       ],
-      "@usb-pd-sniffer/pd-monitor": [
-        "./packages/pd-monitor/src/index.ts"
+      "@usb-pd-sniffer/pd-device-native-hid": [
+        "./packages/pd-device-native-hid/src/index.ts"
       ],
-      "@usb-pd-sniffer/pd-monitor-atk-c2": [
-        "./packages/pd-monitor-atk-c2/src/index.ts"
+      "@usb-pd-sniffer/pd-device-atk-c2": [
+        "./packages/pd-device-atk-c2/src/index.ts"
       ]
     }
   }
