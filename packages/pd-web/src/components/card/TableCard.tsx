@@ -475,7 +475,7 @@ const RecordCounterComponent = memo(() => {
 
   const lastRecord = captureCount > 0 ? captureBuffer.get(captureCount - 1) : null
   const dropCount = lastRecord?.drop_count
-  const hasDropCount = typeof dropCount === 'number'
+  const hasDropCount = typeof dropCount === 'number' && dropCount > 0
   const dropText = hasDropCount ? dropCount.toLocaleString() : ''
 
   return (

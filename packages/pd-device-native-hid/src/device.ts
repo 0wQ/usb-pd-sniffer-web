@@ -15,7 +15,7 @@ import {
 } from "./monitorAdapter.js";
 
 const DEVICE_FILTER = { vendorId: 0x1a86, productId: 0x2333 } as const;
-const STATUS_POLL_INTERVAL_MS = 250;
+const STATUS_POLL_INTERVAL_MS = 500;
 const STATUS_SAMPLE_EVENT_TYPE = 0xff;
 
 type HidDeviceLike = {
