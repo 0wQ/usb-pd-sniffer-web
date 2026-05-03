@@ -1,24 +1,23 @@
 import type {
   CaptureDevice as BaseCaptureDevice,
-  CaptureDeviceStats as BaseCaptureDeviceStats,
-  CaptureDeviceStatus as BaseCaptureDeviceStatus,
+  CaptureDeviceState,
   CaptureEventType,
-  CaptureRecord as BaseCaptureRecord,
+  CaptureRecord,
 } from "@usb-pd-sniffer/pd-device-types";
 import { CAPTURE_EVENT } from "@usb-pd-sniffer/pd-device-types";
 import {
-  encodeNativeMonitorTxCommandBody,
-  MONITOR_TX_CMD,
+  encodeNativeHidTxCommandBody,
+  NATIVE_HID_TX_CMD,
   NATIVE_HID_REPORT_BODY_SIZE,
   NATIVE_HID_REPORT_ID,
   NATIVE_HID_REPORT_TYPE,
-  NATIVE_MONITOR_PAYLOAD_MAX_LEN,
-  monitorEventToCaptureEvent,
-  parseNativeMonitorHidReportBody,
-  type MonitorCCModeConfig,
-  type NativeMonitorTxCommand,
-  type NativeMonitorEventReport,
-} from "./monitorAdapter.js";
+  NATIVE_HID_PAYLOAD_MAX_LEN,
+  nativeHidEventToCaptureEvent,
+  parseNativeHidReportBody,
+  type CCModeConfig,
+  type NativeHidTxCommand,
+  type NativeHidEventReport,
+} from "./nativeHidAdapter.js";
 
 const DEVICE_FILTER = { vendorId: 0x1a86, productId: 0x2333 } as const;
 const STATUS_POLL_INTERVAL_MS = 500;
@@ -60,25 +59,21 @@ type NavigatorWithHid = {
 type UfcsDirection = "dp" | "dm";
 
 type PendingUfcsChunks = {
-  dp: MonitorRecord | null;
-  dm: MonitorRecord | null;
+  dp: CaptureRecord | null;
+  dm: CaptureRecord | null;
 };
 
-export type MonitorRecord = BaseCaptureRecord;
+export type PdTxSop = "SOP" | "SOP_PRIME" | "SOP_DPRIME";
 
-export type MonitorDeviceStatus = BaseCaptureDeviceStatus;
-
-export type MonitorDevice = BaseCaptureDevice & {
-  sendRawPd(target: MonitorPdTxTarget, payload: Uint8Array): Promise<void>;
+export type NativeHidDevice = BaseCaptureDevice & {
+  sendRawPd(sop: PdTxSop, payload: Uint8Array): Promise<void>;
   sendHardReset(): Promise<void>;
   sendCableReset(): Promise<void>;
-  setCCMode(config: MonitorCCModeConfig): Promise<void>;
+  setCCMode(config: CCModeConfig): Promise<void>;
 };
 
-export type MonitorPdTxTarget = "SOP" | "SOP_PRIME" | "SOP_DPRIME";
-
-export type MonitorRecordNormalizer = {
-  push(record: MonitorRecord): MonitorRecord[];
+export type CaptureRecordNormalizer = {
+  push(record: CaptureRecord): CaptureRecord[];
   reset(): void;
 };
 
@@ -141,14 +136,14 @@ function pickPreferredDevice(devices: readonly HidDeviceLike[], preferredFingerp
   return candidates[0] ?? null;
 }
 
-function opcodeForTarget(target: MonitorPdTxTarget): typeof MONITOR_TX_CMD.SEND_RAW_SOP0 | typeof MONITOR_TX_CMD.SEND_RAW_SOP1 | typeof MONITOR_TX_CMD.SEND_RAW_SOP2 {
-  switch (target) {
+function opcodeForSop(sop: PdTxSop): typeof NATIVE_HID_TX_CMD.SEND_RAW_SOP0 | typeof NATIVE_HID_TX_CMD.SEND_RAW_SOP1 | typeof NATIVE_HID_TX_CMD.SEND_RAW_SOP2 {
+  switch (sop) {
     case "SOP":
-      return MONITOR_TX_CMD.SEND_RAW_SOP0;
+      return NATIVE_HID_TX_CMD.SEND_RAW_SOP0;
     case "SOP_PRIME":
-      return MONITOR_TX_CMD.SEND_RAW_SOP1;
+      return NATIVE_HID_TX_CMD.SEND_RAW_SOP1;
     case "SOP_DPRIME":
-      return MONITOR_TX_CMD.SEND_RAW_SOP2;
+      return NATIVE_HID_TX_CMD.SEND_RAW_SOP2;
   }
 }
 
@@ -170,8 +165,8 @@ function microampsToMilliamps(ibusUa: number): number {
   return ibusUa / 1000;
 }
 
-function reportToRecord(report: NativeMonitorEventReport): MonitorRecord | null {
-  const eventType = monitorEventToCaptureEvent(report.eventType);
+function reportToRecord(report: NativeHidEventReport): CaptureRecord | null {
+  const eventType = nativeHidEventToCaptureEvent(report.eventType);
   if (eventType === null) {
     return null;
   }
@@ -192,7 +187,7 @@ function reportToRecord(report: NativeMonitorEventReport): MonitorRecord | null 
   };
 }
 
-function isPassthroughMonitorRecordEvent(eventType: CaptureEventType): boolean {
+function isPassthroughNativeHidRecordEvent(eventType: CaptureEventType): boolean {
   return eventType === CAPTURE_EVENT.DISCONNECT ||
     eventType === CAPTURE_EVENT.CC1_CONNECT ||
     eventType === CAPTURE_EVENT.CC2_CONNECT ||
@@ -216,14 +211,14 @@ function ufcsDirection(eventType: CaptureEventType): UfcsDirection | null {
   }
 }
 
-function cloneRecord(record: MonitorRecord): MonitorRecord {
+function cloneRecord(record: CaptureRecord): CaptureRecord {
   return {
     ...record,
     data: record.data.slice(0, record.data_len),
   };
 }
 
-function assembleUfcsRecord(chunk0: MonitorRecord, chunk1: MonitorRecord): MonitorRecord {
+function assembleUfcsRecord(chunk0: CaptureRecord, chunk1: CaptureRecord): CaptureRecord {
   const data = [
     ...chunk0.data.slice(0, chunk0.data_len),
     ...chunk1.data.slice(0, chunk1.data_len),
@@ -236,8 +231,8 @@ function assembleUfcsRecord(chunk0: MonitorRecord, chunk1: MonitorRecord): Monit
   };
 }
 
-function flushPending(pending: PendingUfcsChunks): MonitorRecord[] {
-  const flushed: MonitorRecord[] = [];
+function flushPending(pending: PendingUfcsChunks): CaptureRecord[] {
+  const flushed: CaptureRecord[] = [];
   if (pending.dp !== null) {
     flushed.push(cloneRecord(pending.dp));
     pending.dp = null;
@@ -249,14 +244,14 @@ function flushPending(pending: PendingUfcsChunks): MonitorRecord[] {
   return flushed;
 }
 
-export function createMonitorRecordNormalizer(): MonitorRecordNormalizer {
+export function createCaptureRecordNormalizer(): CaptureRecordNormalizer {
   const pending: PendingUfcsChunks = {
     dp: null,
     dm: null,
   };
 
   return {
-    push(record: MonitorRecord): MonitorRecord[] {
+    push(record: CaptureRecord): CaptureRecord[] {
       const direction = ufcsDirection(record.event_type);
       if (direction !== null) {
         const otherDirection: UfcsDirection = direction === "dp" ? "dm" : "dp";
@@ -278,7 +273,7 @@ export function createMonitorRecordNormalizer(): MonitorRecordNormalizer {
         if (otherPrevious !== null) {
           output.push(cloneRecord(otherPrevious));
         }
-        if (record.data_len >= NATIVE_MONITOR_PAYLOAD_MAX_LEN) {
+        if (record.data_len >= NATIVE_HID_PAYLOAD_MAX_LEN) {
           pending[direction] = cloneRecord(record);
           return output;
         }
@@ -288,7 +283,7 @@ export function createMonitorRecordNormalizer(): MonitorRecordNormalizer {
       }
 
       const output = flushPending(pending);
-      if (isPassthroughMonitorRecordEvent(record.event_type)) {
+      if (isPassthroughNativeHidRecordEvent(record.event_type)) {
         output.push(record);
       }
       return output;
@@ -300,12 +295,11 @@ export function createMonitorRecordNormalizer(): MonitorRecordNormalizer {
   };
 }
 
-export function createMonitorDevice(): MonitorDevice {
+export function createNativeHidDevice(): NativeHidDevice {
   const hid = getHid();
-  const recordListeners = new Set<(record: MonitorRecord) => void>();
-  const statusListeners = new Set<(status: MonitorDeviceStatus) => void>();
-  const statsListeners = new Set<(stats: BaseCaptureDeviceStats) => void>();
-  const recordNormalizer = createMonitorRecordNormalizer();
+  const recordListeners = new Set<(record: CaptureRecord) => void>();
+  const stateListeners = new Set<(state: CaptureDeviceState) => void>();
+  const recordNormalizer = createCaptureRecordNormalizer();
 
   let device: HidDeviceLike | null = null;
   let isConnecting = false;
@@ -315,12 +309,12 @@ export function createMonitorDevice(): MonitorDevice {
   let autoReconnect = false;
   let autoReconnectFingerprint: string | null = null;
   let disposed = false;
-  let latestStats: BaseCaptureDeviceStats = { recv_count: 0, drop_count: 0 };
+  let latestStats = { recv_count: 0, drop_count: 0 };
   let statusPollTimer: ReturnType<typeof setInterval> | null = null;
   let statusPollInFlight = false;
   let queuedReportWrite: Promise<void> = Promise.resolve();
 
-  const status = (): MonitorDeviceStatus => ({
+  const snapshotState = (): CaptureDeviceState => ({
     isSupported: hid !== null,
     isConnected: device?.opened ?? false,
     isConnecting,
@@ -330,20 +324,18 @@ export function createMonitorDevice(): MonitorDevice {
     fingerprint: device === null ? null : deviceFingerprint(device),
   });
 
-  const emitStatus = () => {
-    const current = status();
-    for (const listener of statusListeners) listener(current);
+  const emitStatus = (): void => {
+    const state = snapshotState();
+    for (const listener of stateListeners) listener(state);
   };
 
-  const emitRecord = (record: MonitorRecord): void => {
+  const emitRecord = (record: CaptureRecord): void => {
     for (const listener of recordListeners) listener(record);
   };
 
-  const emitStats = (stats: BaseCaptureDeviceStats): void => {
-    for (const listener of statsListeners) listener(stats);
-  };
+  const emitStats = (_stats: typeof latestStats): void => {};
 
-  const processRecord = (record: MonitorRecord): void => {
+  const processRecord = (record: CaptureRecord): void => {
     for (const normalizedRecord of recordNormalizer.push(record)) {
       emitRecord(normalizedRecord);
     }
@@ -376,8 +368,8 @@ export function createMonitorDevice(): MonitorDevice {
 
     statusPollInFlight = true;
     try {
-      await enqueueReportWrite(encodeNativeMonitorTxCommandBody({
-        opcode: MONITOR_TX_CMD.GET_STATUS,
+      await enqueueReportWrite(encodeNativeHidTxCommandBody({
+        opcode: NATIVE_HID_TX_CMD.GET_STATUS,
       }));
     } catch (caught) {
       if (!disposed && device !== null && device.opened) {
@@ -400,7 +392,7 @@ export function createMonitorDevice(): MonitorDevice {
 
   const handleInputReport = (event: HidInputReportEventLike): void => {
     try {
-      const report = parseNativeMonitorHidReportBody(normalizeReportBody(event.reportId, event.data));
+      const report = parseNativeHidReportBody(normalizeReportBody(event.reportId, event.data));
       if (report.reportType === NATIVE_HID_REPORT_TYPE.STATUS) {
         latestStats = {
           recv_count: report.recvCount,
@@ -497,7 +489,7 @@ export function createMonitorDevice(): MonitorDevice {
     hid.addEventListener("disconnect", handleDisconnect);
   }
 
-  const sendCommand = async (command: NativeMonitorTxCommand): Promise<void> => {
+  const sendCommand = async (command: NativeHidTxCommand): Promise<void> => {
     if (device === null || !device.opened) {
       throw new Error("No HID device connected.");
     }
@@ -508,7 +500,7 @@ export function createMonitorDevice(): MonitorDevice {
     try {
       isSending = true;
       emitStatus();
-      const body = encodeNativeMonitorTxCommandBody(command);
+      const body = encodeNativeHidTxCommandBody(command);
       await enqueueReportWrite(body);
     } finally {
       isSending = false;
@@ -607,31 +599,26 @@ export function createMonitorDevice(): MonitorDevice {
       device = null;
       emitStatus();
     },
-    async sendRawPd(target: MonitorPdTxTarget, payload: Uint8Array): Promise<void> {
-      await sendCommand({ opcode: opcodeForTarget(target), payload });
+    async sendRawPd(sop: PdTxSop, payload: Uint8Array): Promise<void> {
+      await sendCommand({ opcode: opcodeForSop(sop), payload });
     },
     async sendHardReset(): Promise<void> {
-      await sendCommand({ opcode: MONITOR_TX_CMD.SEND_HARD_RESET });
+      await sendCommand({ opcode: NATIVE_HID_TX_CMD.SEND_HARD_RESET });
     },
     async sendCableReset(): Promise<void> {
-      await sendCommand({ opcode: MONITOR_TX_CMD.SEND_CABLE_RESET });
+      await sendCommand({ opcode: NATIVE_HID_TX_CMD.SEND_CABLE_RESET });
     },
-    async setCCMode(config: MonitorCCModeConfig): Promise<void> {
-      await sendCommand({ opcode: MONITOR_TX_CMD.SET_CC_MODE, activeCC: config.activeCC, cc1: config.cc1, cc2: config.cc2 });
+    async setCCMode(config: CCModeConfig): Promise<void> {
+      await sendCommand({ opcode: NATIVE_HID_TX_CMD.SET_CC_MODE, activeCC: config.activeCC, cc1: config.cc1, cc2: config.cc2 });
     },
-    onRecord(listener: (record: MonitorRecord) => void): () => void {
+    onRecord(listener: (record: CaptureRecord) => void): () => void {
       recordListeners.add(listener);
       return () => recordListeners.delete(listener);
     },
-    onStatus(listener: (status: MonitorDeviceStatus) => void): () => void {
-      statusListeners.add(listener);
-      listener(status());
-      return () => statusListeners.delete(listener);
-    },
-    onStats(listener: (stats: BaseCaptureDeviceStats) => void): () => void {
-      statsListeners.add(listener);
-      listener(latestStats);
-      return () => statsListeners.delete(listener);
+    onState(listener: (state: CaptureDeviceState) => void): () => void {
+      stateListeners.add(listener);
+      listener(snapshotState());
+      return () => stateListeners.delete(listener);
     },
   };
 }

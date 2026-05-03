@@ -1,9 +1,8 @@
 import {
-  encodeNativeMonitorCommandPayload,
-  MONITOR_EVENT,
-  type NativeMonitorTxCommand,
-} from "@usb-pd-sniffer/pd-device-native-hid";
-import type { CaptureRecord } from "@usb-pd-sniffer/pd-device-types";
+  CAPTURE_EVENT,
+  type CaptureEventType,
+  type CaptureRecord,
+} from "@usb-pd-sniffer/pd-device-types";
 
 export const NATIVE_CDC_USB = {
   vendorId: 0x1a86,
@@ -13,13 +12,27 @@ export const NATIVE_CDC_USB = {
 
 export const NATIVE_CDC_FRAME_MAGIC = Uint8Array.from([0x0a, 0x55, 0x50, 0x53]);
 export const NATIVE_CDC_FRAME_TYPE_EVENT = 0x01;
-export const NATIVE_CDC_FRAME_TYPE_CMD = 0x80;
 export const NATIVE_CDC_FRAME_HEADER_SIZE = 7;
 export const NATIVE_CDC_EVENT_HEADER_SIZE = 28;
 export const NATIVE_CDC_EVENT_DATA_MAX_LEN = 65;
 export const NATIVE_CDC_EVENT_PAYLOAD_MAX_LEN = NATIVE_CDC_EVENT_HEADER_SIZE + NATIVE_CDC_EVENT_DATA_MAX_LEN;
-export const NATIVE_CDC_CMD_DATA_MAX_LEN = 62;
-export const NATIVE_CDC_CMD_PAYLOAD_MAX_LEN = 1 + NATIVE_CDC_CMD_DATA_MAX_LEN;
+
+export const NATIVE_CDC_EVENT = {
+  DISCONNECT: 0,
+  CC1_CONNECT: 1,
+  CC2_CONNECT: 2,
+  PD_SOP0: 20,
+  PD_SOP1: 21,
+  PD_SOP2: 22,
+  PD_SOP1_DEBUG: 23,
+  PD_SOP2_DEBUG: 24,
+  HARD_RESET: 25,
+  CABLE_RESET: 26,
+  PD_ERROR: 30,
+  BUFFER_OVERFLOW: 31,
+  UFCS_DP: 40,
+  UFCS_DM: 41,
+} as const;
 
 export type NativeCdcFrame = {
   type: number;
@@ -82,29 +95,27 @@ function maxPayloadLenForType(type: number): number | null {
   switch (type) {
     case NATIVE_CDC_FRAME_TYPE_EVENT:
       return NATIVE_CDC_EVENT_PAYLOAD_MAX_LEN;
-    case NATIVE_CDC_FRAME_TYPE_CMD:
-      return NATIVE_CDC_CMD_PAYLOAD_MAX_LEN;
     default:
       return null;
   }
 }
 
-function isKnownMonitorEvent(eventType: number): boolean {
+function isKnownNativeCdcEvent(eventType: number): boolean {
   switch (eventType) {
-    case MONITOR_EVENT.DISCONNECT:
-    case MONITOR_EVENT.CC1_CONNECT:
-    case MONITOR_EVENT.CC2_CONNECT:
-    case MONITOR_EVENT.PD_SOP0:
-    case MONITOR_EVENT.PD_SOP1:
-    case MONITOR_EVENT.PD_SOP2:
-    case MONITOR_EVENT.PD_SOP1_DEBUG:
-    case MONITOR_EVENT.PD_SOP2_DEBUG:
-    case MONITOR_EVENT.HARD_RESET:
-    case MONITOR_EVENT.CABLE_RESET:
-    case MONITOR_EVENT.PD_ERROR:
-    case MONITOR_EVENT.BUFFER_OVERFLOW:
-    case MONITOR_EVENT.UFCS_DP:
-    case MONITOR_EVENT.UFCS_DM:
+    case NATIVE_CDC_EVENT.DISCONNECT:
+    case NATIVE_CDC_EVENT.CC1_CONNECT:
+    case NATIVE_CDC_EVENT.CC2_CONNECT:
+    case NATIVE_CDC_EVENT.PD_SOP0:
+    case NATIVE_CDC_EVENT.PD_SOP1:
+    case NATIVE_CDC_EVENT.PD_SOP2:
+    case NATIVE_CDC_EVENT.PD_SOP1_DEBUG:
+    case NATIVE_CDC_EVENT.PD_SOP2_DEBUG:
+    case NATIVE_CDC_EVENT.HARD_RESET:
+    case NATIVE_CDC_EVENT.CABLE_RESET:
+    case NATIVE_CDC_EVENT.PD_ERROR:
+    case NATIVE_CDC_EVENT.BUFFER_OVERFLOW:
+    case NATIVE_CDC_EVENT.UFCS_DP:
+    case NATIVE_CDC_EVENT.UFCS_DM:
       return true;
     default:
       return false;
@@ -120,7 +131,7 @@ function validateNativeCdcEventPayload(payload: Uint8Array): void {
   }
 
   const eventType = payload[26] ?? 0;
-  if (!isKnownMonitorEvent(eventType)) {
+  if (!isKnownNativeCdcEvent(eventType)) {
     throw new Error(`Unknown native CDC event type ${eventType}.`);
   }
 
@@ -210,6 +221,37 @@ export function parseNativeCdcEventPayload(payload: Uint8Array): RawNativeCdcEve
   };
 }
 
+export function nativeCdcEventToCaptureEvent(eventType: number): CaptureEventType | null {
+  switch (eventType) {
+    case NATIVE_CDC_EVENT.DISCONNECT:
+      return CAPTURE_EVENT.DISCONNECT;
+    case NATIVE_CDC_EVENT.CC1_CONNECT:
+      return CAPTURE_EVENT.CC1_CONNECT;
+    case NATIVE_CDC_EVENT.CC2_CONNECT:
+      return CAPTURE_EVENT.CC2_CONNECT;
+    case NATIVE_CDC_EVENT.PD_SOP0:
+      return CAPTURE_EVENT.PD_SOP0;
+    case NATIVE_CDC_EVENT.PD_SOP1:
+      return CAPTURE_EVENT.PD_SOP1;
+    case NATIVE_CDC_EVENT.PD_SOP2:
+      return CAPTURE_EVENT.PD_SOP2;
+    case NATIVE_CDC_EVENT.PD_SOP1_DEBUG:
+      return CAPTURE_EVENT.PD_SOP1_DEBUG;
+    case NATIVE_CDC_EVENT.PD_SOP2_DEBUG:
+      return CAPTURE_EVENT.PD_SOP2_DEBUG;
+    case NATIVE_CDC_EVENT.HARD_RESET:
+      return CAPTURE_EVENT.PD_HARD_RESET;
+    case NATIVE_CDC_EVENT.CABLE_RESET:
+      return CAPTURE_EVENT.PD_CABLE_RESET;
+    case NATIVE_CDC_EVENT.UFCS_DP:
+      return CAPTURE_EVENT.UFCS_DP;
+    case NATIVE_CDC_EVENT.UFCS_DM:
+      return CAPTURE_EVENT.UFCS_DM;
+    default:
+      return null;
+  }
+}
+
 export function encodeNativeCdcFrame(type: number, payload: Uint8Array): Uint8Array {
   const maxPayloadLen = maxPayloadLenForType(type);
   if (maxPayloadLen === null) {
@@ -225,13 +267,4 @@ export function encodeNativeCdcFrame(type: number, payload: Uint8Array): Uint8Ar
   putU16LE(frame, NATIVE_CDC_FRAME_MAGIC.length + 1, payload.length);
   frame.set(payload, NATIVE_CDC_FRAME_HEADER_SIZE);
   return frame;
-}
-
-export function encodeNativeCdcCommandFrame(command: NativeMonitorTxCommand): Uint8Array {
-  const payload = encodeNativeMonitorCommandPayload(command);
-  if (payload.length > NATIVE_CDC_CMD_PAYLOAD_MAX_LEN) {
-    throw new Error(`Native CDC command payload is too long: ${payload.length} bytes.`);
-  }
-
-  return encodeNativeCdcFrame(NATIVE_CDC_FRAME_TYPE_CMD, payload);
 }

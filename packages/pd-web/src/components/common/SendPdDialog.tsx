@@ -3,7 +3,7 @@ import type { BitField, MessageFrame, Section } from '@usb-pd-sniffer/pd-core'
 import clsx from 'clsx'
 import { toast } from 'sonner'
 import { X } from 'lucide-react'
-import type { MonitorActiveCCMode, MonitorCCMode, MonitorCCModeConfig, MonitorPdTxTarget } from '@/lib/devices/monitorDrivers'
+import type { ActiveCCMode, CCMode, CCModeConfig, PdTxSop } from '@/lib/devices/deviceDrivers'
 import { applyFieldRawValue, formatEditedBytes } from '@/lib/analyzer/fieldEdit'
 import { hasPdTxPayloadNewline, parsePdHexPayload, previewPdTxFrame, splitPdTxPayloadLines } from '@/lib/analyzer/txPreview'
 import { hexBytes, IssueList, SectionView } from '@/components/decode/DecodedSectionsView'
@@ -18,17 +18,17 @@ const SEND_MODE_OPTIONS: Array<{ key: SendMode; label: string }> = [
   { key: 'cable_reset', label: 'Cable Reset' },
 ]
 
-const TX_TARGET_OPTIONS = ['SOP', 'SOP_PRIME', 'SOP_DPRIME'] as const satisfies readonly MonitorPdTxTarget[]
+const TX_SOP_OPTIONS = ['SOP', 'SOP_PRIME', 'SOP_DPRIME'] as const satisfies readonly PdTxSop[]
 
 type TxDialogDraft = {
   mode: SendMode
-  target: MonitorPdTxTarget
+  sop: PdTxSop
   hexPayload: string
 }
 
 const DEFAULT_TX_DIALOG_DRAFT: TxDialogDraft = {
   mode: 'raw',
-  target: 'SOP',
+  sop: 'SOP',
   hexPayload: 'A7 00',
 }
 
@@ -36,8 +36,8 @@ function isSendMode(value: unknown): value is SendMode {
   return value === 'raw' || value === 'hard_reset' || value === 'cable_reset'
 }
 
-function isTxTarget(value: unknown): value is MonitorPdTxTarget {
-  return typeof value === 'string' && TX_TARGET_OPTIONS.includes(value as MonitorPdTxTarget)
+function isTxSop(value: unknown): value is PdTxSop {
+  return typeof value === 'string' && TX_SOP_OPTIONS.includes(value as PdTxSop)
 }
 
 function readTxDialogDraft(): TxDialogDraft {
@@ -48,7 +48,7 @@ function readTxDialogDraft(): TxDialogDraft {
     const parsed = JSON.parse(rawValue) as Partial<TxDialogDraft>
     return {
       mode: isSendMode(parsed.mode) ? parsed.mode : DEFAULT_TX_DIALOG_DRAFT.mode,
-      target: isTxTarget(parsed.target) ? parsed.target : DEFAULT_TX_DIALOG_DRAFT.target,
+      sop: isTxSop(parsed.sop) ? parsed.sop : DEFAULT_TX_DIALOG_DRAFT.sop,
       hexPayload: typeof parsed.hexPayload === 'string' ? parsed.hexPayload : DEFAULT_TX_DIALOG_DRAFT.hexPayload,
     }
   } catch {
@@ -69,10 +69,10 @@ type Props = {
   isConnected: boolean
   selectedFrame: MessageFrame | null
   onClose: () => void
-  onSendRaw: (target: MonitorPdTxTarget, hexPayload: string) => Promise<void>
+  onSendRaw: (sop: PdTxSop, hexPayload: string) => Promise<void>
   onSendHardReset: () => Promise<void>
   onSendCableReset: () => Promise<void>
-  onSetCCMode: (config: MonitorCCModeConfig) => Promise<void>
+  onSetCCMode: (config: CCModeConfig) => Promise<void>
 }
 
 const SendPdDialog = ({
@@ -92,11 +92,11 @@ const SendPdDialog = ({
   }
 
   const [mode, setMode] = useState<SendMode>(initialDraftRef.current.mode)
-  const [target, setTarget] = useState<MonitorPdTxTarget>(initialDraftRef.current.target)
+  const [sop, setSop] = useState<PdTxSop>(initialDraftRef.current.sop)
   const [hexPayload, setHexPayload] = useState(initialDraftRef.current.hexPayload)
-  const [activeCCMode, setActiveCCMode] = useState<MonitorActiveCCMode>('auto')
-  const [cc1Mode, setCC1Mode] = useState<MonitorCCMode>('open')
-  const [cc2Mode, setCC2Mode] = useState<MonitorCCMode>('open')
+  const [activeCCMode, setActiveCCMode] = useState<ActiveCCMode>('auto')
+  const [cc1Mode, setCC1Mode] = useState<CCMode>('open')
+  const [cc2Mode, setCC2Mode] = useState<CCMode>('open')
   const [isTxCommandSending, setIsTxCommandSending] = useState(false)
   const [isBatchSending, setIsBatchSending] = useState(false)
   const [isApplyingCCMode, setIsApplyingCCMode] = useState(false)
@@ -117,18 +117,18 @@ const SendPdDialog = ({
     }
 
     try {
-      return { result: previewPdTxFrame(target, hexPayload), error: null }
+      return { result: previewPdTxFrame(sop, hexPayload), error: null }
     } catch (error) {
       return {
         result: null,
         error: error instanceof Error ? error.message : 'Preview decode failed.',
       }
     }
-  }, [hasMultilinePayload, hexPayload, mode, target])
+  }, [hasMultilinePayload, hexPayload, mode, sop])
 
   useEffect(() => {
-    writeTxDialogDraft({ mode, target, hexPayload })
-  }, [hexPayload, mode, target])
+    writeTxDialogDraft({ mode, sop, hexPayload })
+  }, [hexPayload, mode, sop])
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -166,8 +166,8 @@ const SendPdDialog = ({
   const handleSendRaw = async () => {
     if (!hasMultilinePayload) {
       await runCommand(
-        () => onSendRaw(target, hexPayload),
-        `Sent raw ${target} payload.`,
+        () => onSendRaw(sop, hexPayload),
+        `Sent raw ${sop} payload.`,
       )
       return
     }
@@ -184,13 +184,13 @@ const SendPdDialog = ({
 
       setIsBatchSending(true)
       for (const [index, line] of payloadLines.entries()) {
-        await onSendRaw(target, line)
+        await onSendRaw(sop, line)
         if (index < payloadLines.length - 1) {
           await delay(MULTILINE_TX_INTERVAL_MS)
         }
       }
 
-      toast.success(`Sent ${payloadLines.length} raw ${target} payloads.`)
+      toast.success(`Sent ${payloadLines.length} raw ${sop} payloads.`)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Command failed.')
     } finally {
@@ -242,17 +242,17 @@ const SendPdDialog = ({
     switch (selectedFrame.sop) {
       case 'SOP':
         setMode('raw')
-        setTarget('SOP')
+        setSop('SOP')
         setHexPayload(hexBytes(selectedFrame.bytes))
         return
       case 'SOP_PRIME':
         setMode('raw')
-        setTarget('SOP_PRIME')
+        setSop('SOP_PRIME')
         setHexPayload(hexBytes(selectedFrame.bytes))
         return
       case 'SOP_DPRIME':
         setMode('raw')
-        setTarget('SOP_DPRIME')
+        setSop('SOP_DPRIME')
         setHexPayload(hexBytes(selectedFrame.bytes))
         return
       default:
@@ -331,7 +331,7 @@ const SendPdDialog = ({
                 <select
                   className="select select-bordered select-sm w-full"
                   value={activeCCMode}
-                  onChange={(e) => setActiveCCMode(e.target.value as MonitorActiveCCMode)}
+                  onChange={(e) => setActiveCCMode(e.target.value as ActiveCCMode)}
                   disabled={!isConnected}
                 >
                   <option value="auto">Auto</option>
@@ -345,7 +345,7 @@ const SendPdDialog = ({
                 <select
                   className="select select-bordered select-sm w-full"
                   value={cc1Mode}
-                  onChange={(e) => setCC1Mode(e.target.value as MonitorCCMode)}
+                  onChange={(e) => setCC1Mode(e.target.value as CCMode)}
                   disabled={!isConnected}
                 >
                   <option value="open">Open</option>
@@ -360,7 +360,7 @@ const SendPdDialog = ({
                 <select
                   className="select select-bordered select-sm w-full"
                   value={cc2Mode}
-                  onChange={(e) => setCC2Mode(e.target.value as MonitorCCMode)}
+                  onChange={(e) => setCC2Mode(e.target.value as CCMode)}
                   disabled={!isConnected}
                 >
                   <option value="open">Open</option>
@@ -417,11 +417,11 @@ const SendPdDialog = ({
             <span className="text-sm font-medium">SOP Target</span>
             <select
               className="select select-bordered w-full"
-              value={target}
-              onChange={(e) => setTarget(e.target.value as MonitorPdTxTarget)}
+                  value={sop}
+              onChange={(e) => setSop(e.target.value as PdTxSop)}
               disabled={!isConnected}
             >
-              {TX_TARGET_OPTIONS.map((option) => (
+                {TX_SOP_OPTIONS.map((option) => (
                 <option key={option} value={option}>
                   {option === 'SOP' ? 'SOP' : option === 'SOP_PRIME' ? "SOP'" : "SOP''"}
                 </option>
@@ -521,14 +521,14 @@ const SendPdDialog = ({
           ) : (
             <div className="rounded-lg border border-base-300 bg-base-200/70 px-3 py-4 text-sm text-base-content/70">
               {mode === 'hard_reset'
-                ? 'Send a Hard Reset through the native monitor device.'
-                : 'Send a Cable Reset through the native monitor device.'}
+                ? 'Send a Hard Reset through the native HID device.'
+                : 'Send a Cable Reset through the native HID device.'}
             </div>
           )}
 
           {!isConnected && (
             <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
-              Connect the native monitor device before sending.
+              Connect the native HID device before sending.
             </div>
           )}
         </div>

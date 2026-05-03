@@ -21,8 +21,7 @@
     "typecheck": "pnpm exec tsc -p tsconfig.json --pretty false"
   },
   "dependencies": {
-    "@usb-pd-sniffer/pd-device-types": "workspace:*",
-    "@usb-pd-sniffer/pd-device-native-hid": "workspace:*"
+    "@usb-pd-sniffer/pd-device-types": "workspace:*"
   },
   "publishConfig": {
     "access": "public"

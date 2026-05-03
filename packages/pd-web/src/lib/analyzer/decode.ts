@@ -4,7 +4,7 @@ import {
   type MessagePacket,
 } from '@usb-pd-sniffer/pd-core'
 import {
-  type MonitorPdFrame,
+  type PdFrame,
 } from '@usb-pd-sniffer/pd-device-native-hid'
 import { CAPTURE_EVENT } from '@usb-pd-sniffer/pd-device-types'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
@@ -179,7 +179,7 @@ export function decodeRecordAtIndex(
     ),
   }
 }
-function recordToPdFrame(eventType: CaptureRecord['event_type'], payload: Uint8Array): MonitorPdFrame | null {
+function recordToPdFrame(eventType: CaptureRecord['event_type'], payload: Uint8Array): PdFrame | null {
   switch (eventType) {
     case CAPTURE_EVENT.PD_SOP0:
       return { sop: 'SOP', bytes: payload }

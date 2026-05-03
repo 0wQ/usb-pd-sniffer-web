@@ -1,26 +1,24 @@
 import {
-  DEFAULT_MONITOR_DEVICE_KIND,
-  isMonitorDeviceKind,
-  type MonitorDeviceKind,
-} from '@/lib/devices/monitorDrivers'
+  DEFAULT_DEVICE_KIND,
+  isDeviceKind,
+  type DeviceKind,
+} from '@/lib/devices/deviceDrivers'
 
 const DEVICE_STORAGE_KEYS = {
   autoConnectOnLoad: 'usb-pd-device-autoConnectOnLoad',
   autoReconnectOnHotplug: 'usb-pd-device-autoReconnectOnHotplug',
-  manualDisconnect: 'usb-pd-device-manualDisconnect',
-  selectedMonitorDeviceKind: 'usb-pd-device-selected-kind',
+  selectedDeviceKind: 'usb-pd-device-selected-kind',
   lastDeviceFingerprint: 'usb-pd-device-lastDeviceFingerprint',
   lastDeviceFingerprints: 'usb-pd-device-lastDeviceFingerprints',
   detailContextBacktrackRecords: 'usb-pd-detail-context-backtrack-records',
 } as const
 
-export type LastDeviceFingerprints = Partial<Record<MonitorDeviceKind, string>>
+export type LastDeviceFingerprints = Partial<Record<DeviceKind, string>>
 
 export type DevicePreferences = {
-  manualDisconnect: boolean
   autoConnectOnLoad: boolean
   autoReconnectOnHotplug: boolean
-  selectedMonitorDeviceKind: MonitorDeviceKind
+  selectedDeviceKind: DeviceKind
   lastDeviceFingerprints: LastDeviceFingerprints
   detailContextBacktrackRecords: number | null
 }
@@ -60,9 +58,9 @@ function readNullableNumber(key: string, fallback: number | null): number | null
   }
 }
 
-function readSelectedMonitorDeviceKind(): MonitorDeviceKind {
-  const value = readString(DEVICE_STORAGE_KEYS.selectedMonitorDeviceKind, DEFAULT_MONITOR_DEVICE_KIND)
-  return value !== null && isMonitorDeviceKind(value) ? value : DEFAULT_MONITOR_DEVICE_KIND
+function readSelectedDeviceKind(): DeviceKind {
+  const value = readString(DEVICE_STORAGE_KEYS.selectedDeviceKind, DEFAULT_DEVICE_KIND)
+  return value !== null && isDeviceKind(value) ? value : DEFAULT_DEVICE_KIND
 }
 
 function readLastDeviceFingerprints(): LastDeviceFingerprints {
@@ -73,7 +71,7 @@ function readLastDeviceFingerprints(): LastDeviceFingerprints {
 
     if (parsed !== null && typeof parsed === 'object') {
       for (const [kind, fingerprint] of Object.entries(parsed)) {
-        if (isMonitorDeviceKind(kind) && typeof fingerprint === 'string' && fingerprint.length > 0) {
+        if (isDeviceKind(kind) && typeof fingerprint === 'string' && fingerprint.length > 0) {
           result[kind] = fingerprint
         }
       }
@@ -100,17 +98,12 @@ function writeValue(key: string, value: string): void {
 
 export function readDevicePreferences(): DevicePreferences {
   return {
-    manualDisconnect: readBool(DEVICE_STORAGE_KEYS.manualDisconnect, false),
     autoConnectOnLoad: readBool(DEVICE_STORAGE_KEYS.autoConnectOnLoad, true),
     autoReconnectOnHotplug: readBool(DEVICE_STORAGE_KEYS.autoReconnectOnHotplug, true),
-    selectedMonitorDeviceKind: readSelectedMonitorDeviceKind(),
+    selectedDeviceKind: readSelectedDeviceKind(),
     lastDeviceFingerprints: readLastDeviceFingerprints(),
     detailContextBacktrackRecords: readNullableNumber(DEVICE_STORAGE_KEYS.detailContextBacktrackRecords, null),
   }
-}
-
-export function writeManualDisconnect(value: boolean): void {
-  writeValue(DEVICE_STORAGE_KEYS.manualDisconnect, String(value))
 }
 
 export function writeAutoConnectOnLoad(value: boolean): void {
@@ -121,8 +114,8 @@ export function writeAutoReconnectOnHotplug(value: boolean): void {
   writeValue(DEVICE_STORAGE_KEYS.autoReconnectOnHotplug, String(value))
 }
 
-export function writeSelectedMonitorDeviceKind(value: MonitorDeviceKind): void {
-  writeValue(DEVICE_STORAGE_KEYS.selectedMonitorDeviceKind, value)
+export function writeSelectedDeviceKind(value: DeviceKind): void {
+  writeValue(DEVICE_STORAGE_KEYS.selectedDeviceKind, value)
 }
 
 export function writeLastDeviceFingerprints(value: LastDeviceFingerprints): void {

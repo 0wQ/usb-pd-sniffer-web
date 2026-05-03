@@ -5,13 +5,10 @@ import {
   buildAtkC2SwitchCommand,
 } from "./protocol.js";
 import type {
-  MonitorDevice,
-  MonitorDeviceStats,
-  MonitorDeviceStatus,
-  MonitorCCModeConfig,
-  MonitorPdTxTarget,
-  MonitorRecord,
-} from "./types.js";
+  CaptureDevice,
+  CaptureDeviceState,
+  CaptureRecord,
+} from "@usb-pd-sniffer/pd-device-types";
 
 type UsbTransferStatus = "ok" | "stall" | "babble";
 
@@ -62,7 +59,7 @@ type NavigatorWithUsb = {
   readonly usb?: UsbLike;
 };
 
-export type AtkC2MonitorDeviceOptions = {
+export type AtkC2DeviceOptions = {
   readonly transferInLength?: number;
 };
 
@@ -118,56 +115,44 @@ function unsupportedError(): string {
   return "WebUSB is not supported. Please use Chrome, Edge, or Opera.";
 }
 
-export function createAtkC2MonitorDevice(options: AtkC2MonitorDeviceOptions = {}): MonitorDevice {
+export function createAtkC2Device(options: AtkC2DeviceOptions = {}): CaptureDevice {
   const usb = getUsb();
   const transferInLength = options.transferInLength ?? DEFAULT_TRANSFER_IN_LENGTH;
-  const recordListeners = new Set<(record: MonitorRecord) => void>();
-  const statusListeners = new Set<(status: MonitorDeviceStatus) => void>();
-  const statsListeners = new Set<(stats: MonitorDeviceStats) => void>();
+  const recordListeners = new Set<(record: CaptureRecord) => void>();
+  const stateListeners = new Set<(state: CaptureDeviceState) => void>();
   const decoder = new AtkC2ProtocolDecoder();
 
   let device: UsbDeviceLike | null = null;
   let isConnecting = false;
   let isPrompting = false;
-  let isSending = false;
   let readLoopRunning = false;
   let shouldRead = false;
   let error: string | null = usb === null ? unsupportedError() : null;
   let autoReconnect = false;
   let autoReconnectFingerprint: string | null = null;
   let disposed = false;
-  let latestStats: MonitorDeviceStats = { recv_count: 0, drop_count: 0 };
 
-  const status = (): MonitorDeviceStatus => ({
+  const snapshotState = (): CaptureDeviceState => ({
     isSupported: usb !== null,
     isConnected: device?.opened ?? false,
     isConnecting,
-    isSending,
+    isSending: false,
     error,
     productName: device?.productName ?? null,
     fingerprint: device === null ? null : deviceFingerprint(device),
   });
 
   const emitStatus = (): void => {
-    const current = status();
-    for (const listener of statusListeners) listener(current);
+    const state = snapshotState();
+    for (const listener of stateListeners) listener(state);
   };
 
-  const emitRecord = (record: MonitorRecord): void => {
+  const emitRecord = (record: CaptureRecord): void => {
     for (const listener of recordListeners) listener(record);
-  };
-
-  const emitStats = (stats: MonitorDeviceStats): void => {
-    for (const listener of statsListeners) listener(stats);
   };
 
   const emitRecordsFromChunk = (chunk: Uint8Array): void => {
     for (const record of decoder.pushBytes(chunk)) {
-      latestStats = {
-        recv_count: record.seq,
-        drop_count: 0,
-      };
-      emitStats(latestStats);
       emitRecord(record);
     }
   };
@@ -326,7 +311,7 @@ export function createAtkC2MonitorDevice(options: AtkC2MonitorDeviceOptions = {}
       return isConnecting;
     },
     get isSending() {
-      return isSending;
+      return false;
     },
     get error() {
       return error;
@@ -383,31 +368,14 @@ export function createAtkC2MonitorDevice(options: AtkC2MonitorDeviceOptions = {}
       device = null;
       emitStatus();
     },
-    async sendRawPd(_target: MonitorPdTxTarget, _payload: Uint8Array): Promise<void> {
-      throw new Error("ATK C2 WebUSB backend currently supports capture only; PD TX is not implemented.");
-    },
-    async sendHardReset(): Promise<void> {
-      throw new Error("ATK C2 WebUSB backend currently supports capture only; hard reset TX is not implemented.");
-    },
-    async sendCableReset(): Promise<void> {
-      throw new Error("ATK C2 WebUSB backend currently supports capture only; cable reset TX is not implemented.");
-    },
-    async setCCMode(_config: MonitorCCModeConfig): Promise<void> {
-      throw new Error("ATK C2 WebUSB backend does not support CC mode control.");
-    },
-    onRecord(listener: (record: MonitorRecord) => void): () => void {
+    onRecord(listener: (record: CaptureRecord) => void): () => void {
       recordListeners.add(listener);
       return () => recordListeners.delete(listener);
     },
-    onStatus(listener: (status: MonitorDeviceStatus) => void): () => void {
-      statusListeners.add(listener);
-      listener(status());
-      return () => statusListeners.delete(listener);
-    },
-    onStats(listener: (stats: MonitorDeviceStats) => void): () => void {
-      statsListeners.add(listener);
-      listener(latestStats);
-      return () => statsListeners.delete(listener);
+    onState(listener: (state: CaptureDeviceState) => void): () => void {
+      stateListeners.add(listener);
+      listener(snapshotState());
+      return () => stateListeners.delete(listener);
     },
   };
 }

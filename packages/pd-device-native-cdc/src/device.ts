@@ -1,21 +1,13 @@
 import type {
-  CaptureDevice as BaseCaptureDevice,
-  CaptureDeviceStats as BaseCaptureDeviceStats,
-  CaptureDeviceStatus as BaseCaptureDeviceStatus,
-  CaptureRecord as BaseCaptureRecord,
+  CaptureDevice,
+  CaptureDeviceState,
+  CaptureRecord,
 } from "@usb-pd-sniffer/pd-device-types";
 import {
-  MONITOR_TX_CMD,
-  monitorEventToCaptureEvent,
-  type MonitorCCModeConfig,
-  type MonitorPdTxTarget,
-  type NativeMonitorTxCommand,
-} from "@usb-pd-sniffer/pd-device-native-hid";
-import {
-  encodeNativeCdcCommandFrame,
   NativeCdcFrameParser,
   NATIVE_CDC_FRAME_TYPE_EVENT,
   NATIVE_CDC_USB,
+  nativeCdcEventToCaptureEvent,
   parseNativeCdcEventPayload,
 } from "./protocol.js";
 
@@ -74,18 +66,9 @@ type NavigatorWithSerial = {
   readonly serial?: SerialLike;
 };
 
-export type NativeCdcMonitorDeviceOptions = {
+export type NativeCdcDeviceOptions = {
   readonly baudRate?: number;
   readonly bufferSize?: number;
-};
-
-export type MonitorRecord = BaseCaptureRecord;
-export type MonitorDeviceStatus = BaseCaptureDeviceStatus;
-export type MonitorDevice = BaseCaptureDevice & {
-  sendRawPd(target: MonitorPdTxTarget, payload: Uint8Array): Promise<void>;
-  sendHardReset(): Promise<void>;
-  sendCableReset(): Promise<void>;
-  setCCMode(config: MonitorCCModeConfig): Promise<void>;
 };
 
 function getSerial(): SerialLike | null {
@@ -184,25 +167,13 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, message: string):
   return Promise.race([promise, delayReject(ms, message)]);
 }
 
-function opcodeForTarget(target: MonitorPdTxTarget): typeof MONITOR_TX_CMD.SEND_RAW_SOP0 | typeof MONITOR_TX_CMD.SEND_RAW_SOP1 | typeof MONITOR_TX_CMD.SEND_RAW_SOP2 {
-  switch (target) {
-    case "SOP":
-      return MONITOR_TX_CMD.SEND_RAW_SOP0;
-    case "SOP_PRIME":
-      return MONITOR_TX_CMD.SEND_RAW_SOP1;
-    case "SOP_DPRIME":
-      return MONITOR_TX_CMD.SEND_RAW_SOP2;
-  }
-}
-
-export function createNativeCdcMonitorDevice(options: NativeCdcMonitorDeviceOptions = {}): MonitorDevice {
+export function createNativeCdcDevice(options: NativeCdcDeviceOptions = {}): CaptureDevice {
   const serial = getSerial();
   const baudRate = options.baudRate ?? NATIVE_CDC_USB.baudRate;
   const bufferSize = options.bufferSize ?? DEFAULT_SERIAL_BUFFER_SIZE;
   debugLog("create device", { hasSerial: serial !== null, baudRate, bufferSize });
-  const recordListeners = new Set<(record: MonitorRecord) => void>();
-  const statusListeners = new Set<(status: MonitorDeviceStatus) => void>();
-  const statsListeners = new Set<(stats: BaseCaptureDeviceStats) => void>();
+  const recordListeners = new Set<(record: CaptureRecord) => void>();
+  const stateListeners = new Set<(state: CaptureDeviceState) => void>();
   const frameParser = new NativeCdcFrameParser();
 
   let port: SerialPortLike | null = null;
@@ -223,9 +194,7 @@ export function createNativeCdcMonitorDevice(options: NativeCdcMonitorDeviceOpti
   let rxByteCount = 0;
   let rxStatsTimer: ReturnType<typeof setTimeout> | null = null;
   let disposed = false;
-  let latestStats: BaseCaptureDeviceStats = { recv_count: 0, drop_count: 0 };
-
-  const status = (): MonitorDeviceStatus => ({
+  const snapshotState = (): CaptureDeviceState => ({
     isSupported: serial !== null,
     isConnected: isOpen,
     isConnecting,
@@ -235,17 +204,13 @@ export function createNativeCdcMonitorDevice(options: NativeCdcMonitorDeviceOpti
     fingerprint: port === null ? null : portFingerprint(port),
   });
 
-  const emitStatus = (): void => {
-    const current = status();
-    for (const listener of statusListeners) listener(current);
+  const emitState = (): void => {
+    const state = snapshotState();
+    for (const listener of stateListeners) listener(state);
   };
 
-  const emitRecord = (record: MonitorRecord): void => {
+  const emitRecord = (record: CaptureRecord): void => {
     for (const listener of recordListeners) listener(record);
-  };
-
-  const emitStats = (stats: BaseCaptureDeviceStats): void => {
-    for (const listener of statsListeners) listener(stats);
   };
 
   const cancelHotplugOpen = (): void => {
@@ -287,24 +252,18 @@ export function createNativeCdcMonitorDevice(options: NativeCdcMonitorDeviceOpti
         rawRecord = parseNativeCdcEventPayload(frame.payload);
       } catch (caught) {
         error = caught instanceof Error ? caught.message : "Failed to parse native CDC event frame.";
-        emitStatus();
+        emitState();
         continue;
       }
 
-      const captureEventType = monitorEventToCaptureEvent(rawRecord.event_type);
+      const captureEventType = nativeCdcEventToCaptureEvent(rawRecord.event_type);
       if (captureEventType === null) {
         continue;
       }
-      const record: MonitorRecord = {
+      const record: CaptureRecord = {
         ...rawRecord,
         event_type: captureEventType,
       };
-      latestStats = {
-        recv_count: record.seq,
-        drop_count: 0,
-      };
-      emitStats(latestStats);
-
       emitRecord(record);
     }
   };
@@ -319,7 +278,7 @@ export function createNativeCdcMonitorDevice(options: NativeCdcMonitorDeviceOpti
     if (nextError !== null) {
       error = nextError;
     }
-    emitStatus();
+    emitState();
   };
 
   const cancelCurrentReader = (): void => {
@@ -333,7 +292,7 @@ export function createNativeCdcMonitorDevice(options: NativeCdcMonitorDeviceOpti
     const readable = currentPort.readable;
     if (readable === null) {
       error = "Native CDC serial port has no readable stream.";
-      emitStatus();
+      emitState();
       return;
     }
 
@@ -407,7 +366,7 @@ export function createNativeCdcMonitorDevice(options: NativeCdcMonitorDeviceOpti
     try {
       debugLog("setup start", { attemptToken, baudRate, bufferSize, ...portDebugInfo(nextPort) });
       isConnecting = true;
-      emitStatus();
+      emitState();
       if (disposed) return false;
       openPromise = nextPort.open({ baudRate, bufferSize });
       debugLog("serial open pending", { attemptToken });
@@ -471,7 +430,7 @@ export function createNativeCdcMonitorDevice(options: NativeCdcMonitorDeviceOpti
       throw caught;
     } finally {
       isConnecting = false;
-      emitStatus();
+      emitState();
     }
   };
 
@@ -513,7 +472,7 @@ export function createNativeCdcMonitorDevice(options: NativeCdcMonitorDeviceOpti
       void setupPort(candidate).catch((caught) => {
         if (disposed || port === candidate) return;
         error = caught instanceof Error ? caught.message : "Native CDC hotplug reconnect failed.";
-        emitStatus();
+        emitState();
       });
     }, HOTPLUG_OPEN_SETTLE_DELAY_MS);
   };
@@ -591,7 +550,7 @@ export function createNativeCdcMonitorDevice(options: NativeCdcMonitorDeviceOpti
     if (current === null) {
       frameParser.reset();
       flushRxStats();
-      emitStatus();
+      emitState();
       return;
     }
 
@@ -616,27 +575,7 @@ export function createNativeCdcMonitorDevice(options: NativeCdcMonitorDeviceOpti
       frameParser.reset();
       flushRxStats();
       debugLog("shutdown complete");
-      emitStatus();
-    }
-  };
-
-  const sendCommand = async (command: NativeMonitorTxCommand): Promise<void> => {
-    if (port === null || !isOpen || port.writable === null) {
-      throw new Error("No native CDC serial port connected.");
-    }
-    if (isSending) {
-      throw new Error("A TX command is already in flight.");
-    }
-
-    const writer = port.writable.getWriter();
-    try {
-      isSending = true;
-      emitStatus();
-      await writer.write(encodeNativeCdcCommandFrame(command));
-    } finally {
-      writer.releaseLock();
-      isSending = false;
-      emitStatus();
+      emitState();
     }
   };
 
@@ -671,7 +610,7 @@ export function createNativeCdcMonitorDevice(options: NativeCdcMonitorDeviceOpti
       try {
         isPrompting = true;
         isConnecting = true;
-        emitStatus();
+        emitState();
         const selected = await serial.requestPort({ filters: [DEVICE_FILTER] });
         isConnecting = false;
         await setupPort(selected);
@@ -686,7 +625,7 @@ export function createNativeCdcMonitorDevice(options: NativeCdcMonitorDeviceOpti
       } finally {
         isPrompting = false;
         isConnecting = false;
-        emitStatus();
+        emitState();
       }
     },
     connectAuthorized,
@@ -711,31 +650,14 @@ export function createNativeCdcMonitorDevice(options: NativeCdcMonitorDeviceOpti
       }
       void shutdownCurrentPort();
     },
-    async sendRawPd(target: MonitorPdTxTarget, payload: Uint8Array): Promise<void> {
-      await sendCommand({ opcode: opcodeForTarget(target), payload });
-    },
-    async sendHardReset(): Promise<void> {
-      await sendCommand({ opcode: MONITOR_TX_CMD.SEND_HARD_RESET });
-    },
-    async sendCableReset(): Promise<void> {
-      await sendCommand({ opcode: MONITOR_TX_CMD.SEND_CABLE_RESET });
-    },
-    async setCCMode(config: MonitorCCModeConfig): Promise<void> {
-      await sendCommand({ opcode: MONITOR_TX_CMD.SET_CC_MODE, activeCC: config.activeCC, cc1: config.cc1, cc2: config.cc2 });
-    },
-    onRecord(listener: (record: MonitorRecord) => void): () => void {
+    onRecord(listener: (record: CaptureRecord) => void): () => void {
       recordListeners.add(listener);
       return () => recordListeners.delete(listener);
     },
-    onStatus(listener: (status: MonitorDeviceStatus) => void): () => void {
-      statusListeners.add(listener);
-      listener(status());
-      return () => statusListeners.delete(listener);
-    },
-    onStats(listener: (stats: BaseCaptureDeviceStats) => void): () => void {
-      statsListeners.add(listener);
-      listener(latestStats);
-      return () => statsListeners.delete(listener);
+    onState(listener: (state: CaptureDeviceState) => void): () => void {
+      stateListeners.add(listener);
+      listener(snapshotState());
+      return () => stateListeners.delete(listener);
     },
   };
 }

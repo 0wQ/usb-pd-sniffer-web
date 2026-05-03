@@ -7,23 +7,21 @@ import {
   writeAutoReconnectOnHotplug,
   writeDetailContextBacktrackRecords,
   writeLastDeviceFingerprints,
-  writeManualDisconnect,
-  writeSelectedMonitorDeviceKind,
+  writeSelectedDeviceKind,
   type LastDeviceFingerprints,
 } from '@/lib/preferences/devicePreferences'
-import type { MonitorDeviceKind } from '@/lib/devices/monitorDrivers'
-import type { CaptureDeviceStats, CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
+import type { DeviceKind } from '@/lib/devices/deviceDrivers'
+import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
 import { downloadCsv, exportToCsv, generateFilename } from '@/utils/csvHelper'
 
 interface DeviceState {
   isConnected: boolean
   isConnecting: boolean
-  manualDisconnect: boolean
 
   // Auto connect preferences (persisted)
   autoConnectOnLoad: boolean
   autoReconnectOnHotplug: boolean
-  selectedMonitorDeviceKind: MonitorDeviceKind
+  selectedDeviceKind: DeviceKind
   lastDeviceFingerprints: LastDeviceFingerprints
   detailContextBacktrackRecords: number | null
   protocolSelectedIndex: number | null
@@ -31,16 +29,13 @@ interface DeviceState {
   captureBuffer: CaptureBuffer
   captureVersion: number
   captureCount: number
-  deviceStats: CaptureDeviceStats
 
   setIsConnected: (isConnected: boolean) => void
   setIsConnecting: (isConnecting: boolean) => void
-  setDeviceStats: (stats: CaptureDeviceStats) => void
-  setManualDisconnect: (manualDisconnect: boolean) => void
   setAutoConnectOnLoad: (autoConnectOnLoad: boolean) => void
   setAutoReconnectOnHotplug: (autoReconnectOnHotplug: boolean) => void
-  setSelectedMonitorDeviceKind: (kind: MonitorDeviceKind) => void
-  setLastDeviceFingerprintForKind: (kind: MonitorDeviceKind, fingerprint: string | null) => void
+  setSelectedDeviceKind: (kind: DeviceKind) => void
+  setLastDeviceFingerprintForKind: (kind: DeviceKind, fingerprint: string | null) => void
   setDetailContextBacktrackRecords: (detailContextBacktrackRecords: number | null) => void
   setProtocolSelectedIndex: (protocolSelectedIndex: number | null) => void
   addRecord: (record: CaptureRecord) => void
@@ -127,31 +122,19 @@ const useDeviceStore = create<DeviceState>()((set, get) => {
   return {
     isConnected: false,
     isConnecting: false,
-    manualDisconnect: initialPreferences.manualDisconnect,
     autoConnectOnLoad: initialPreferences.autoConnectOnLoad,
     autoReconnectOnHotplug: initialPreferences.autoReconnectOnHotplug,
-    selectedMonitorDeviceKind: initialPreferences.selectedMonitorDeviceKind,
+    selectedDeviceKind: initialPreferences.selectedDeviceKind,
     lastDeviceFingerprints: initialPreferences.lastDeviceFingerprints,
     detailContextBacktrackRecords: initialPreferences.detailContextBacktrackRecords,
     protocolSelectedIndex: null,
     captureBuffer: createCaptureBuffer(CAPTURE_BUFFER_CAPACITY),
     captureVersion: 0,
     captureCount: 0,
-    deviceStats: {
-      recv_count: 0,
-      drop_count: 0,
-    },
 
     setIsConnected: (isConnected) => set({ isConnected }),
 
     setIsConnecting: (isConnecting) => set({ isConnecting }),
-
-    setDeviceStats: (deviceStats) => set({ deviceStats }),
-
-    setManualDisconnect: (manualDisconnect) => {
-      writeManualDisconnect(manualDisconnect)
-      set({ manualDisconnect })
-    },
 
     setAutoConnectOnLoad: (autoConnectOnLoad) => {
       writeAutoConnectOnLoad(autoConnectOnLoad)
@@ -163,9 +146,9 @@ const useDeviceStore = create<DeviceState>()((set, get) => {
       set({ autoReconnectOnHotplug })
     },
 
-    setSelectedMonitorDeviceKind: (selectedMonitorDeviceKind) => {
-      writeSelectedMonitorDeviceKind(selectedMonitorDeviceKind)
-      set({ selectedMonitorDeviceKind })
+    setSelectedDeviceKind: (selectedDeviceKind) => {
+      writeSelectedDeviceKind(selectedDeviceKind)
+      set({ selectedDeviceKind })
     },
 
     setLastDeviceFingerprintForKind: (kind, fingerprint) => {
@@ -202,10 +185,6 @@ const useDeviceStore = create<DeviceState>()((set, get) => {
       captureQueue.clear()
       captureBuffer.clear()
       set({
-        deviceStats: {
-          recv_count: 0,
-          drop_count: 0,
-        },
         protocolSelectedIndex: null,
         captureVersion: captureBuffer.currentVersion,
         captureCount: 0,
@@ -218,10 +197,6 @@ const useDeviceStore = create<DeviceState>()((set, get) => {
       set({
         isConnected: false,
         isConnecting: false,
-        deviceStats: {
-          recv_count: 0,
-          drop_count: 0,
-        },
       })
     },
 

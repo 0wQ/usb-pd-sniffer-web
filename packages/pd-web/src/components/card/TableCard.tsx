@@ -25,10 +25,9 @@ import { decodeSingleRecord } from '@/lib/analyzer/decode'
 import { decodeUfcsRecordType, formatUfcsSignal, formatUfcsTypeSummary } from '@/lib/ufcs/ufcsType'
 import { formatCompactPowerRoleOrCable, formatCompactSop } from '@/lib/display/pdTableFields'
 import type {
-  MonitorDeviceCapabilities,
-  MonitorDeviceDriver,
-  MonitorDeviceKind,
-} from '@/lib/devices/monitorDrivers'
+  DeviceDriver,
+  DeviceKind,
+} from '@/lib/devices/deviceDrivers'
 
 const ROW_HEIGHT = 30
 const THEME_STORAGE_KEY = 'usb-pd-sniffer-theme'
@@ -470,22 +469,11 @@ TableComponent.displayName = 'TableComponent'
 
 const RecordCounterComponent = memo(() => {
   const captureCount = useDeviceStore((state) => state.captureCount)
-  const deviceStats = useDeviceStore((state) => state.deviceStats)
-  const dropCount = deviceStats.drop_count
-  const hasDropCount = dropCount > 0
-  const dropText = hasDropCount ? dropCount.toLocaleString() : ''
 
   return (
     <div className="btn btn-sm rounded-full gap-1.5 border-base-300 bg-base-100 px-3 font-mono font-normal normal-case text-base-content/65 pointer-events-none cursor-default hover:bg-base-100">
       <span className="font-semibold text-base-content/80">{captureCount.toLocaleString()}</span>
       <span>records</span>
-      {hasDropCount && (
-        <>
-          <span className="text-base-content/35">/</span>
-          <span className="text-base-content/65">{dropText}</span>
-          <span>drop</span>
-        </>
-      )}
     </div>
   )
 })
@@ -500,15 +488,14 @@ type CardProps = {
   selectedIndex: number | null
   isConnected: boolean
   isConnecting: boolean
-  manualDisconnect: boolean
   autoConnectOnLoad: boolean
   autoReconnectOnHotplug: boolean
   onAutoConnectOnLoadChange: (value: boolean) => void
   onAutoReconnectOnHotplugChange: (value: boolean) => void
-  selectedMonitorDeviceKind: MonitorDeviceKind
-  monitorDeviceOptions: MonitorDeviceDriver[]
-  monitorDeviceCapabilities: MonitorDeviceCapabilities
-  onMonitorDeviceKindChange: (kind: MonitorDeviceKind) => void
+  selectedDeviceKind: DeviceKind
+  deviceOptions: DeviceDriver[]
+  supportsTx: boolean
+  onDeviceKindChange: (kind: DeviceKind) => void
   onConnectBtnClick: () => void
   onOpenTxDialog: () => void
   isSendingCommand: boolean
@@ -525,15 +512,14 @@ const Card = memo(({
   selectedIndex,
   isConnected,
   isConnecting,
-  manualDisconnect,
   autoConnectOnLoad,
   autoReconnectOnHotplug,
   onAutoConnectOnLoadChange,
   onAutoReconnectOnHotplugChange,
-  selectedMonitorDeviceKind,
-  monitorDeviceOptions,
-  monitorDeviceCapabilities,
-  onMonitorDeviceKindChange,
+  selectedDeviceKind,
+  deviceOptions,
+  supportsTx,
+  onDeviceKindChange,
   onConnectBtnClick,
   onOpenTxDialog,
   isSendingCommand,
@@ -698,13 +684,8 @@ const Card = memo(({
                   {isDeviceSupported && (
                     <>
                     <div className="px-1 pb-2 text-xs font-semibold text-base-content/60 select-none">
-                      Monitor Device Settings
+                      Device Settings
                     </div>
-                    {manualDisconnect && !isConnected && (
-                      <div className="mb-2 px-1 text-xs text-warning select-none">
-                        Auto-connect is paused until you click CONNECT.
-                      </div>
-                    )}
                     <label className="flex items-center justify-between gap-3 px-1 py-2">
                       <span className="text-sm select-none">Auto connect on load</span>
                       <input
@@ -727,12 +708,12 @@ const Card = memo(({
                       <span className="text-sm select-none">Device</span>
                       <select
                         className="select select-bordered select-sm w-40"
-                        value={selectedMonitorDeviceKind}
-                        onChange={(event) => onMonitorDeviceKindChange(event.target.value as MonitorDeviceKind)}
+                        value={selectedDeviceKind}
+                        onChange={(event) => onDeviceKindChange(event.target.value as DeviceKind)}
                         disabled={isConnecting}
-                        aria-label="Monitor device"
+                        aria-label="Device"
                       >
-                        {monitorDeviceOptions.map((device) => (
+                        {deviceOptions.map((device) => (
                           <option key={device.kind} value={device.kind}>
                             {device.label}
                           </option>
@@ -746,9 +727,9 @@ const Card = memo(({
               <button
                 className={TOOLBAR_ICON_BUTTON_CLASS}
                 onClick={onOpenTxDialog}
-                disabled={!monitorDeviceCapabilities.tx || !isDeviceSupported || !isConnected || isSendingCommand}
+                disabled={!supportsTx || !isDeviceSupported || !isConnected || isSendingCommand}
                 aria-label="Native PD TX"
-                title={monitorDeviceCapabilities.tx ? 'Native PD TX' : 'Selected device does not support PD TX'}
+                title={supportsTx ? 'Native PD TX' : 'Selected device does not support PD TX'}
               >
                 <Send className={TOOLBAR_ICON_CLASS} />
               </button>

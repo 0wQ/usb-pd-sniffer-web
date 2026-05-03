@@ -1,5 +1,5 @@
 import { decodeMessage, type DecodedMessage, type MessageFrame } from '@usb-pd-sniffer/pd-core'
-import { parsePdHexPayload, type MonitorPdTxTarget } from '@usb-pd-sniffer/pd-device-native-hid'
+import { parsePdHexPayload, type PdTxSop } from '@usb-pd-sniffer/pd-device-native-hid'
 
 export { parsePdHexPayload } from '@usb-pd-sniffer/pd-device-native-hid'
 
@@ -14,8 +14,8 @@ export function splitPdTxPayloadLines(hexPayload: string): string[] {
     .filter((line) => line.length > 0)
 }
 
-function sopForTarget(target: MonitorPdTxTarget): MessageFrame['sop'] {
-  switch (target) {
+function messageSopForTxSop(sop: PdTxSop): MessageFrame['sop'] {
+  switch (sop) {
     case 'SOP':
       return 'SOP'
     case 'SOP_PRIME':
@@ -25,13 +25,13 @@ function sopForTarget(target: MonitorPdTxTarget): MessageFrame['sop'] {
   }
 }
 
-export function previewPdTxFrame(target: MonitorPdTxTarget, hexPayload: string): {
+export function previewPdTxFrame(sop: PdTxSop, hexPayload: string): {
   frame: MessageFrame
   decoded: DecodedMessage
 } {
   const payload = parsePdHexPayload(hexPayload)
   const frame: MessageFrame = {
-    sop: sopForTarget(target),
+    sop: messageSopForTxSop(sop),
     bytes: payload,
   }
 

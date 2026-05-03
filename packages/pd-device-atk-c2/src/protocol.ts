@@ -1,5 +1,4 @@
-import { CAPTURE_EVENT, type CaptureEventType } from "@usb-pd-sniffer/pd-device-types";
-import type { MonitorRecord } from "./types.js";
+import { CAPTURE_EVENT, type CaptureEventType, type CaptureRecord } from "@usb-pd-sniffer/pd-device-types";
 
 export const ATK_C2_USB = {
   vendorId: 0x2e88,
@@ -368,8 +367,8 @@ export class AtkC2ProtocolDecoder {
     this.recvCounter = options.initialRecvCounter ?? 0;
   }
 
-  pushBytes(chunk: Uint8Array): MonitorRecord[] {
-    const records: MonitorRecord[] = [];
+  pushBytes(chunk: Uint8Array): CaptureRecord[] {
+    const records: CaptureRecord[] = [];
 
     for (const frame of this.frameParser.push(chunk)) {
       if (frame.cmd === ATK_C2_CMD.SAMPLE_BLOCK) {
@@ -390,9 +389,9 @@ export class AtkC2ProtocolDecoder {
     this.recvCounter = 0;
   }
 
-  private eventToRecord(event: AtkC2DecodedEvent): MonitorRecord {
+  private eventToRecord(event: AtkC2DecodedEvent): CaptureRecord {
     const data = "bytes" in event ? Array.from(event.bytes) : [];
-    const record: MonitorRecord = {
+    const record: CaptureRecord = {
       timestamp_us: timestampUsFromSampleIndex(event.sampleIndex),
       seq: ++this.recvCounter,
       vbus_mv: this.snapshot.vbusMv,

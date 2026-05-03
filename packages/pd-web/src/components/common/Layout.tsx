@@ -6,12 +6,11 @@ import useDeviceStore from '@/stores/deviceStore'
 import type { AppView } from '@/components/common/ViewTabs'
 import { decodeSingleRecord } from '@/lib/analyzer/decode'
 import type {
-  MonitorDeviceCapabilities,
-  MonitorDeviceDriver,
-  MonitorCCModeConfig,
-  MonitorDeviceKind,
-  MonitorPdTxTarget,
-} from '@/lib/devices/monitorDrivers'
+  CCModeConfig,
+  DeviceDriver,
+  DeviceKind,
+  PdTxSop,
+} from '@/lib/devices/deviceDrivers'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import clsx from 'clsx'
 
@@ -39,20 +38,19 @@ const MAX_DECODE_SIZE = {
 type Props = {
   isConnected: boolean
   isConnecting: boolean
-  manualDisconnect: boolean
   autoConnectOnLoad: boolean
   autoReconnectOnHotplug: boolean
   onAutoConnectOnLoadChange: (value: boolean) => void
   onAutoReconnectOnHotplugChange: (value: boolean) => void
-  selectedMonitorDeviceKind: MonitorDeviceKind
-  monitorDeviceOptions: MonitorDeviceDriver[]
-  monitorDeviceCapabilities: MonitorDeviceCapabilities
-  onMonitorDeviceKindChange: (kind: MonitorDeviceKind) => void
+  selectedDeviceKind: DeviceKind
+  deviceOptions: DeviceDriver[]
+  supportsTx: boolean
+  onDeviceKindChange: (kind: DeviceKind) => void
   onConnectBtnClick: () => void
-  onSendRawPdFrame: (target: MonitorPdTxTarget, hexPayload: string) => Promise<void>
+  onSendRawPdFrame: (sop: PdTxSop, hexPayload: string) => Promise<void>
   onSendHardReset: () => Promise<void>
   onSendCableReset: () => Promise<void>
-  onSetCCMode: (config: MonitorCCModeConfig) => Promise<void>
+  onSetCCMode: (config: CCModeConfig) => Promise<void>
   isSendingCommand: boolean
   isDeviceSupported: boolean
   currentView: AppView
@@ -95,15 +93,14 @@ function writeDecodeCollapsed(value: boolean): void {
 const Layout = ({
   isConnected,
   isConnecting,
-  manualDisconnect,
   autoConnectOnLoad,
   autoReconnectOnHotplug,
   onAutoConnectOnLoadChange,
   onAutoReconnectOnHotplugChange,
-  selectedMonitorDeviceKind,
-  monitorDeviceOptions,
-  monitorDeviceCapabilities,
-  onMonitorDeviceKindChange,
+  selectedDeviceKind,
+  deviceOptions,
+  supportsTx,
+  onDeviceKindChange,
   onConnectBtnClick,
   onSendRawPdFrame,
   onSendHardReset,
@@ -244,15 +241,14 @@ const Layout = ({
             selectedIndex={selectedIndex}
             isConnected={isConnected}
             isConnecting={isConnecting}
-            manualDisconnect={manualDisconnect}
             autoConnectOnLoad={autoConnectOnLoad}
             autoReconnectOnHotplug={autoReconnectOnHotplug}
             onAutoConnectOnLoadChange={onAutoConnectOnLoadChange}
             onAutoReconnectOnHotplugChange={onAutoReconnectOnHotplugChange}
-            selectedMonitorDeviceKind={selectedMonitorDeviceKind}
-            monitorDeviceOptions={monitorDeviceOptions}
-            monitorDeviceCapabilities={monitorDeviceCapabilities}
-            onMonitorDeviceKindChange={onMonitorDeviceKindChange}
+            selectedDeviceKind={selectedDeviceKind}
+            deviceOptions={deviceOptions}
+            supportsTx={supportsTx}
+            onDeviceKindChange={onDeviceKindChange}
             onConnectBtnClick={onConnectBtnClick}
             onOpenTxDialog={handleOpenTxDialog}
             isSendingCommand={isSendingCommand}

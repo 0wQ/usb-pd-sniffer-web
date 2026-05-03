@@ -1,7 +1,7 @@
 {
   "name": "@usb-pd-sniffer/pd-device-native-hid",
   "version": "0.1.0",
-  "description": "Native WebHID device backend and native monitor-event helpers for USB PD capture.",
+  "description": "Native WebHID device backend and native HID helpers for USB PD capture.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

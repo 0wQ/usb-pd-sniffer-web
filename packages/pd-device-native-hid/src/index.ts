@@ -1,2 +1,2 @@
-export * from "./monitorAdapter.js";
+export * from "./nativeHidAdapter.js";
 export * from "./device.js";

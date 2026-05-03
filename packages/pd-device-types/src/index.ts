@@ -30,12 +30,7 @@ export type CaptureRecord = {
   data: number[];
 };
 
-export type CaptureDeviceStats = {
-  recv_count: number;
-  drop_count: number;
-};
-
-export type CaptureConnectionState = {
+export type CaptureDeviceState = {
   readonly isSupported: boolean;
   readonly isConnected: boolean;
   readonly isConnecting: boolean;
@@ -45,30 +40,12 @@ export type CaptureConnectionState = {
   readonly fingerprint: string | null;
 };
 
-export type CaptureDeviceStatus = CaptureConnectionState;
-
-export type CaptureDeviceConnection = CaptureConnectionState & {
+export type CaptureDevice = CaptureDeviceState & {
   connect(): Promise<void>;
   connectAuthorized(preferredFingerprint?: string | null): Promise<void>;
   disconnect(): Promise<void>;
   setAutoReconnect(enabled: boolean, preferredFingerprint?: string | null): void;
   dispose(): void;
-};
-
-export type CaptureRecordSource = {
+  onState(listener: (state: CaptureDeviceState) => void): () => void;
   onRecord(listener: (record: CaptureRecord) => void): () => void;
 };
-
-export type CaptureStatusSource = {
-  onStatus(listener: (status: CaptureConnectionState) => void): () => void;
-};
-
-export type CaptureStatsSource = {
-  onStats(listener: (stats: CaptureDeviceStats) => void): () => void;
-};
-
-export type CaptureDevice =
-  & CaptureDeviceConnection
-  & CaptureRecordSource
-  & CaptureStatusSource
-  & CaptureStatsSource;
