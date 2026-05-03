@@ -1,23 +1,17 @@
 import clsx from 'clsx'
-import ViewTabs, { type AppView } from '@/components/common/ViewTabs'
+import ViewTabs from '@/components/common/ViewTabs'
+import { useDeviceWorkspaceContext } from '@/components/common/DeviceWorkspaceContext'
 
-type Props = {
-  isConnected: boolean
-  isConnecting: boolean
-  onConnectBtnClick: () => void
-  isDeviceSupported: boolean
-  currentView: AppView
-  onViewChange: (view: AppView) => void
-}
+const PowerPage = () => {
+  const {
+    isConnected,
+    isConnecting,
+    isDeviceSupported,
+    currentView,
+    onViewChange,
+    connectDevice,
+  } = useDeviceWorkspaceContext()
 
-const PowerPage = ({
-  isConnected,
-  isConnecting,
-  onConnectBtnClick,
-  isDeviceSupported,
-  currentView,
-  onViewChange,
-}: Props) => {
   return (
     <main className="flex-1 min-h-0 z-10 p-5 overflow-visible">
       <section className="card bg-base-100 h-full min-h-0 min-w-0">
@@ -34,7 +28,7 @@ const PowerPage = ({
               {isDeviceSupported && (
                 <button
                   className="btn btn-sm rounded-full gap-2"
-                  onClick={onConnectBtnClick}
+                  onClick={() => void connectDevice()}
                   disabled={isConnecting}
                 >
                   {isConnected ? (

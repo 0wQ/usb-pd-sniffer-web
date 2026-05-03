@@ -1,12 +1,12 @@
 import { useEffect, useState, useMemo, memo, useCallback, useRef } from 'react'
 import { List, useListCallbackRef, type RowComponentProps } from 'react-window'
 import { toast } from 'sonner'
+import { useDeviceWorkspaceContext } from '@/components/common/DeviceWorkspaceContext'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
-import useDeviceStore from '@/stores/deviceStore'
 import type { ImportMode } from '@/types/csv'
 import { exportToCsv, importFromCsv, generateFilename, downloadCsv, readFile } from '@/utils/csvHelper'
 import ImportDialog from '@/components/common/ImportDialog'
-import ViewTabs, { type AppView } from '@/components/common/ViewTabs'
+import ViewTabs from '@/components/common/ViewTabs'
 import clsx from 'clsx'
 import {
   CirclePause,
@@ -24,10 +24,7 @@ import {
 import { decodeSingleRecord } from '@/lib/analyzer/decode'
 import { decodeUfcsRecordType, formatUfcsSignal, formatUfcsTypeSummary } from '@/lib/ufcs/ufcsType'
 import { formatCompactPowerRoleOrCable, formatCompactSop } from '@/lib/display/pdTableFields'
-import type {
-  DeviceDriver,
-  DeviceKind,
-} from '@/lib/devices/deviceDrivers'
+import type { DeviceKind } from '@/lib/devices/deviceDrivers'
 
 const ROW_HEIGHT = 30
 const THEME_STORAGE_KEY = 'usb-pd-sniffer-theme'
@@ -321,9 +318,7 @@ const TableComponent = memo(({
   selectedIndex,
   scrollRequest,
 }: TableComponentProps) => {
-  const captureBuffer = useDeviceStore((state) => state.captureBuffer)
-  const captureVersion = useDeviceStore((state) => state.captureVersion)
-  const captureCount = useDeviceStore((state) => state.captureCount)
+  const { captureBuffer, captureCount } = useDeviceWorkspaceContext()
 
   const [list, setList] = useListCallbackRef()
   const lastScrollRequest = useRef(0)
@@ -426,8 +421,7 @@ const TableComponent = memo(({
 
   const rowProps = useMemo<RowData>(
     () => ({ records, onRowClick, selectedIndex }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [captureVersion, onRowClick, selectedIndex]
+    [onRowClick, records, selectedIndex]
   )
 
   return (
@@ -468,7 +462,7 @@ const TableComponent = memo(({
 TableComponent.displayName = 'TableComponent'
 
 const RecordCounterComponent = memo(() => {
-  const captureCount = useDeviceStore((state) => state.captureCount)
+  const { captureCount } = useDeviceWorkspaceContext()
 
   return (
     <div className="btn btn-sm rounded-full gap-1.5 border-base-300 bg-base-100 px-3 font-mono font-normal normal-case text-base-content/65 pointer-events-none cursor-default hover:bg-base-100">
@@ -486,22 +480,7 @@ type CardProps = {
   onToggleDecodeLayoutMode: () => void
   onRowClick: (index: number) => void
   selectedIndex: number | null
-  isConnected: boolean
-  isConnecting: boolean
-  autoConnectOnLoad: boolean
-  autoReconnectOnHotplug: boolean
-  onAutoConnectOnLoadChange: (value: boolean) => void
-  onAutoReconnectOnHotplugChange: (value: boolean) => void
-  selectedDeviceKind: DeviceKind
-  deviceOptions: DeviceDriver[]
-  supportsTx: boolean
-  onDeviceKindChange: (kind: DeviceKind) => void
-  onConnectBtnClick: () => void
   onOpenTxDialog: () => void
-  isSendingCommand: boolean
-  isDeviceSupported: boolean
-  currentView: AppView
-  onViewChange: (view: AppView) => void
 }
 
 const Card = memo(({
@@ -510,22 +489,7 @@ const Card = memo(({
   onToggleDecodeLayoutMode,
   onRowClick,
   selectedIndex,
-  isConnected,
-  isConnecting,
-  autoConnectOnLoad,
-  autoReconnectOnHotplug,
-  onAutoConnectOnLoadChange,
-  onAutoReconnectOnHotplugChange,
-  selectedDeviceKind,
-  deviceOptions,
-  supportsTx,
-  onDeviceKindChange,
-  onConnectBtnClick,
   onOpenTxDialog,
-  isSendingCommand,
-  isDeviceSupported,
-  currentView,
-  onViewChange,
 }: CardProps) => {
   const [autoScroll, setAutoScroll] = useState(true)
   const [scrollRequest, setScrollRequest] = useState(0)
@@ -534,10 +498,27 @@ const Card = memo(({
   const [isProcessing, setIsProcessing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const clearRecords = useDeviceStore((state) => state.clearRecords)
-  const captureBuffer = useDeviceStore((state) => state.captureBuffer)
-  const captureCount = useDeviceStore((state) => state.captureCount)
-  const importRecords = useDeviceStore((state) => state.importRecords)
+  const {
+    currentView,
+    onViewChange,
+    clearRecords,
+    captureBuffer,
+    captureCount,
+    importRecords,
+    isConnected,
+    isConnecting,
+    autoConnectOnLoad,
+    autoReconnectOnHotplug,
+    selectedDeviceKind,
+    deviceOptions,
+    supportsTx,
+    isSending,
+    isDeviceSupported,
+    connectDevice,
+    selectDeviceKind,
+    setAutoConnectOnLoad,
+    setAutoReconnectOnHotplug,
+  } = useDeviceWorkspaceContext()
 
   const handleRowClick = useCallback((index: number) => {
     if (AUTO_SCROLL_CONFIG.STOP_ON_ROW_CLICK) {
@@ -653,7 +634,7 @@ const Card = memo(({
               {isDeviceSupported && (
                 <button
                   className="btn btn-sm rounded-full gap-2"
-                  onClick={onConnectBtnClick}
+                  onClick={() => void connectDevice()}
                   disabled={isConnecting}
                 >
                   {isConnected ? (
@@ -692,7 +673,7 @@ const Card = memo(({
                         type="checkbox"
                         className="toggle toggle-sm"
                         checked={autoConnectOnLoad}
-                        onChange={(e) => onAutoConnectOnLoadChange(e.target.checked)}
+                        onChange={(e) => setAutoConnectOnLoad(e.target.checked)}
                       />
                     </label>
                     <label className="flex items-center justify-between gap-3 px-1 py-2">
@@ -701,7 +682,7 @@ const Card = memo(({
                         type="checkbox"
                         className="toggle toggle-sm"
                         checked={autoReconnectOnHotplug}
-                        onChange={(e) => onAutoReconnectOnHotplugChange(e.target.checked)}
+                        onChange={(e) => setAutoReconnectOnHotplug(e.target.checked)}
                       />
                     </label>
                     <label className="flex items-center justify-between gap-3 px-1 py-2">
@@ -709,7 +690,7 @@ const Card = memo(({
                       <select
                         className="select select-bordered select-sm w-40"
                         value={selectedDeviceKind}
-                        onChange={(event) => onDeviceKindChange(event.target.value as DeviceKind)}
+                        onChange={(event) => selectDeviceKind(event.target.value as DeviceKind)}
                         disabled={isConnecting}
                         aria-label="Device"
                       >
@@ -727,7 +708,7 @@ const Card = memo(({
               <button
                 className={TOOLBAR_ICON_BUTTON_CLASS}
                 onClick={onOpenTxDialog}
-                disabled={!supportsTx || !isDeviceSupported || !isConnected || isSendingCommand}
+                disabled={!supportsTx || !isDeviceSupported || !isConnected || isSending}
                 aria-label="Native PD TX"
                 title={supportsTx ? 'Native PD TX' : 'Selected device does not support PD TX'}
               >

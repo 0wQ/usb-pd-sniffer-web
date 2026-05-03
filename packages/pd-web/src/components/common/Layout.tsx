@@ -1,16 +1,9 @@
 import TableCard from '@/components/card/TableCard'
 import DecodeCard from '@/components/card/DecodeCard'
 import SendPdDialog from '@/components/common/SendPdDialog'
+import { useDeviceWorkspaceContext } from '@/components/common/DeviceWorkspaceContext'
 import { Group, Panel, Separator, useDefaultLayout, usePanelCallbackRef, type PanelSize } from 'react-resizable-panels'
-import useDeviceStore from '@/stores/deviceStore'
-import type { AppView } from '@/components/common/ViewTabs'
 import { decodeSingleRecord } from '@/lib/analyzer/decode'
-import type {
-  CCModeConfig,
-  DeviceDriver,
-  DeviceKind,
-  PdTxSop,
-} from '@/lib/devices/deviceDrivers'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import clsx from 'clsx'
 
@@ -34,28 +27,6 @@ const MAX_DECODE_SIZE = {
   vertical: '100%',
   horizontal: '50%',
 } satisfies Record<DecodeLayoutMode, string>
-
-type Props = {
-  isConnected: boolean
-  isConnecting: boolean
-  autoConnectOnLoad: boolean
-  autoReconnectOnHotplug: boolean
-  onAutoConnectOnLoadChange: (value: boolean) => void
-  onAutoReconnectOnHotplugChange: (value: boolean) => void
-  selectedDeviceKind: DeviceKind
-  deviceOptions: DeviceDriver[]
-  supportsTx: boolean
-  onDeviceKindChange: (kind: DeviceKind) => void
-  onConnectBtnClick: () => void
-  onSendRawPdFrame: (sop: PdTxSop, hexPayload: string) => Promise<void>
-  onSendHardReset: () => Promise<void>
-  onSendCableReset: () => Promise<void>
-  onSetCCMode: (config: CCModeConfig) => Promise<void>
-  isSendingCommand: boolean
-  isDeviceSupported: boolean
-  currentView: AppView
-  onViewChange: (view: AppView) => void
-}
 
 function readDecodeLayoutMode(): DecodeLayoutMode {
   try {
@@ -90,34 +61,23 @@ function writeDecodeCollapsed(value: boolean): void {
   }
 }
 
-const Layout = ({
-  isConnected,
-  isConnecting,
-  autoConnectOnLoad,
-  autoReconnectOnHotplug,
-  onAutoConnectOnLoadChange,
-  onAutoReconnectOnHotplugChange,
-  selectedDeviceKind,
-  deviceOptions,
-  supportsTx,
-  onDeviceKindChange,
-  onConnectBtnClick,
-  onSendRawPdFrame,
-  onSendHardReset,
-  onSendCableReset,
-  onSetCCMode,
-  isSendingCommand,
-  isDeviceSupported,
-  currentView,
-  onViewChange,
-}: Props) => {
-  const selectedIndex = useDeviceStore((state) => state.protocolSelectedIndex)
-  const setSelectedIndex = useDeviceStore((state) => state.setProtocolSelectedIndex)
-  const captureBuffer = useDeviceStore((state) => state.captureBuffer)
+const Layout = () => {
+  const {
+    selectedIndex,
+    setSelectedIndex,
+    captureBuffer,
+    isConnected,
+    sendRawPdFrame,
+    sendHardReset,
+    sendCableReset,
+    setCCMode,
+    isTxDialogOpen,
+    openTxDialog,
+    closeTxDialog,
+  } = useDeviceWorkspaceContext()
   const [decodeLayoutMode, setDecodeLayoutMode] = useState<DecodeLayoutMode>(() => readDecodeLayoutMode())
   const [decodeCollapsed, setDecodeCollapsed] = useState(() => readDecodeCollapsed())
   const [decodeHandleHighlighted, setDecodeHandleHighlighted] = useState(false)
-  const [txDialogOpen, setTxDialogOpen] = useState(false)
   const [decodePanel, setDecodePanel] = usePanelCallbackRef()
   const layoutId = `pd-web-main-layout-${decodeLayoutMode}`
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
@@ -195,14 +155,6 @@ const Layout = ({
     setDecodeCollapsed((current) => !current)
   }, [])
 
-  const handleOpenTxDialog = useCallback(() => {
-    setTxDialogOpen(true)
-  }, [])
-
-  const handleCloseTxDialog = useCallback(() => {
-    setTxDialogOpen(false)
-  }, [])
-
   const defaultLayoutForMode = useMemo(() => defaultLayout, [defaultLayout])
   const selectedRecord = selectedIndex === null ? null : (captureBuffer.get(selectedIndex) ?? null)
   const selectedFrameForTx = useMemo(() => {
@@ -239,28 +191,13 @@ const Layout = ({
             onToggleDecodeLayoutMode={toggleDecodeLayoutMode}
             onRowClick={setSelectedIndex}
             selectedIndex={selectedIndex}
-            isConnected={isConnected}
-            isConnecting={isConnecting}
-            autoConnectOnLoad={autoConnectOnLoad}
-            autoReconnectOnHotplug={autoReconnectOnHotplug}
-            onAutoConnectOnLoadChange={onAutoConnectOnLoadChange}
-            onAutoReconnectOnHotplugChange={onAutoReconnectOnHotplugChange}
-            selectedDeviceKind={selectedDeviceKind}
-            deviceOptions={deviceOptions}
-            supportsTx={supportsTx}
-            onDeviceKindChange={onDeviceKindChange}
-            onConnectBtnClick={onConnectBtnClick}
-            onOpenTxDialog={handleOpenTxDialog}
-            isSendingCommand={isSendingCommand}
-            isDeviceSupported={isDeviceSupported}
-            currentView={currentView}
-            onViewChange={onViewChange}
+            onOpenTxDialog={openTxDialog}
           />
         </Panel>
 
         <Separator
           className={separatorClassName}
-          disabled={txDialogOpen}
+          disabled={isTxDialogOpen}
           disableDoubleClick
           onDoubleClick={handleDecodeSeparatorDoubleClick}
         >
@@ -283,14 +220,14 @@ const Layout = ({
       </Group>
 
       <SendPdDialog
-        isOpen={txDialogOpen}
+        isOpen={isTxDialogOpen}
         isConnected={isConnected}
         selectedFrame={selectedFrameForTx}
-        onClose={handleCloseTxDialog}
-        onSendRaw={onSendRawPdFrame}
-        onSendHardReset={onSendHardReset}
-        onSendCableReset={onSendCableReset}
-        onSetCCMode={onSetCCMode}
+        onClose={closeTxDialog}
+        onSendRaw={sendRawPdFrame}
+        onSendHardReset={sendHardReset}
+        onSendCableReset={sendCableReset}
+        onSetCCMode={setCCMode}
       />
     </main>
   )

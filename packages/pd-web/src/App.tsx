@@ -1,60 +1,13 @@
 import { Toaster } from 'sonner'
-import Layout from '@/components/common/Layout'
+import DeviceWorkspace from '@/components/common/DeviceWorkspace'
 import { type AppView } from '@/components/common/ViewTabs'
-import PowerPage from '@/components/pages/PowerPage'
-import { useCaptureDevice } from '@/hooks/useCaptureDevice'
 import { useBeforeUnloadWarning } from '@/hooks/useBeforeUnloadWarning'
-import useDeviceStore from '@/stores/deviceStore'
 import { useState } from 'react'
-import type { CCModeConfig, PdTxSop } from '@/lib/devices/deviceDrivers'
 
 function App() {
   const [currentView, setCurrentView] = useState<AppView>('protocol')
   // 数据丢失警告
   useBeforeUnloadWarning()
-
-  // 初始化设备连接 hook
-  const {
-    selectedDeviceKind,
-    deviceOptions,
-    supportsTx,
-    selectDeviceKind,
-    connectDevice,
-    disconnectDevice,
-    sendRawPdFrame,
-    sendHardReset,
-    sendCableReset,
-    setCCMode,
-    isSending,
-    isDeviceSupported,
-    deviceError,
-  } = useCaptureDevice()
-
-  // 从 store 读取连接状态
-  const isConnected = useDeviceStore((state) => state.isConnected)
-  const isConnecting = useDeviceStore((state) => state.isConnecting)
-  const autoConnectOnLoad = useDeviceStore((state) => state.autoConnectOnLoad)
-  const autoReconnectOnHotplug = useDeviceStore((state) => state.autoReconnectOnHotplug)
-  const setAutoConnectOnLoad = useDeviceStore((state) => state.setAutoConnectOnLoad)
-  const setAutoReconnectOnHotplug = useDeviceStore((state) => state.setAutoReconnectOnHotplug)
-
-  // 处理连接/断开按钮点击
-  const handleConnectBtnClick = () => {
-    if (isConnecting) return
-    if (isConnected) {
-      disconnectDevice()
-    } else {
-      connectDevice()
-    }
-  }
-
-  const handleSendRawPdFrame = (sop: PdTxSop, hexPayload: string) => sendRawPdFrame(sop, hexPayload)
-
-  const handleSendHardReset = () => sendHardReset()
-
-  const handleSendCableReset = () => sendCableReset()
-
-  const handleSetCCMode = (config: CCModeConfig) => setCCMode(config)
 
   return (
     <div className="app bg-base-200 w-full h-screen min-h-200 flex flex-col">
@@ -68,65 +21,7 @@ function App() {
           },
         }}
       />
-
-      {/* Device API 不支持时显示警告 */}
-      {!isDeviceSupported && (
-        <div className="mx-auto w-full max-w-4xl px-5 pt-5">
-          <div role="alert" className="alert alert-error">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 shrink-0 stroke-current"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <div>
-              <h3 className="font-bold">Device API Not Supported</h3>
-              <div className="text-sm">
-                {deviceError || 'Your browser does not support the required device API. Please use Chrome, Edge, or Opera (version 89+).'}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {currentView === 'protocol' ? (
-        <Layout
-          isConnected={isConnected}
-          isConnecting={isConnecting}
-          autoConnectOnLoad={autoConnectOnLoad}
-          autoReconnectOnHotplug={autoReconnectOnHotplug}
-          onAutoConnectOnLoadChange={setAutoConnectOnLoad}
-          onAutoReconnectOnHotplugChange={setAutoReconnectOnHotplug}
-          selectedDeviceKind={selectedDeviceKind}
-          deviceOptions={deviceOptions}
-          supportsTx={supportsTx}
-          onDeviceKindChange={selectDeviceKind}
-          onConnectBtnClick={handleConnectBtnClick}
-          onSendRawPdFrame={handleSendRawPdFrame}
-          onSendHardReset={handleSendHardReset}
-          onSendCableReset={handleSendCableReset}
-          onSetCCMode={handleSetCCMode}
-          isSendingCommand={isSending}
-          isDeviceSupported={isDeviceSupported}
-          currentView={currentView}
-          onViewChange={setCurrentView}
-        />
-      ) : (
-        <PowerPage
-          isConnected={isConnected}
-          isConnecting={isConnecting}
-          onConnectBtnClick={handleConnectBtnClick}
-          isDeviceSupported={isDeviceSupported}
-          currentView={currentView}
-          onViewChange={setCurrentView}
-        />
-      )}
+      <DeviceWorkspace currentView={currentView} onViewChange={setCurrentView} />
     </div>
   )
 }
