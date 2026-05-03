@@ -11,7 +11,7 @@ Device support package for the current USB PD Sniffer native firmware monitor.
 - WebHID device lifecycle for the current native firmware device.
 - Native HID report body parse/encode.
 - Native monitor event constants and TX command constants.
-- Conversion from native monitor events to upper-layer records and power samples.
+- Conversion from native monitor events to upper-layer records.
 - Raw PD TX command dispatch through the native firmware HID OUT report.
 
 `pd-device-native-hid` does not own:
@@ -33,10 +33,6 @@ const offRecord = device.onRecord((record) => {
   // Append to protocol capture buffer.
 })
 
-const offPower = device.onPowerSample((sample) => {
-  // Append to the power sample buffer if recording is enabled.
-})
-
 const offStatus = device.onStatus((status) => {
   // Mirror connection/sending/error state into UI state.
 })
@@ -46,7 +42,6 @@ await device.sendRawPd('SOP', Uint8Array.from([0x42, 0x10]))
 await device.disconnect()
 
 offRecord()
-offPower()
 offStatus()
 device.dispose()
 ```
@@ -71,7 +66,6 @@ type MonitorDevice = {
   setCCMode(config: MonitorCCModeConfig): Promise<void>
 
   onRecord(listener: (record: MonitorRecord) => void): () => void
-  onPowerSample(listener: (sample: MonitorPowerSample) => void): () => void
   onStatus(listener: (status: MonitorDeviceStatus) => void): () => void
 }
 ```
@@ -110,15 +104,14 @@ The `fingerprint` is stable enough for choosing a previously authorized device i
 ```ts
 type MonitorRecord = {
   timestamp_us: number
-  recv_counter: number
-  drop_count?: number
+  seq: number
   vbus_mv: number
   ibus_ma: number
   cc1_mv: number
   cc2_mv: number
   dp_mv: number
   dm_mv: number
-  event_type: number
+  event_type: string
   active_cc: number
   data_len: number
   data: number[]
@@ -132,29 +125,8 @@ Current record emission behavior:
 - `UFCS_DP` and `UFCS_DM` emit records with UFCS raw frames.
 - HID may split `UFCS_DP` / `UFCS_DM` records across two consecutive reports when the raw frame is longer than 34 bytes.
 - A full 34-byte UFCS HID report is held until the next report decides whether it is complete or the first split chunk.
-- The second split report assembles only when it is consecutive, has the same `recv_counter`, and has the same UFCS event type.
+- The second split report assembles only when it is consecutive, has the same `seq`, and has the same UFCS event type.
 - Any different next record flushes the pending 34-byte UFCS report before the new record is processed.
-
-## Power Samples
-
-`onPowerSample()` emits snapshot samples derived from native EVENT reports and HID `GET_STATUS` snapshots.
-
-```ts
-type MonitorPowerSample = {
-  timestamp_us: number
-  recv_counter: number
-  vbus_mv: number
-  ibus_ma: number
-  cc1_mv: number
-  cc2_mv: number
-  dp_mv: number
-  dm_mv: number
-  active_cc: number
-  event_type: number
-}
-```
-
-The device layer emits power samples whenever firmware sends a monitor event or replies to a HID status poll. UI/store code decides whether to record them based on user settings.
 
 ## TX
 

@@ -1,3 +1,9 @@
+import type {
+  CaptureDevice,
+  CaptureDeviceStats,
+  CaptureDeviceStatus,
+  CaptureRecord,
+} from '@usb-pd-sniffer/pd-device-types'
 import { createMonitorDevice } from '@usb-pd-sniffer/pd-device-native-hid'
 import type { MonitorActiveCCMode, MonitorCCMode, MonitorCCModeConfig } from '@usb-pd-sniffer/pd-device-native-hid'
 import { createNativeCdcMonitorDevice } from '@usb-pd-sniffer/pd-device-native-cdc'
@@ -5,63 +11,21 @@ import { createAtkC2MonitorDevice } from '@usb-pd-sniffer/pd-device-atk-c2'
 
 export type MonitorDeviceKind = 'native' | 'native-cdc' | 'atk-c2'
 
-export type MonitorRecordLike = {
-  timestamp_us: number
-  recv_counter: number
-  drop_count?: number
-  vbus_mv: number
-  ibus_ma: number
-  cc1_mv: number
-  cc2_mv: number
-  dp_mv: number
-  dm_mv: number
-  event_type: number
-  active_cc: number
-  data_len: number
-  data: number[]
-}
+export type MonitorRecord = CaptureRecord
 
-export type MonitorPowerSampleLike = {
-  timestamp_us: number
-  recv_counter: number
-  vbus_mv: number
-  ibus_ma: number
-  cc1_mv: number
-  cc2_mv: number
-  dp_mv: number
-  dm_mv: number
-  active_cc: number
-  event_type: number
-}
-
-export type MonitorDeviceStatusLike = {
-  readonly isSupported: boolean
-  readonly isConnected: boolean
-  readonly isConnecting: boolean
-  readonly isSending: boolean
-  readonly error: string | null
-  readonly productName: string | null
-  readonly fingerprint: string | null
-}
+export type MonitorDeviceStatus = CaptureDeviceStatus
+export type MonitorDeviceStats = CaptureDeviceStats
 
 export type MonitorPdTxTarget = 'SOP' | 'SOP_PRIME' | 'SOP_DPRIME'
 
 export type { MonitorActiveCCMode, MonitorCCMode, MonitorCCModeConfig }
 
-export type MonitorDeviceLike = {
-  readonly isSupported: boolean
-  connect(): Promise<void>
-  connectAuthorized(preferredFingerprint?: string | null): Promise<void>
-  disconnect(): Promise<void>
-  setAutoReconnect(enabled: boolean, preferredFingerprint?: string | null): void
-  dispose(): void
+export type MonitorDevice = CaptureDevice & {
   sendRawPd(target: MonitorPdTxTarget, payload: Uint8Array): Promise<void>
   sendHardReset(): Promise<void>
   sendCableReset(): Promise<void>
   setCCMode(config: MonitorCCModeConfig): Promise<void>
-  onRecord(listener: (record: MonitorRecordLike) => void): () => void
-  onPowerSample(listener: (sample: MonitorPowerSampleLike) => void): () => void
-  onStatus(listener: (status: MonitorDeviceStatusLike) => void): () => void
+  onStats(listener: (stats: MonitorDeviceStats) => void): () => void
 }
 
 export type MonitorDeviceCapabilities = {
@@ -75,7 +39,7 @@ export type MonitorDeviceDriver = {
   label: string
   shortLabel: string
   apiName: string
-  createDevice: () => MonitorDeviceLike
+  createDevice: () => MonitorDevice
   capabilities: MonitorDeviceCapabilities
 }
 

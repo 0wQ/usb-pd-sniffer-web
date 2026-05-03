@@ -6,10 +6,10 @@ import {
 } from "./protocol.js";
 import type {
   MonitorDevice,
+  MonitorDeviceStats,
   MonitorDeviceStatus,
   MonitorCCModeConfig,
   MonitorPdTxTarget,
-  MonitorPowerSample,
   MonitorRecord,
 } from "./types.js";
 
@@ -122,8 +122,8 @@ export function createAtkC2MonitorDevice(options: AtkC2MonitorDeviceOptions = {}
   const usb = getUsb();
   const transferInLength = options.transferInLength ?? DEFAULT_TRANSFER_IN_LENGTH;
   const recordListeners = new Set<(record: MonitorRecord) => void>();
-  const powerListeners = new Set<(sample: MonitorPowerSample) => void>();
   const statusListeners = new Set<(status: MonitorDeviceStatus) => void>();
+  const statsListeners = new Set<(stats: MonitorDeviceStats) => void>();
   const decoder = new AtkC2ProtocolDecoder();
 
   let device: UsbDeviceLike | null = null;
@@ -136,6 +136,7 @@ export function createAtkC2MonitorDevice(options: AtkC2MonitorDeviceOptions = {}
   let autoReconnect = false;
   let autoReconnectFingerprint: string | null = null;
   let disposed = false;
+  let latestStats: MonitorDeviceStats = { recv_count: 0, drop_count: 0 };
 
   const status = (): MonitorDeviceStatus => ({
     isSupported: usb !== null,
@@ -156,8 +157,17 @@ export function createAtkC2MonitorDevice(options: AtkC2MonitorDeviceOptions = {}
     for (const listener of recordListeners) listener(record);
   };
 
+  const emitStats = (stats: MonitorDeviceStats): void => {
+    for (const listener of statsListeners) listener(stats);
+  };
+
   const emitRecordsFromChunk = (chunk: Uint8Array): void => {
     for (const record of decoder.pushBytes(chunk)) {
+      latestStats = {
+        recv_count: record.seq,
+        drop_count: 0,
+      };
+      emitStats(latestStats);
       emitRecord(record);
     }
   };
@@ -309,6 +319,24 @@ export function createAtkC2MonitorDevice(options: AtkC2MonitorDeviceOptions = {}
     get isSupported() {
       return usb !== null;
     },
+    get isConnected() {
+      return device?.opened ?? false;
+    },
+    get isConnecting() {
+      return isConnecting;
+    },
+    get isSending() {
+      return isSending;
+    },
+    get error() {
+      return error;
+    },
+    get productName() {
+      return device?.productName ?? null;
+    },
+    get fingerprint() {
+      return device === null ? null : deviceFingerprint(device);
+    },
     async connect(): Promise<void> {
       if (usb === null) {
         throw new Error(unsupportedError());
@@ -371,14 +399,15 @@ export function createAtkC2MonitorDevice(options: AtkC2MonitorDeviceOptions = {}
       recordListeners.add(listener);
       return () => recordListeners.delete(listener);
     },
-    onPowerSample(listener: (sample: MonitorPowerSample) => void): () => void {
-      powerListeners.add(listener);
-      return () => powerListeners.delete(listener);
-    },
     onStatus(listener: (status: MonitorDeviceStatus) => void): () => void {
       statusListeners.add(listener);
       listener(status());
       return () => statusListeners.delete(listener);
+    },
+    onStats(listener: (stats: MonitorDeviceStats) => void): () => void {
+      statsListeners.add(listener);
+      listener(latestStats);
+      return () => statsListeners.delete(listener);
     },
   };
 }

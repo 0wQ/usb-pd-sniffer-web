@@ -1,11 +1,10 @@
 import Papa from 'papaparse'
-import type { CaptureRecord } from '@/types/pd'
 import type { ValidationError, ImportResult } from '@/types/csv'
-import { MONITOR_EVENT, monitorEventName } from '@usb-pd-sniffer/pd-device-native-hid'
+import { CAPTURE_EVENT, type CaptureEventType, type CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
 
 const CSV_HEADERS = [
   'timestamp_us',
-  'recv_counter',
+  'seq',
   'vbus_mv',
   'ibus_ma',
   'cc1_mv',
@@ -21,22 +20,22 @@ const CSV_HEADERS = [
 type CaptureCsvHeader = typeof CSV_HEADERS[number]
 
 const CAPTURE_EVENT_BY_NAME = {
-  DISCONNECT: MONITOR_EVENT.DISCONNECT,
-  CC1_CONNECT: MONITOR_EVENT.CC1_CONNECT,
-  CC2_CONNECT: MONITOR_EVENT.CC2_CONNECT,
-  PD_SOP0: MONITOR_EVENT.PD_SOP0,
-  PD_SOP1: MONITOR_EVENT.PD_SOP1,
-  PD_SOP2: MONITOR_EVENT.PD_SOP2,
-  PD_SOP1_DEBUG: MONITOR_EVENT.PD_SOP1_DEBUG,
-  PD_SOP2_DEBUG: MONITOR_EVENT.PD_SOP2_DEBUG,
-  HARD_RESET: MONITOR_EVENT.HARD_RESET,
-  CABLE_RESET: MONITOR_EVENT.CABLE_RESET,
-  PD_ERROR: MONITOR_EVENT.PD_ERROR,
-  BUFFER_OVERFLOW: MONITOR_EVENT.BUFFER_OVERFLOW,
-  UFCS_DP: MONITOR_EVENT.UFCS_DP,
-  UFCS_DM: MONITOR_EVENT.UFCS_DM,
-  UFCS_DP_SINGLE: MONITOR_EVENT.UFCS_DP,
-  UFCS_DM_SINGLE: MONITOR_EVENT.UFCS_DM,
+  DISCONNECT: CAPTURE_EVENT.DISCONNECT,
+  CC1_CONNECT: CAPTURE_EVENT.CC1_CONNECT,
+  CC2_CONNECT: CAPTURE_EVENT.CC2_CONNECT,
+  PD_SOP0: CAPTURE_EVENT.PD_SOP0,
+  PD_SOP1: CAPTURE_EVENT.PD_SOP1,
+  PD_SOP2: CAPTURE_EVENT.PD_SOP2,
+  PD_SOP1_DEBUG: CAPTURE_EVENT.PD_SOP1_DEBUG,
+  PD_SOP2_DEBUG: CAPTURE_EVENT.PD_SOP2_DEBUG,
+  PD_HARD_RESET: CAPTURE_EVENT.PD_HARD_RESET,
+  PD_CABLE_RESET: CAPTURE_EVENT.PD_CABLE_RESET,
+  HARD_RESET: CAPTURE_EVENT.PD_HARD_RESET,
+  CABLE_RESET: CAPTURE_EVENT.PD_CABLE_RESET,
+  UFCS_DP: CAPTURE_EVENT.UFCS_DP,
+  UFCS_DM: CAPTURE_EVENT.UFCS_DM,
+  UFCS_DP_SINGLE: CAPTURE_EVENT.UFCS_DP,
+  UFCS_DM_SINGLE: CAPTURE_EVENT.UFCS_DM,
 } as const
 
 const CAPTURE_EVENT_NAMES = new Set<string>(Object.keys(CAPTURE_EVENT_BY_NAME))
@@ -44,7 +43,7 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 
 const NUMERIC_FIELDS: readonly CaptureCsvHeader[] = [
   'timestamp_us',
-  'recv_counter',
+  'seq',
   'vbus_mv',
   'ibus_ma',
   'cc1_mv',
@@ -56,7 +55,7 @@ const NUMERIC_FIELDS: readonly CaptureCsvHeader[] = [
 
 const UNSIGNED_NUMERIC_FIELDS = new Set<CaptureCsvHeader>([
   'timestamp_us',
-  'recv_counter',
+  'seq',
   'vbus_mv',
   'cc1_mv',
   'cc2_mv',
@@ -87,7 +86,7 @@ export const deserializeData = (value: string): number[] => {
   return result
 }
 
-function parseCaptureEventName(value: string): number {
+function parseCaptureEventName(value: string): CaptureEventType {
   const name = value.trim()
   if (!CAPTURE_EVENT_NAMES.has(name)) {
     throw new Error(`Unsupported capture event_type "${value}"`)
@@ -197,14 +196,14 @@ function validateRow(row: Record<string, unknown>, rowIndex: number): Validation
 export const exportToCsv = (records: CaptureRecord[]): string => {
   const data = records.map(record => ({
     timestamp_us: record.timestamp_us,
-    recv_counter: record.recv_counter,
+    seq: record.seq,
     vbus_mv: record.vbus_mv,
     ibus_ma: record.ibus_ma ?? 0,
     cc1_mv: record.cc1_mv,
     cc2_mv: record.cc2_mv,
     dp_mv: record.dp_mv ?? 0,
     dm_mv: record.dm_mv ?? 0,
-    event_type: monitorEventName(record.event_type),
+    event_type: record.event_type,
     active_cc: record.active_cc,
     data: serializeData(record.data.slice(0, record.data_len)),
     note: ''
@@ -263,14 +262,14 @@ export const importFromCsv = (content: string): ImportResult => {
       const bytes = deserializeData(row.data)
       records.push({
         timestamp_us: Number(row.timestamp_us),
-        recv_counter: Number(row.recv_counter),
+        seq: Number(row.seq),
         vbus_mv: Number(row.vbus_mv),
         ibus_ma: Number(row.ibus_ma),
         cc1_mv: Number(row.cc1_mv),
         cc2_mv: Number(row.cc2_mv),
         dp_mv: Number(row.dp_mv),
         dm_mv: Number(row.dm_mv),
-        event_type: parseCaptureEventName(row.event_type),
+        event_type: parseCaptureEventName(row.event_type) as CaptureEventType,
         active_cc: Number(row.active_cc),
         data_len: bytes.length,
         data: bytes,

@@ -1,7 +1,7 @@
 {
-  "name": "@usb-pd-sniffer/pd-device-native-cdc",
+  "name": "@usb-pd-sniffer/pd-device-types",
   "version": "0.1.0",
-  "description": "Native Web Serial CDC device backend for USB PD capture.",
+  "description": "Shared capture/status/connection contracts for USB PD capture devices.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -19,10 +19,6 @@
     "build": "rm -rf dist *.tsbuildinfo && pnpm exec tsc -p tsconfig.json",
     "clean": "rm -rf dist *.tsbuildinfo",
     "typecheck": "pnpm exec tsc -p tsconfig.json --pretty false"
-  },
-  "dependencies": {
-    "@usb-pd-sniffer/pd-device-types": "workspace:*",
-    "@usb-pd-sniffer/pd-device-native-hid": "workspace:*"
   },
   "publishConfig": {
     "access": "public"

@@ -1,3 +1,8 @@
+import {
+  CAPTURE_EVENT,
+  type CaptureEventType,
+} from "@usb-pd-sniffer/pd-device-types";
+
 export type MonitorSnapshot = {
   vbusMv: number;
   ibusUa: number;
@@ -216,6 +221,37 @@ export function monitorEventName(eventType: number): string {
       return "UFCS_DM";
     default:
       return `EVENT_${eventType}`;
+  }
+}
+
+export function monitorEventToCaptureEvent(eventType: number): CaptureEventType | null {
+  switch (eventType) {
+    case MONITOR_EVENT.DISCONNECT:
+      return CAPTURE_EVENT.DISCONNECT;
+    case MONITOR_EVENT.CC1_CONNECT:
+      return CAPTURE_EVENT.CC1_CONNECT;
+    case MONITOR_EVENT.CC2_CONNECT:
+      return CAPTURE_EVENT.CC2_CONNECT;
+    case MONITOR_EVENT.PD_SOP0:
+      return CAPTURE_EVENT.PD_SOP0;
+    case MONITOR_EVENT.PD_SOP1:
+      return CAPTURE_EVENT.PD_SOP1;
+    case MONITOR_EVENT.PD_SOP2:
+      return CAPTURE_EVENT.PD_SOP2;
+    case MONITOR_EVENT.PD_SOP1_DEBUG:
+      return CAPTURE_EVENT.PD_SOP1_DEBUG;
+    case MONITOR_EVENT.PD_SOP2_DEBUG:
+      return CAPTURE_EVENT.PD_SOP2_DEBUG;
+    case MONITOR_EVENT.HARD_RESET:
+      return CAPTURE_EVENT.PD_HARD_RESET;
+    case MONITOR_EVENT.CABLE_RESET:
+      return CAPTURE_EVENT.PD_CABLE_RESET;
+    case MONITOR_EVENT.UFCS_DP:
+      return CAPTURE_EVENT.UFCS_DP;
+    case MONITOR_EVENT.UFCS_DM:
+      return CAPTURE_EVENT.UFCS_DM;
+    default:
+      return null;
   }
 }
 

@@ -1,4 +1,4 @@
-import type { CaptureRecord } from '@/types/pd'
+import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
 
 export type CaptureBuffer = {
   add(record: CaptureRecord): void

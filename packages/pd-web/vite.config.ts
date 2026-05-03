@@ -20,6 +20,9 @@ export default defineConfig({
       "@usb-pd-sniffer/pd-core": fileURLToPath(
         new URL("../pd-core/src/index.ts", import.meta.url)
       ),
+      "@usb-pd-sniffer/pd-device-types": fileURLToPath(
+        new URL("../pd-device-types/src/index.ts", import.meta.url)
+      ),
       "@usb-pd-sniffer/pd-device-native-hid": fileURLToPath(
         new URL("../pd-device-native-hid/src/index.ts", import.meta.url)
       ),

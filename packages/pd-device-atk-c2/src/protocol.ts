@@ -1,4 +1,5 @@
-import { MONITOR_EVENT, type MonitorRecord } from "./types.js";
+import { CAPTURE_EVENT, type CaptureEventType } from "@usb-pd-sniffer/pd-device-types";
+import type { MonitorRecord } from "./types.js";
 
 export const ATK_C2_USB = {
   vendorId: 0x2e88,
@@ -326,22 +327,22 @@ export class AtkC2BmcDecoder {
   }
 }
 
-function eventTypeForDecodedEvent(event: AtkC2DecodedEvent): number {
+function eventTypeForDecodedEvent(event: AtkC2DecodedEvent): CaptureEventType {
   if ("kind" in event) {
-    return event.kind === "hard_reset" ? MONITOR_EVENT.HARD_RESET : MONITOR_EVENT.CABLE_RESET;
+    return event.kind === "hard_reset" ? CAPTURE_EVENT.PD_HARD_RESET : CAPTURE_EVENT.PD_CABLE_RESET;
   }
 
   switch (event.sop) {
     case "SOP":
-      return MONITOR_EVENT.PD_SOP0;
+      return CAPTURE_EVENT.PD_SOP0;
     case "SOP_PRIME":
-      return MONITOR_EVENT.PD_SOP1;
+      return CAPTURE_EVENT.PD_SOP1;
     case "SOP_DPRIME":
-      return MONITOR_EVENT.PD_SOP2;
+      return CAPTURE_EVENT.PD_SOP2;
     case "SOP_PRIME_DEBUG":
-      return MONITOR_EVENT.PD_SOP1_DEBUG;
+      return CAPTURE_EVENT.PD_SOP1_DEBUG;
     case "SOP_DPRIME_DEBUG":
-      return MONITOR_EVENT.PD_SOP2_DEBUG;
+      return CAPTURE_EVENT.PD_SOP2_DEBUG;
   }
 }
 
@@ -393,7 +394,7 @@ export class AtkC2ProtocolDecoder {
     const data = "bytes" in event ? Array.from(event.bytes) : [];
     const record: MonitorRecord = {
       timestamp_us: timestampUsFromSampleIndex(event.sampleIndex),
-      recv_counter: this.recvCounter++,
+      seq: ++this.recvCounter,
       vbus_mv: this.snapshot.vbusMv,
       ibus_ma: this.snapshot.ibusMa,
       cc1_mv: this.snapshot.cc1Mv,

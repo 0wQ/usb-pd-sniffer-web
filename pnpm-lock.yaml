@@ -23,15 +23,28 @@ importers:
 
   packages/pd-core: {}
 
-  packages/pd-device-atk-c2: {}
+  packages/pd-device-atk-c2:
+    dependencies:
+      '@usb-pd-sniffer/pd-device-types':
+        specifier: workspace:*
+        version: link:../pd-device-types
 
   packages/pd-device-native-cdc:
     dependencies:
       '@usb-pd-sniffer/pd-device-native-hid':
         specifier: workspace:*
         version: link:../pd-device-native-hid
+      '@usb-pd-sniffer/pd-device-types':
+        specifier: workspace:*
+        version: link:../pd-device-types
 
-  packages/pd-device-native-hid: {}
+  packages/pd-device-native-hid:
+    dependencies:
+      '@usb-pd-sniffer/pd-device-types':
+        specifier: workspace:*
+        version: link:../pd-device-types
+
+  packages/pd-device-types: {}
 
   packages/pd-web:
     dependencies:
@@ -50,6 +63,9 @@ importers:
       '@usb-pd-sniffer/pd-device-native-hid':
         specifier: workspace:*
         version: link:../pd-device-native-hid
+      '@usb-pd-sniffer/pd-device-types':
+        specifier: workspace:*
+        version: link:../pd-device-types
       clsx:
         specifier: ^2.1.1
         version: 2.1.1

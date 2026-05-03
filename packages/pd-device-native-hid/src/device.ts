@@ -1,22 +1,27 @@
+import type {
+  CaptureDevice as BaseCaptureDevice,
+  CaptureDeviceStats as BaseCaptureDeviceStats,
+  CaptureDeviceStatus as BaseCaptureDeviceStatus,
+  CaptureEventType,
+  CaptureRecord as BaseCaptureRecord,
+} from "@usb-pd-sniffer/pd-device-types";
+import { CAPTURE_EVENT } from "@usb-pd-sniffer/pd-device-types";
 import {
   encodeNativeMonitorTxCommandBody,
-  isPdMonitorEvent,
-  MONITOR_EVENT,
   MONITOR_TX_CMD,
   NATIVE_HID_REPORT_BODY_SIZE,
   NATIVE_HID_REPORT_ID,
   NATIVE_HID_REPORT_TYPE,
   NATIVE_MONITOR_PAYLOAD_MAX_LEN,
+  monitorEventToCaptureEvent,
   parseNativeMonitorHidReportBody,
   type MonitorCCModeConfig,
   type NativeMonitorTxCommand,
   type NativeMonitorEventReport,
-  type NativeMonitorStatusReport,
 } from "./monitorAdapter.js";
 
 const DEVICE_FILTER = { vendorId: 0x1a86, productId: 0x2333 } as const;
 const STATUS_POLL_INTERVAL_MS = 500;
-const STATUS_SAMPLE_EVENT_TYPE = 0xff;
 
 type HidDeviceLike = {
   readonly vendorId: number;
@@ -59,59 +64,15 @@ type PendingUfcsChunks = {
   dm: MonitorRecord | null;
 };
 
-export type MonitorRecord = {
-  timestamp_us: number;
-  recv_counter: number;
-  drop_count?: number;
-  vbus_mv: number;
-  ibus_ma: number;
-  cc1_mv: number;
-  cc2_mv: number;
-  dp_mv: number;
-  dm_mv: number;
-  event_type: number;
-  active_cc: number;
-  data_len: number;
-  data: number[];
-};
+export type MonitorRecord = BaseCaptureRecord;
 
-export type MonitorPowerSample = {
-  timestamp_us: number;
-  recv_counter: number;
-  vbus_mv: number;
-  ibus_ma: number;
-  cc1_mv: number;
-  cc2_mv: number;
-  dp_mv: number;
-  dm_mv: number;
-  active_cc: number;
-  event_type: number;
-};
+export type MonitorDeviceStatus = BaseCaptureDeviceStatus;
 
-export type MonitorDeviceStatus = {
-  readonly isSupported: boolean;
-  readonly isConnected: boolean;
-  readonly isConnecting: boolean;
-  readonly isSending: boolean;
-  readonly error: string | null;
-  readonly productName: string | null;
-  readonly fingerprint: string | null;
-};
-
-export type MonitorDevice = {
-  readonly isSupported: boolean;
-  connect(): Promise<void>;
-  connectAuthorized(preferredFingerprint?: string | null): Promise<void>;
-  disconnect(): Promise<void>;
-  setAutoReconnect(enabled: boolean, preferredFingerprint?: string | null): void;
-  dispose(): void;
+export type MonitorDevice = BaseCaptureDevice & {
   sendRawPd(target: MonitorPdTxTarget, payload: Uint8Array): Promise<void>;
   sendHardReset(): Promise<void>;
   sendCableReset(): Promise<void>;
   setCCMode(config: MonitorCCModeConfig): Promise<void>;
-  onRecord(listener: (record: MonitorRecord) => void): () => void;
-  onPowerSample(listener: (sample: MonitorPowerSample) => void): () => void;
-  onStatus(listener: (status: MonitorDeviceStatus) => void): () => void;
 };
 
 export type MonitorPdTxTarget = "SOP" | "SOP_PRIME" | "SOP_DPRIME";
@@ -209,69 +170,46 @@ function microampsToMilliamps(ibusUa: number): number {
   return ibusUa / 1000;
 }
 
-function reportToRecord(report: NativeMonitorEventReport, dropCount?: number): MonitorRecord {
+function reportToRecord(report: NativeMonitorEventReport): MonitorRecord | null {
+  const eventType = monitorEventToCaptureEvent(report.eventType);
+  if (eventType === null) {
+    return null;
+  }
+
   return {
     timestamp_us: report.timestampUs,
-    recv_counter: report.recvCount,
+    seq: report.recvCount,
     vbus_mv: report.snapshot.vbusMv,
     ibus_ma: microampsToMilliamps(report.snapshot.ibusUa),
     cc1_mv: report.snapshot.cc1Mv,
     cc2_mv: report.snapshot.cc2Mv,
     dp_mv: report.snapshot.dpMv,
     dm_mv: report.snapshot.dmMv,
-    event_type: report.eventType,
+    event_type: eventType,
     active_cc: report.activeCC,
     data_len: report.payloadLen,
     data: Array.from(report.payload),
-    ...(dropCount === undefined ? {} : { drop_count: dropCount }),
   };
 }
 
-function recordToPowerSample(record: MonitorRecord): MonitorPowerSample {
-  return {
-    timestamp_us: record.timestamp_us,
-    recv_counter: record.recv_counter,
-    vbus_mv: record.vbus_mv,
-    ibus_ma: record.ibus_ma,
-    cc1_mv: record.cc1_mv,
-    cc2_mv: record.cc2_mv,
-    dp_mv: record.dp_mv,
-    dm_mv: record.dm_mv,
-    active_cc: record.active_cc,
-    event_type: record.event_type,
-  };
+function isPassthroughMonitorRecordEvent(eventType: CaptureEventType): boolean {
+  return eventType === CAPTURE_EVENT.DISCONNECT ||
+    eventType === CAPTURE_EVENT.CC1_CONNECT ||
+    eventType === CAPTURE_EVENT.CC2_CONNECT ||
+    eventType === CAPTURE_EVENT.PD_SOP0 ||
+    eventType === CAPTURE_EVENT.PD_SOP1 ||
+    eventType === CAPTURE_EVENT.PD_SOP2 ||
+    eventType === CAPTURE_EVENT.PD_SOP1_DEBUG ||
+    eventType === CAPTURE_EVENT.PD_SOP2_DEBUG ||
+    eventType === CAPTURE_EVENT.PD_HARD_RESET ||
+    eventType === CAPTURE_EVENT.PD_CABLE_RESET;
 }
 
-function statusReportToPowerSample(report: NativeMonitorStatusReport): MonitorPowerSample {
-  return {
-    timestamp_us: report.timestampUs,
-    recv_counter: report.recvCount,
-    vbus_mv: report.snapshot.vbusMv,
-    ibus_ma: microampsToMilliamps(report.snapshot.ibusUa),
-    cc1_mv: report.snapshot.cc1Mv,
-    cc2_mv: report.snapshot.cc2Mv,
-    dp_mv: report.snapshot.dpMv,
-    dm_mv: report.snapshot.dmMv,
-    active_cc: report.activeCC,
-    event_type: STATUS_SAMPLE_EVENT_TYPE,
-  };
-}
-
-function isPassthroughMonitorRecordEvent(eventType: number): boolean {
-  return (
-    isPdMonitorEvent(eventType) ||
-    eventType === MONITOR_EVENT.DISCONNECT ||
-    eventType === MONITOR_EVENT.CC1_CONNECT ||
-    eventType === MONITOR_EVENT.CC2_CONNECT ||
-    eventType === MONITOR_EVENT.BUFFER_OVERFLOW
-  );
-}
-
-function ufcsDirection(eventType: number): UfcsDirection | null {
+function ufcsDirection(eventType: CaptureEventType): UfcsDirection | null {
   switch (eventType) {
-    case MONITOR_EVENT.UFCS_DP:
+    case CAPTURE_EVENT.UFCS_DP:
       return "dp";
-    case MONITOR_EVENT.UFCS_DM:
+    case CAPTURE_EVENT.UFCS_DM:
       return "dm";
     default:
       return null;
@@ -330,7 +268,7 @@ export function createMonitorRecordNormalizer(): MonitorRecordNormalizer {
         if (
           otherPrevious === null &&
           previous !== null &&
-          previous.recv_counter === record.recv_counter &&
+          previous.seq === record.seq &&
           previous.event_type === record.event_type
         ) {
           return [assembleUfcsRecord(previous, record)];
@@ -365,8 +303,8 @@ export function createMonitorRecordNormalizer(): MonitorRecordNormalizer {
 export function createMonitorDevice(): MonitorDevice {
   const hid = getHid();
   const recordListeners = new Set<(record: MonitorRecord) => void>();
-  const powerListeners = new Set<(sample: MonitorPowerSample) => void>();
   const statusListeners = new Set<(status: MonitorDeviceStatus) => void>();
+  const statsListeners = new Set<(stats: BaseCaptureDeviceStats) => void>();
   const recordNormalizer = createMonitorRecordNormalizer();
 
   let device: HidDeviceLike | null = null;
@@ -377,7 +315,7 @@ export function createMonitorDevice(): MonitorDevice {
   let autoReconnect = false;
   let autoReconnectFingerprint: string | null = null;
   let disposed = false;
-  let latestDropCount: number | undefined;
+  let latestStats: BaseCaptureDeviceStats = { recv_count: 0, drop_count: 0 };
   let statusPollTimer: ReturnType<typeof setInterval> | null = null;
   let statusPollInFlight = false;
   let queuedReportWrite: Promise<void> = Promise.resolve();
@@ -401,8 +339,8 @@ export function createMonitorDevice(): MonitorDevice {
     for (const listener of recordListeners) listener(record);
   };
 
-  const emitPowerSample = (sample: MonitorPowerSample): void => {
-    for (const listener of powerListeners) listener(sample);
+  const emitStats = (stats: BaseCaptureDeviceStats): void => {
+    for (const listener of statsListeners) listener(stats);
   };
 
   const processRecord = (record: MonitorRecord): void => {
@@ -464,13 +402,23 @@ export function createMonitorDevice(): MonitorDevice {
     try {
       const report = parseNativeMonitorHidReportBody(normalizeReportBody(event.reportId, event.data));
       if (report.reportType === NATIVE_HID_REPORT_TYPE.STATUS) {
-        latestDropCount = report.dropCount;
-        emitPowerSample(statusReportToPowerSample(report));
+        latestStats = {
+          recv_count: report.recvCount,
+          drop_count: report.dropCount,
+        };
+        emitStats(latestStats);
         return;
       }
 
-      const record = reportToRecord(report, latestDropCount);
-      emitPowerSample(recordToPowerSample(record));
+      const record = reportToRecord(report);
+      if (record === null) {
+        return;
+      }
+      latestStats = {
+        recv_count: record.seq,
+        drop_count: latestStats.drop_count,
+      };
+      emitStats(latestStats);
       processRecord(record);
     } catch (caught) {
       error = caught instanceof Error ? caught.message : "Failed to parse HID input report.";
@@ -484,7 +432,7 @@ export function createMonitorDevice(): MonitorDevice {
     if (nextDevice.opened) {
       device = nextDevice;
       error = null;
-      latestDropCount = undefined;
+      latestStats = { recv_count: 0, drop_count: 0 };
       nextDevice.addEventListener("inputreport", handleInputReport);
       startStatusPolling();
       emitStatus();
@@ -499,7 +447,7 @@ export function createMonitorDevice(): MonitorDevice {
       await nextDevice.open();
       device = nextDevice;
       error = null;
-      latestDropCount = undefined;
+      latestStats = { recv_count: 0, drop_count: 0 };
       nextDevice.addEventListener("inputreport", handleInputReport);
       startStatusPolling();
     } catch (caught) {
@@ -539,7 +487,7 @@ export function createMonitorDevice(): MonitorDevice {
     stopStatusPolling();
     current.removeEventListener("inputreport", handleInputReport);
     recordNormalizer.reset();
-    latestDropCount = undefined;
+    latestStats = { recv_count: 0, drop_count: 0 };
     device = null;
     emitStatus();
   };
@@ -571,6 +519,24 @@ export function createMonitorDevice(): MonitorDevice {
   return {
     get isSupported() {
       return hid !== null;
+    },
+    get isConnected() {
+      return device?.opened ?? false;
+    },
+    get isConnecting() {
+      return isConnecting;
+    },
+    get isSending() {
+      return isSending;
+    },
+    get error() {
+      return error;
+    },
+    get productName() {
+      return device?.productName ?? null;
+    },
+    get fingerprint() {
+      return device === null ? null : deviceFingerprint(device);
     },
     async connect(): Promise<void> {
       if (hid === null) {
@@ -617,7 +583,7 @@ export function createMonitorDevice(): MonitorDevice {
         }
       } finally {
         recordNormalizer.reset();
-        latestDropCount = undefined;
+        latestStats = { recv_count: 0, drop_count: 0 };
         device = null;
         emitStatus();
       }
@@ -637,7 +603,7 @@ export function createMonitorDevice(): MonitorDevice {
         device.removeEventListener("inputreport", handleInputReport);
       }
       recordNormalizer.reset();
-      latestDropCount = undefined;
+      latestStats = { recv_count: 0, drop_count: 0 };
       device = null;
       emitStatus();
     },
@@ -657,14 +623,15 @@ export function createMonitorDevice(): MonitorDevice {
       recordListeners.add(listener);
       return () => recordListeners.delete(listener);
     },
-    onPowerSample(listener: (sample: MonitorPowerSample) => void): () => void {
-      powerListeners.add(listener);
-      return () => powerListeners.delete(listener);
-    },
     onStatus(listener: (status: MonitorDeviceStatus) => void): () => void {
       statusListeners.add(listener);
       listener(status());
       return () => statusListeners.delete(listener);
+    },
+    onStats(listener: (stats: BaseCaptureDeviceStats) => void): () => void {
+      statsListeners.add(listener);
+      listener(latestStats);
+      return () => statsListeners.delete(listener);
     },
   };
 }

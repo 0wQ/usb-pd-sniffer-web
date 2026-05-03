@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { createBatchedQueue } from '@/lib/batching/batchedQueue'
 import { createCaptureBuffer, type CaptureBuffer } from '@/lib/buffers/captureBuffer'
-import { createPowerSamplesBuffer, type PowerSamplesBuffer } from '@/lib/buffers/powerSamplesBuffer'
 import {
   readDevicePreferences,
   writeAutoConnectOnLoad,
@@ -13,7 +12,7 @@ import {
   type LastDeviceFingerprints,
 } from '@/lib/preferences/devicePreferences'
 import type { MonitorDeviceKind } from '@/lib/devices/monitorDrivers'
-import type { CaptureRecord, PowerSample } from '@/types/pd'
+import type { CaptureDeviceStats, CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
 import { downloadCsv, exportToCsv, generateFilename } from '@/utils/csvHelper'
 
 interface DeviceState {
@@ -27,32 +26,26 @@ interface DeviceState {
   selectedMonitorDeviceKind: MonitorDeviceKind
   lastDeviceFingerprints: LastDeviceFingerprints
   detailContextBacktrackRecords: number | null
-  powerCaptureEnabled: boolean
   protocolSelectedIndex: number | null
 
   captureBuffer: CaptureBuffer
-  powerBuffer: PowerSamplesBuffer
   captureVersion: number
-  powerVersion: number
   captureCount: number
-  powerCount: number
+  deviceStats: CaptureDeviceStats
 
   setIsConnected: (isConnected: boolean) => void
   setIsConnecting: (isConnecting: boolean) => void
+  setDeviceStats: (stats: CaptureDeviceStats) => void
   setManualDisconnect: (manualDisconnect: boolean) => void
   setAutoConnectOnLoad: (autoConnectOnLoad: boolean) => void
   setAutoReconnectOnHotplug: (autoReconnectOnHotplug: boolean) => void
   setSelectedMonitorDeviceKind: (kind: MonitorDeviceKind) => void
   setLastDeviceFingerprintForKind: (kind: MonitorDeviceKind, fingerprint: string | null) => void
   setDetailContextBacktrackRecords: (detailContextBacktrackRecords: number | null) => void
-  setPowerCaptureEnabled: (powerCaptureEnabled: boolean) => void
   setProtocolSelectedIndex: (protocolSelectedIndex: number | null) => void
   addRecord: (record: CaptureRecord) => void
-  addPowerSample: (sample: PowerSample) => void
   flushPendingRecords: () => void
-  flushPendingPowerSamples: () => void
   clearRecords: () => void
-  clearPowerSamples: () => void
   resetDevice: () => void
   importRecords: (records: CaptureRecord[], mode: 'replace' | 'append') => void
 }
@@ -61,9 +54,6 @@ const CAPTURE_BATCH_SIZE = 1000
 const CAPTURE_BATCH_TIMEOUT = 50
 const CAPTURE_BUFFER_CAPACITY = 500_000
 const CAPTURE_AUTO_EXPORT_RECORD_LIMIT = 100_000
-const POWER_BUFFER_CAPACITY = 500_000
-const POWER_BATCH_SIZE = 200
-const POWER_BATCH_TIMEOUT = 50
 
 const initialPreferences = readDevicePreferences()
 
@@ -134,19 +124,6 @@ const useDeviceStore = create<DeviceState>()((set, get) => {
     },
   })
 
-  const powerQueue = createBatchedQueue<PowerSample>({
-    maxBatchSize: POWER_BATCH_SIZE,
-    timeoutMs: POWER_BATCH_TIMEOUT,
-    onFlush(samples) {
-      const { powerBuffer } = get()
-      powerBuffer.addBatch(samples)
-      set({
-        powerVersion: powerBuffer.currentVersion,
-        powerCount: powerBuffer.length,
-      })
-    },
-  })
-
   return {
     isConnected: false,
     isConnecting: false,
@@ -156,18 +133,20 @@ const useDeviceStore = create<DeviceState>()((set, get) => {
     selectedMonitorDeviceKind: initialPreferences.selectedMonitorDeviceKind,
     lastDeviceFingerprints: initialPreferences.lastDeviceFingerprints,
     detailContextBacktrackRecords: initialPreferences.detailContextBacktrackRecords,
-    powerCaptureEnabled: false,
     protocolSelectedIndex: null,
     captureBuffer: createCaptureBuffer(CAPTURE_BUFFER_CAPACITY),
-    powerBuffer: createPowerSamplesBuffer(POWER_BUFFER_CAPACITY),
     captureVersion: 0,
-    powerVersion: 0,
     captureCount: 0,
-    powerCount: 0,
+    deviceStats: {
+      recv_count: 0,
+      drop_count: 0,
+    },
 
     setIsConnected: (isConnected) => set({ isConnected }),
 
     setIsConnecting: (isConnecting) => set({ isConnecting }),
+
+    setDeviceStats: (deviceStats) => set({ deviceStats }),
 
     setManualDisconnect: (manualDisconnect) => {
       writeManualDisconnect(manualDisconnect)
@@ -207,31 +186,14 @@ const useDeviceStore = create<DeviceState>()((set, get) => {
       set({ detailContextBacktrackRecords })
     },
 
-    setPowerCaptureEnabled: (powerCaptureEnabled) => {
-      if (!powerCaptureEnabled) {
-        powerQueue.clear()
-      }
-
-      set({ powerCaptureEnabled })
-    },
-
     setProtocolSelectedIndex: (protocolSelectedIndex) => set({ protocolSelectedIndex }),
 
     addRecord: (record) => {
       captureQueue.push(record)
     },
 
-    addPowerSample: (sample) => {
-      if (!get().powerCaptureEnabled) return
-      powerQueue.push(sample)
-    },
-
     flushPendingRecords: () => {
       captureQueue.flush()
-    },
-
-    flushPendingPowerSamples: () => {
-      powerQueue.flush()
     },
 
     clearRecords: () => {
@@ -240,30 +202,26 @@ const useDeviceStore = create<DeviceState>()((set, get) => {
       captureQueue.clear()
       captureBuffer.clear()
       set({
+        deviceStats: {
+          recv_count: 0,
+          drop_count: 0,
+        },
         protocolSelectedIndex: null,
         captureVersion: captureBuffer.currentVersion,
         captureCount: 0,
       })
     },
 
-    clearPowerSamples: () => {
-      const { powerBuffer } = get()
-
-      powerQueue.clear()
-      powerBuffer.clear()
-      set({
-        powerVersion: powerBuffer.currentVersion,
-        powerCount: 0,
-      })
-    },
-
     resetDevice: () => {
       captureQueue.clear()
-      powerQueue.clear()
 
       set({
         isConnected: false,
         isConnecting: false,
+        deviceStats: {
+          recv_count: 0,
+          drop_count: 0,
+        },
       })
     },
 
@@ -290,8 +248,5 @@ const useDeviceStore = create<DeviceState>()((set, get) => {
 export const selectCaptureCount = (state: DeviceState) => state.captureCount
 export const selectCaptureVersion = (state: DeviceState) => state.captureVersion
 export const selectCaptureBuffer = (state: DeviceState) => state.captureBuffer
-export const selectPowerCount = (state: DeviceState) => state.powerCount
-export const selectPowerVersion = (state: DeviceState) => state.powerVersion
-export const selectPowerBuffer = (state: DeviceState) => state.powerBuffer
 
 export default useDeviceStore

@@ -3,15 +3,15 @@ import { parsePdHexPayload } from '@usb-pd-sniffer/pd-device-native-hid'
 import {
   getMonitorDeviceDriver,
   MONITOR_DEVICE_OPTIONS,
-  type MonitorDeviceLike,
-  type MonitorDeviceStatusLike,
+  type MonitorDevice,
+  type MonitorDeviceStatus,
   type MonitorCCModeConfig,
   type MonitorDeviceKind,
   type MonitorPdTxTarget,
 } from '@/lib/devices/monitorDrivers'
 import useDeviceStore from '@/stores/deviceStore'
 
-function statusError(status: MonitorDeviceStatusLike, apiName: string): string | null {
+function statusError(status: MonitorDeviceStatus, apiName: string): string | null {
   if (!status.isSupported) {
     return `${apiName} is not supported. Please use Chrome, Edge, or Opera.`
   }
@@ -37,6 +37,7 @@ export function useMonitorDevice() {
   const setIsConnecting = useDeviceStore((state) => state.setIsConnecting)
   const manualDisconnect = useDeviceStore((state) => state.manualDisconnect)
   const setManualDisconnect = useDeviceStore((state) => state.setManualDisconnect)
+  const setDeviceStats = useDeviceStore((state) => state.setDeviceStats)
   const autoConnectOnLoad = useDeviceStore((state) => state.autoConnectOnLoad)
   const autoReconnectOnHotplug = useDeviceStore((state) => state.autoReconnectOnHotplug)
   const selectedMonitorDeviceKind = useDeviceStore((state) => state.selectedMonitorDeviceKind)
@@ -44,24 +45,17 @@ export function useMonitorDevice() {
   const lastDeviceFingerprints = useDeviceStore((state) => state.lastDeviceFingerprints)
   const setLastDeviceFingerprintForKind = useDeviceStore((state) => state.setLastDeviceFingerprintForKind)
   const addRecord = useDeviceStore((state) => state.addRecord)
-  const addPowerSample = useDeviceStore((state) => state.addPowerSample)
-  const powerCaptureEnabled = useDeviceStore((state) => state.powerCaptureEnabled)
   const resetDevice = useDeviceStore((state) => state.resetDevice)
   const selectedDriver = getMonitorDeviceDriver(selectedMonitorDeviceKind)
   const selectedFingerprint = lastDeviceFingerprints[selectedMonitorDeviceKind] ?? null
 
-  const deviceRef = useRef<MonitorDeviceLike | null>(null)
-  const latestPowerCaptureEnabled = useRef(powerCaptureEnabled)
+  const deviceRef = useRef<MonitorDevice | null>(null)
   const latestAutoReconnect = useRef(autoReconnectOnHotplug)
   const latestFingerprint = useRef(selectedFingerprint)
   const autoConnectAttempted = useRef(false)
   const [isDeviceSupported, setIsDeviceSupported] = useState(false)
   const [deviceError, setDeviceError] = useState<string | null>(null)
   const [isSending, setIsSending] = useState(false)
-
-  useEffect(() => {
-    latestPowerCaptureEnabled.current = powerCaptureEnabled
-  }, [powerCaptureEnabled])
 
   useEffect(() => {
     latestAutoReconnect.current = autoReconnectOnHotplug
@@ -87,14 +81,6 @@ export function useMonitorDevice() {
       addRecord(record)
     })
 
-    const offPowerSample = monitorDevice.onPowerSample((sample) => {
-      if (!latestPowerCaptureEnabled.current) {
-        return
-      }
-
-      addPowerSample(sample)
-    })
-
     const offStatus = monitorDevice.onStatus((status) => {
       setIsDeviceSupported(status.isSupported)
       setDeviceError(statusError(status, driver.apiName))
@@ -111,20 +97,24 @@ export function useMonitorDevice() {
       }
     })
 
+    const offStats = monitorDevice.onStats((stats) => {
+      setDeviceStats(stats)
+    })
+
     return () => {
       logDevice('dispose monitor device', { kind: driver.kind })
       offRecord()
-      offPowerSample()
       offStatus()
+      offStats()
       monitorDevice.dispose()
       resetDevice()
       deviceRef.current = null
     }
   }, [
-    addPowerSample,
     addRecord,
     resetDevice,
     selectedMonitorDeviceKind,
+    setDeviceStats,
     setIsConnected,
     setIsConnecting,
     setLastDeviceFingerprintForKind,

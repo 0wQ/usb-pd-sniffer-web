@@ -27,6 +27,7 @@
     "paths": {
       "@/*": ["./src/*"],
       "@usb-pd-sniffer/pd-core": ["../pd-core/src/index.ts"],
+      "@usb-pd-sniffer/pd-device-types": ["../pd-device-types/src/index.ts"],
       "@usb-pd-sniffer/pd-device-native-hid": ["../pd-device-native-hid/src/index.ts"],
       "@usb-pd-sniffer/pd-device-native-cdc": ["../pd-device-native-cdc/src/index.ts"],
       "@usb-pd-sniffer/pd-device-atk-c2": ["../pd-device-atk-c2/src/index.ts"]

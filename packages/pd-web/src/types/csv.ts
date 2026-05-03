@@ -6,7 +6,7 @@ export interface ValidationError {
 }
 
 export interface ImportResult {
-  records: import('./pd').CaptureRecord[]
+  records: import('@usb-pd-sniffer/pd-device-types').CaptureRecord[]
   errors: ValidationError[]
 }
 

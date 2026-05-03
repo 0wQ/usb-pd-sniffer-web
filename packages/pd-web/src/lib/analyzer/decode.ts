@@ -4,17 +4,15 @@ import {
   type MessagePacket,
 } from '@usb-pd-sniffer/pd-core'
 import {
-  MONITOR_EVENT,
-  toPdObservedFrameFromMonitorEvent,
+  type MonitorPdFrame,
 } from '@usb-pd-sniffer/pd-device-native-hid'
-import type { CaptureRecord } from '@/types/pd'
+import { CAPTURE_EVENT } from '@usb-pd-sniffer/pd-device-types'
+import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
 
 export function recordToMessagePacket(record: CaptureRecord) {
   const rawPayload = Uint8Array.from(record.data.slice(0, record.data_len))
-  return toPdObservedFrameFromMonitorEvent({
-    eventType: record.event_type,
-    payload: rawPayload,
-  })
+  const frame = recordToPdFrame(record.event_type, rawPayload)
+  return frame
 }
 
 export function decodeSingleRecord(record: CaptureRecord): DecodedPacket | null {
@@ -59,8 +57,8 @@ function findPreviousChunkedExtendedPackets(
     scannedRecords = targetIndex - index
 
     if (
-      records[index]?.event_type === MONITOR_EVENT.HARD_RESET ||
-      records[index]?.event_type === MONITOR_EVENT.CABLE_RESET
+      records[index]?.event_type === CAPTURE_EVENT.PD_HARD_RESET ||
+      records[index]?.event_type === CAPTURE_EVENT.PD_CABLE_RESET
     ) {
       break
     }
@@ -109,8 +107,8 @@ function findNearestSourceCapabilitiesFrame(
     scannedRecords = targetIndex - index
 
     if (
-      records[index]?.event_type === MONITOR_EVENT.HARD_RESET ||
-      records[index]?.event_type === MONITOR_EVENT.CABLE_RESET
+      records[index]?.event_type === CAPTURE_EVENT.PD_HARD_RESET ||
+      records[index]?.event_type === CAPTURE_EVENT.PD_CABLE_RESET
     ) {
       break
     }
@@ -179,5 +177,21 @@ export function decodeRecordAtIndex(
       sourceCapabilities.scannedRecords,
       previousChunkedExtendedPackets.scannedRecords,
     ),
+  }
+}
+function recordToPdFrame(eventType: CaptureRecord['event_type'], payload: Uint8Array): MonitorPdFrame | null {
+  switch (eventType) {
+    case CAPTURE_EVENT.PD_SOP0:
+      return { sop: 'SOP', bytes: payload }
+    case CAPTURE_EVENT.PD_SOP1:
+      return { sop: 'SOP_PRIME', bytes: payload }
+    case CAPTURE_EVENT.PD_SOP2:
+      return { sop: 'SOP_DPRIME', bytes: payload }
+    case CAPTURE_EVENT.PD_SOP1_DEBUG:
+      return { sop: 'SOP_PRIME_DEBUG', bytes: payload }
+    case CAPTURE_EVENT.PD_SOP2_DEBUG:
+      return { sop: 'SOP_DPRIME_DEBUG', bytes: payload }
+    default:
+      return null
   }
 }

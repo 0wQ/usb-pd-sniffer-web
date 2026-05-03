@@ -2,7 +2,6 @@ import clsx from 'clsx'
 import { useMemo } from 'react'
 import type { DecodedPacket } from '@usb-pd-sniffer/pd-core'
 import useDeviceStore from '@/stores/deviceStore'
-import { monitorEventName } from '@usb-pd-sniffer/pd-device-native-hid'
 import { decodeRecordAtIndex, decodeSingleRecord } from '@/lib/analyzer/decode'
 import { decodeUfcsRecordType, formatUfcsTypeSummary, type UfcsTypeDecode } from '@/lib/ufcs/ufcsType'
 import { hexBytes, IssueList, SectionView } from '@/components/decode/DecodedSectionsView'
@@ -161,7 +160,7 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
                 </div>
                 <div>
                   <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Event</div>
-                  <div className="mt-1 font-mono text-xs">{monitorEventName(selectedRecord.event_type)}</div>
+                  <div className="mt-1 font-mono text-xs">{selectedRecord.event_type}</div>
                 </div>
                 <div>
                   <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Payload</div>

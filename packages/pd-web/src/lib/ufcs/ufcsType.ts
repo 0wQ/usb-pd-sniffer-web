@@ -1,5 +1,5 @@
-import { MONITOR_EVENT } from '@usb-pd-sniffer/pd-device-native-hid'
-import type { CaptureRecord } from '@/types/pd'
+import { CAPTURE_EVENT } from '@usb-pd-sniffer/pd-device-types'
+import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
 
 const UFCS_TRAINING_BYTE = 0xAA
 
@@ -58,8 +58,8 @@ export type UfcsTypeDecode = {
 
 export function isUfcsRecord(record: CaptureRecord): boolean {
   return (
-    record.event_type === MONITOR_EVENT.UFCS_DP ||
-    record.event_type === MONITOR_EVENT.UFCS_DM
+    record.event_type === CAPTURE_EVENT.UFCS_DP ||
+    record.event_type === CAPTURE_EVENT.UFCS_DM
   )
 }
 
@@ -112,8 +112,8 @@ export function decodeUfcsRecordType(record: CaptureRecord): UfcsTypeDecode | nu
 }
 
 export function formatUfcsSignal(record: CaptureRecord): string | null {
-  if (record.event_type === MONITOR_EVENT.UFCS_DP) return 'D+'
-  if (record.event_type === MONITOR_EVENT.UFCS_DM) return 'D-'
+  if (record.event_type === CAPTURE_EVENT.UFCS_DP) return 'D+'
+  if (record.event_type === CAPTURE_EVENT.UFCS_DM) return 'D-'
   return null
 }
 

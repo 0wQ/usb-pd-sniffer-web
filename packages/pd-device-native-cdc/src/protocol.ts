@@ -1,9 +1,9 @@
 import {
   encodeNativeMonitorCommandPayload,
   MONITOR_EVENT,
-  type MonitorRecord,
   type NativeMonitorTxCommand,
 } from "@usb-pd-sniffer/pd-device-native-hid";
+import type { CaptureRecord } from "@usb-pd-sniffer/pd-device-types";
 
 export const NATIVE_CDC_USB = {
   vendorId: 0x1a86,
@@ -25,6 +25,11 @@ export type NativeCdcFrame = {
   type: number;
   payload: Uint8Array;
 };
+
+type RawNativeCdcEventRecord =
+  Omit<CaptureRecord, "event_type"> & {
+    event_type: number;
+  };
 
 function getU16LE(bytes: Uint8Array, offset: number): number {
   return bytes[offset] | (bytes[offset + 1] << 8);
@@ -181,7 +186,7 @@ export class NativeCdcFrameParser {
   }
 }
 
-export function parseNativeCdcEventPayload(payload: Uint8Array): MonitorRecord {
+export function parseNativeCdcEventPayload(payload: Uint8Array): RawNativeCdcEventRecord {
   validateNativeCdcEventPayload(payload);
 
   const timestampUsLo = getU32LE(payload, 0);
@@ -191,7 +196,7 @@ export function parseNativeCdcEventPayload(payload: Uint8Array): MonitorRecord {
 
   return {
     timestamp_us: Number(timestampUs),
-    recv_counter: getU32LE(payload, 8),
+    seq: getU32LE(payload, 8),
     vbus_mv: getU16LE(payload, 12),
     ibus_ma: getI32LE(payload, 14) / 1000,
     cc1_mv: getU16LE(payload, 18),

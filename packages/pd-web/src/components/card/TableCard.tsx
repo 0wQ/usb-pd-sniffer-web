@@ -1,8 +1,8 @@
 import { useEffect, useState, useMemo, memo, useCallback, useRef } from 'react'
 import { List, useListCallbackRef, type RowComponentProps } from 'react-window'
 import { toast } from 'sonner'
+import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
 import useDeviceStore from '@/stores/deviceStore'
-import type { CaptureRecord } from '@/types/pd'
 import type { ImportMode } from '@/types/csv'
 import { exportToCsv, importFromCsv, generateFilename, downloadCsv, readFile } from '@/utils/csvHelper'
 import ImportDialog from '@/components/common/ImportDialog'
@@ -21,7 +21,6 @@ import {
   Settings,
   Upload,
 } from 'lucide-react'
-import { monitorEventName } from '@usb-pd-sniffer/pd-device-native-hid'
 import { decodeSingleRecord } from '@/lib/analyzer/decode'
 import { decodeUfcsRecordType, formatUfcsSignal, formatUfcsTypeSummary } from '@/lib/ufcs/ufcsType'
 import { formatCompactPowerRoleOrCable, formatCompactSop } from '@/lib/display/pdTableFields'
@@ -226,7 +225,7 @@ const RowComponentInner = ({ ariaAttributes, index, style, records, onRowClick, 
     const versionText = decoded?.header?.specificationRevision ?? ''
     const typeDesc =
       decoded === null
-        ? (formatUfcsTypeSummary(ufcsDecoded) ?? monitorEventName(record.event_type))
+        ? (formatUfcsTypeSummary(ufcsDecoded) ?? record.event_type)
         : (decoded.messageType.name ?? decoded.category)
     const sopDesc = formatCompactSop(decoded?.frame.sop)
     const dataRole =
@@ -236,7 +235,7 @@ const RowComponentInner = ({ ariaAttributes, index, style, records, onRowClick, 
     const powerRole = formatCompactPowerRoleOrCable(decoded?.frame.sop, decoded?.header)
 
     const cells: Record<ColumnKey, React.ReactNode> = {
-      seq: record.recv_counter,
+      seq: record.seq,
       time: timestampText,
       deltaTime: deltaTimeText,
       vbus: record.vbus_mv,
@@ -471,11 +470,9 @@ TableComponent.displayName = 'TableComponent'
 
 const RecordCounterComponent = memo(() => {
   const captureCount = useDeviceStore((state) => state.captureCount)
-  const captureBuffer = useDeviceStore((state) => state.captureBuffer)
-
-  const lastRecord = captureCount > 0 ? captureBuffer.get(captureCount - 1) : null
-  const dropCount = lastRecord?.drop_count
-  const hasDropCount = typeof dropCount === 'number' && dropCount > 0
+  const deviceStats = useDeviceStore((state) => state.deviceStats)
+  const dropCount = deviceStats.drop_count
+  const hasDropCount = dropCount > 0
   const dropText = hasDropCount ? dropCount.toLocaleString() : ''
 
   return (

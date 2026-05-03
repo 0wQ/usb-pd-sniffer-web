@@ -5,6 +5,9 @@
       "path": "./packages/pd-core"
     },
     {
+      "path": "./packages/pd-device-types"
+    },
+    {
       "path": "./packages/pd-device-native-hid"
     },
     {

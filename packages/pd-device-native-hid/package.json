@@ -20,6 +20,9 @@
     "clean": "rm -rf dist *.tsbuildinfo",
     "typecheck": "pnpm exec tsc -p tsconfig.json --pretty false"
   },
+  "dependencies": {
+    "@usb-pd-sniffer/pd-device-types": "workspace:*"
+  },
   "publishConfig": {
     "access": "public"
   }

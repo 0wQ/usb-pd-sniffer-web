@@ -1,7 +1,7 @@
 import { Toaster } from 'sonner'
 import Layout from '@/components/common/Layout'
-import PowerPage from '@/components/pages/PowerPage'
 import { type AppView } from '@/components/common/ViewTabs'
+import PowerPage from '@/components/pages/PowerPage'
 import { useMonitorDevice } from '@/hooks/useMonitorDevice'
 import { useBeforeUnloadWarning } from '@/hooks/useBeforeUnloadWarning'
 import useDeviceStore from '@/stores/deviceStore'
@@ -123,7 +123,6 @@ function App() {
         <PowerPage
           isConnected={isConnected}
           isConnecting={isConnecting}
-          monitorDeviceCapabilities={monitorDeviceCapabilities}
           onConnectBtnClick={handleConnectBtnClick}
           isDeviceSupported={isDeviceSupported}
           currentView={currentView}

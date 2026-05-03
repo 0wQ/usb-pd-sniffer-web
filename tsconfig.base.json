@@ -20,6 +20,9 @@
       "@usb-pd-sniffer/pd-core": [
         "./packages/pd-core/src/index.ts"
       ],
+      "@usb-pd-sniffer/pd-device-types": [
+        "./packages/pd-device-types/src/index.ts"
+      ],
       "@usb-pd-sniffer/pd-device-native-hid": [
         "./packages/pd-device-native-hid/src/index.ts"
       ],
