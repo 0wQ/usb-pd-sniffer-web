@@ -314,7 +314,7 @@ describe("native CDC monitor device", () => {
     await vi.advanceTimersByTimeAsync(300);
 
     const payload = new Uint8Array(NATIVE_CDC_EVENT_HEADER_SIZE + 2);
-    payload[24] = MONITOR_EVENT.PD_SOP0;
+    payload[26] = MONITOR_EVENT.PD_SOP0;
     payload.set([0x42, 0x10], NATIVE_CDC_EVENT_HEADER_SIZE);
     secondPort.enqueue(encodeNativeCdcFrame(NATIVE_CDC_FRAME_TYPE_EVENT, payload));
     await Promise.resolve();

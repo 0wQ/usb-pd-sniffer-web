@@ -1,5 +1,4 @@
 import {
-  MONITOR_EVENT,
   MONITOR_TX_CMD,
   type MonitorCCModeConfig,
   type MonitorDevice,
@@ -290,12 +289,8 @@ export function createNativeCdcMonitorDevice(options: NativeCdcMonitorDeviceOpti
         continue;
       }
 
-      if (record.event_type === MONITOR_EVENT.POWER_TELEMETRY) {
-        const sample = recordToPowerSample(record);
-        for (const listener of powerListeners) listener(sample);
-        continue;
-      }
-
+      const sample = recordToPowerSample(record);
+      for (const listener of powerListeners) listener(sample);
       emitRecord(record);
     }
   };

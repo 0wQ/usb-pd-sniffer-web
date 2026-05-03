@@ -40,12 +40,6 @@ describe("monitor record normalizer", () => {
     expect(normalizer.push(overflow)).toEqual([overflow]);
   });
 
-  test("keeps power telemetry outside capture records", () => {
-    const normalizer = createMonitorRecordNormalizer();
-
-    expect(normalizer.push(record(MONITOR_EVENT.POWER_TELEMETRY, 5, []))).toEqual([]);
-  });
-
   test("passes short UFCS records through unchanged", () => {
     const normalizer = createMonitorRecordNormalizer();
     const input = record(MONITOR_EVENT.UFCS_DP, 7, [1, 2, 3]);

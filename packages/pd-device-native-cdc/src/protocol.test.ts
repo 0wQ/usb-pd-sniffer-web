@@ -47,7 +47,7 @@ describe("native CDC protocol", () => {
   test("parses fragmented byte stream frames", () => {
     const parser = new NativeCdcFrameParser();
     const payload = new Uint8Array(NATIVE_CDC_EVENT_HEADER_SIZE);
-    payload[24] = MONITOR_EVENT.POWER_TELEMETRY;
+    payload[26] = MONITOR_EVENT.PD_SOP0;
     const frame = encodeNativeCdcFrame(NATIVE_CDC_FRAME_TYPE_EVENT, payload);
 
     expect(parser.push(frame.subarray(0, 2))).toEqual([]);
@@ -62,12 +62,12 @@ describe("native CDC protocol", () => {
   test("rejects false magic candidates with invalid event payloads", () => {
     const parser = new NativeCdcFrameParser();
     const invalidPayload = new Uint8Array(NATIVE_CDC_EVENT_HEADER_SIZE + 10);
-    invalidPayload[24] = 153;
+    invalidPayload[26] = 153;
     invalidPayload.set([0x80, 0x04, 0x00, 0xb8, 0xe1, 0x4e, 0x58, 0x0a, 0x55, 0x50], NATIVE_CDC_EVENT_HEADER_SIZE);
 
     const validPayload = new Uint8Array(NATIVE_CDC_EVENT_HEADER_SIZE);
-    validPayload[24] = MONITOR_EVENT.POWER_TELEMETRY;
-    validPayload[25] = 1;
+    validPayload[26] = MONITOR_EVENT.PD_SOP0;
+    validPayload[27] = 1;
 
     const invalidFrame = encodeNativeCdcFrame(NATIVE_CDC_FRAME_TYPE_EVENT, invalidPayload);
     const validFrame = encodeNativeCdcFrame(NATIVE_CDC_FRAME_TYPE_EVENT, validPayload);
@@ -88,13 +88,13 @@ describe("native CDC protocol", () => {
     putU32LE(payload, 4, 0x11223344);
     putU32LE(payload, 8, 0x01020304);
     putU16LE(payload, 12, 5022);
-    putU16LE(payload, 14, 0xff38);
-    putU16LE(payload, 16, 300);
-    putU16LE(payload, 18, 600);
-    putU16LE(payload, 20, 900);
-    putU16LE(payload, 22, 1200);
-    payload[24] = MONITOR_EVENT.UFCS_DP;
-    payload[25] = 1;
+    putU32LE(payload, 14, 0xfffcf2c0);
+    putU16LE(payload, 18, 300);
+    putU16LE(payload, 20, 600);
+    putU16LE(payload, 22, 900);
+    putU16LE(payload, 24, 1200);
+    payload[26] = MONITOR_EVENT.UFCS_DP;
+    payload[27] = 1;
     payload.set([0xaa, 0x24, 0x09, 0x00], NATIVE_CDC_EVENT_HEADER_SIZE);
 
     const record = parseNativeCdcEventPayload(payload);

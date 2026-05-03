@@ -1,6 +1,6 @@
 export type MonitorSnapshot = {
   vbusMv: number;
-  ibusMa: number;
+  ibusUa: number;
   cc1Mv: number;
   cc2Mv: number;
   dpMv: number;
@@ -37,7 +37,6 @@ export const MONITOR_EVENT = {
   DISCONNECT: 0,
   CC1_CONNECT: 1,
   CC2_CONNECT: 2,
-  POWER_TELEMETRY: 10,
   PD_SOP0: 20,
   PD_SOP1: 21,
   PD_SOP2: 22,
@@ -57,6 +56,10 @@ export const NATIVE_MONITOR_PAYLOAD_MAX_LEN = 34;
 export const NATIVE_PD_TX_MESSAGE_MIN_LEN = 2;
 export const NATIVE_PD_TX_MESSAGE_MAX_LEN = 30;
 export const NATIVE_TX_PAYLOAD_MAX_LEN = 62;
+export const NATIVE_HID_REPORT_TYPE = {
+  EVENT: 0x01,
+  STATUS: 0x02,
+} as const;
 
 export const MONITOR_TX_CMD = {
   SEND_RAW_SOP0: 0x01,
@@ -64,7 +67,8 @@ export const MONITOR_TX_CMD = {
   SEND_RAW_SOP2: 0x03,
   SEND_HARD_RESET: 0x04,
   SEND_CABLE_RESET: 0x05,
-  SET_CC_MODE: 0x10
+  SET_CC_MODE: 0x10,
+  GET_STATUS: 0x20,
 } as const;
 
 export type MonitorActiveCCMode = "auto" | "cc1" | "cc2";
@@ -89,9 +93,11 @@ export type NativeMonitorTxOpcode = typeof MONITOR_TX_CMD[keyof typeof MONITOR_T
 export type NativeMonitorTxCommand =
   | { opcode: typeof MONITOR_TX_CMD.SEND_RAW_SOP0 | typeof MONITOR_TX_CMD.SEND_RAW_SOP1 | typeof MONITOR_TX_CMD.SEND_RAW_SOP2; payload: Uint8Array }
   | { opcode: typeof MONITOR_TX_CMD.SEND_HARD_RESET | typeof MONITOR_TX_CMD.SEND_CABLE_RESET; payload?: Uint8Array | null }
-  | { opcode: typeof MONITOR_TX_CMD.SET_CC_MODE; activeCC: MonitorActiveCCMode; cc1: MonitorCCMode; cc2: MonitorCCMode; payload?: Uint8Array | null };
+  | { opcode: typeof MONITOR_TX_CMD.SET_CC_MODE; activeCC: MonitorActiveCCMode; cc1: MonitorCCMode; cc2: MonitorCCMode; payload?: Uint8Array | null }
+  | { opcode: typeof MONITOR_TX_CMD.GET_STATUS; payload?: Uint8Array | null };
 
-export type NativeMonitorHidReport = {
+export type NativeMonitorEventReport = {
+  reportType: typeof NATIVE_HID_REPORT_TYPE.EVENT;
   timestampUs: number;
   recvCount: number;
   snapshot: MonitorSnapshot;
@@ -101,13 +107,26 @@ export type NativeMonitorHidReport = {
   payload: Uint8Array;
 };
 
+export type NativeMonitorStatusReport = {
+  reportType: typeof NATIVE_HID_REPORT_TYPE.STATUS;
+  statusType: number;
+  timestampUs: number;
+  recvCount: number;
+  snapshot: MonitorSnapshot;
+  activeCC: number;
+  payloadLen: number;
+  dropCount: number;
+};
+
+export type NativeMonitorHidReport = NativeMonitorEventReport | NativeMonitorStatusReport;
+
 function getU16LE(bytes: Uint8Array, offset: number): number {
   return bytes[offset] | (bytes[offset + 1] << 8);
 }
 
-function getI16LE(bytes: Uint8Array, offset: number): number {
-  const value = getU16LE(bytes, offset);
-  return value & 0x8000 ? value - 0x10000 : value;
+function getI32LE(bytes: Uint8Array, offset: number): number {
+  const value = getU32LE(bytes, offset);
+  return value > 0x7fffffff ? value - 0x100000000 : value;
 }
 
 function getU32LE(bytes: Uint8Array, offset: number): number {
@@ -173,8 +192,6 @@ export function monitorEventName(eventType: number): string {
       return "CC1_CONNECT";
     case MONITOR_EVENT.CC2_CONNECT:
       return "CC2_CONNECT";
-    case MONITOR_EVENT.POWER_TELEMETRY:
-      return "POWER_TELEMETRY";
     case MONITOR_EVENT.PD_SOP0:
       return "PD_SOP0";
     case MONITOR_EVENT.PD_SOP1:
@@ -241,27 +258,47 @@ export function parseNativeMonitorHidReportBody(body: Uint8Array): NativeMonitor
     );
   }
 
-  const timestampUsLo = getU32LE(body, 0);
-  const timestampUsHi = getU32LE(body, 4);
+  const reportType = body[0] ?? 0;
+  const timestampUsLo = getU32LE(body, 4);
+  const timestampUsHi = getU32LE(body, 8);
   const timestampUs = (BigInt(timestampUsHi) << 32n) | BigInt(timestampUsLo);
-  const payloadLen = Math.min(body[26] ?? 0, NATIVE_MONITOR_PAYLOAD_MAX_LEN);
-
-  return {
-    timestampUs: Number(timestampUs),
-    recvCount: getU32LE(body, 8),
-    snapshot: {
-      vbusMv: getU16LE(body, 12),
-      ibusMa: getI16LE(body, 14),
-      cc1Mv: getU16LE(body, 16),
-      cc2Mv: getU16LE(body, 18),
-      dpMv: getU16LE(body, 20),
-      dmMv: getU16LE(body, 22)
-    },
-    eventType: body[24] ?? 0,
-    activeCC: body[25] ?? 0,
-    payloadLen,
-    payload: body.slice(27, 27 + payloadLen)
+  const snapshot = {
+    vbusMv: getU16LE(body, 16),
+    ibusUa: getI32LE(body, 18),
+    cc1Mv: getU16LE(body, 22),
+    cc2Mv: getU16LE(body, 24),
+    dpMv: getU16LE(body, 26),
+    dmMv: getU16LE(body, 28)
   };
+
+  if (reportType === NATIVE_HID_REPORT_TYPE.EVENT) {
+    const payloadLen = Math.min(body[2] ?? 0, NATIVE_MONITOR_PAYLOAD_MAX_LEN);
+    return {
+      reportType,
+      timestampUs: Number(timestampUs),
+      recvCount: getU32LE(body, 12),
+      snapshot,
+      eventType: body[1] ?? 0,
+      activeCC: body[3] ?? 0,
+      payloadLen,
+      payload: body.slice(30, 30 + payloadLen)
+    };
+  }
+
+  if (reportType === NATIVE_HID_REPORT_TYPE.STATUS) {
+    return {
+      reportType,
+      statusType: body[1] ?? 0,
+      timestampUs: Number(timestampUs),
+      recvCount: getU32LE(body, 12),
+      snapshot,
+      activeCC: body[3] ?? 0,
+      payloadLen: body[2] ?? 0,
+      dropCount: getU32LE(body, 30),
+    };
+  }
+
+  throw new Error(`Unexpected native HID report type ${reportType}.`);
 }
 
 export function encodeNativeMonitorCommandPayload(command: NativeMonitorTxCommand): Uint8Array {
@@ -277,8 +314,9 @@ export function encodeNativeMonitorCommandPayload(command: NativeMonitorTxComman
       return Uint8Array.from([command.opcode, ...payload]);
     case MONITOR_TX_CMD.SEND_HARD_RESET:
     case MONITOR_TX_CMD.SEND_CABLE_RESET:
+    case MONITOR_TX_CMD.GET_STATUS:
       if (payload.length !== 0) {
-        throw new Error(`Reset command payload length must be 0 bytes, got ${payload.length}.`);
+        throw new Error(`Command payload length must be 0 bytes, got ${payload.length}.`);
       }
       return Uint8Array.from([command.opcode]);
     case MONITOR_TX_CMD.SET_CC_MODE:

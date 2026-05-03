@@ -129,7 +129,7 @@ const PowerPage = ({
               </div>
               <div className="btn btn-sm rounded-full gap-1.5 border-base-300 bg-base-100 px-3 font-mono font-normal normal-case text-base-content/65 pointer-events-none cursor-default hover:bg-base-100">
                 <span className="font-semibold text-base-content/80">{powerCount.toLocaleString()}</span>
-                <span>telemetry samples</span>
+                <span>power samples</span>
               </div>
               <div className="inline-flex items-center rounded-full border border-base-300/80 bg-base-200/70 p-1">
                 {POWER_WINDOW_OPTIONS.map((option) => (
@@ -155,7 +155,7 @@ const PowerPage = ({
                 disabled={!monitorDeviceCapabilities.powerTelemetry}
                 type="button"
                 aria-label={powerCaptureEnabled ? 'Pause power capture' : 'Start power capture'}
-                title={monitorDeviceCapabilities.powerTelemetry ? undefined : 'Selected device does not support power telemetry'}
+                title={monitorDeviceCapabilities.powerTelemetry ? undefined : 'Selected device does not support power samples'}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -225,7 +225,7 @@ const PowerPage = ({
                 </div>
                 <div className="rounded-xl border border-base-300 bg-base-100/80 px-3 py-2">
                   <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">
-                    Telemetry Stream
+                    Power Samples
                   </div>
                   <div className="mt-1 text-sm text-base-content">
                     {!powerCaptureEnabled
@@ -233,16 +233,16 @@ const PowerPage = ({
                       : !monitorDeviceCapabilities.powerTelemetry
                         ? 'Unsupported by selected device'
                         : powerCount === 0
-                        ? 'Waiting for telemetry'
-                        : 'Recording power telemetry'}
+                        ? 'Waiting for samples'
+                        : 'Recording power samples'}
                   </div>
                 </div>
                 <div className="rounded-xl border border-base-300 bg-base-100/80 px-3 py-2">
                   <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">
-                    Capture Policy
+                    Sample Source
                   </div>
                   <div className="mt-1 text-sm text-base-content/75">
-                    Idle-gap telemetry after protocol traffic quiets down.
+                    Snapshots from incoming monitor traffic and transport status reports.
                   </div>
                 </div>
                 <div className="rounded-xl border border-base-300 bg-base-100/80 px-3 py-2">
@@ -260,15 +260,15 @@ const PowerPage = ({
 
             <div className="rounded-2xl border border-base-300 bg-base-200/70 p-4 flex-1 min-h-0">
               <div className="text-[11px] uppercase tracking-[0.2em] text-base-content/45">
-                Telemetry Curves
+                Power Curves
               </div>
               {recentSamples.length === 0 ? (
                 <div className="mt-3 rounded-xl border border-dashed border-base-300 bg-base-100/50 p-6 text-sm text-base-content/55">
                   {!monitorDeviceCapabilities.powerTelemetry
-                    ? 'Selected device does not provide power telemetry samples.'
+                    ? 'Selected device does not provide power samples.'
                     : powerCaptureEnabled
-                    ? 'No `POWER_TELEMETRY` samples yet. Connect the device and wait for the telemetry side-channel to go idle-gap active.'
-                    : 'Power capture is off. Turn on `Record Power` to start buffering telemetry samples.'}
+                    ? 'No power samples yet. Connect the device and wait for incoming monitor data.'
+                    : 'Power capture is off. Turn on `Record Power` to start buffering power samples.'}
                 </div>
               ) : (
                 <Suspense

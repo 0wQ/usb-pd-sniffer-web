@@ -7,6 +7,7 @@ import {
   MONITOR_EVENT,
   MONITOR_TX_CMD,
   NATIVE_HID_REPORT_BODY_SIZE,
+  NATIVE_HID_REPORT_TYPE,
   NATIVE_MONITOR_PAYLOAD_MAX_LEN,
   NATIVE_PD_TX_MESSAGE_MAX_LEN,
   NATIVE_PD_TX_MESSAGE_MIN_LEN,
@@ -19,7 +20,6 @@ import {
 
 describe("pd-device-native-hid adapter", () => {
   test("keeps native monitor event numbering aligned with firmware groups", () => {
-    expect(MONITOR_EVENT.POWER_TELEMETRY).toBe(10);
     expect(MONITOR_EVENT.PD_SOP0).toBe(20);
     expect(MONITOR_EVENT.PD_SOP1).toBe(21);
     expect(MONITOR_EVENT.PD_SOP2).toBe(22);
@@ -39,7 +39,6 @@ describe("pd-device-native-hid adapter", () => {
     expect(monitorEventName(MONITOR_EVENT.PD_SOP2_DEBUG)).toBe("PD_SOP2_DEBUG");
     expect(monitorEventName(MONITOR_EVENT.HARD_RESET)).toBe("HARD_RESET");
     expect(monitorEventName(MONITOR_EVENT.CABLE_RESET)).toBe("CABLE_RESET");
-    expect(monitorEventName(MONITOR_EVENT.POWER_TELEMETRY)).toBe("POWER_TELEMETRY");
     expect(monitorEventName(MONITOR_EVENT.UFCS_DP)).toBe("UFCS_DP");
     expect(monitorEventName(MONITOR_EVENT.UFCS_DM)).toBe("UFCS_DM");
 
@@ -53,8 +52,7 @@ describe("pd-device-native-hid adapter", () => {
     expect(() => monitorEventSop(MONITOR_EVENT.PD_ERROR)).toThrow("does not map to a PD Start Of Packet");
   });
 
-  test("keeps POWER_TELEMETRY and connection events outside the PD frame pipeline", () => {
-    expect(isPdMonitorEvent(MONITOR_EVENT.POWER_TELEMETRY)).toBe(false);
+  test("keeps connection events outside the PD frame pipeline", () => {
     expect(isPdMonitorEvent(MONITOR_EVENT.CC1_CONNECT)).toBe(false);
     expect(isPdMonitorEvent(MONITOR_EVENT.CC2_CONNECT)).toBe(false);
     expect(isPdMonitorEvent(MONITOR_EVENT.PD_SOP0)).toBe(true);
@@ -66,7 +64,7 @@ describe("pd-device-native-hid adapter", () => {
 
     expect(
       toPdObservedFrameFromMonitorEvent({
-        eventType: MONITOR_EVENT.POWER_TELEMETRY,
+        eventType: MONITOR_EVENT.DISCONNECT,
         payload: Uint8Array.from([1, 2, 3, 4])
       })
     ).toBeNull();
@@ -86,27 +84,29 @@ describe("pd-device-native-hid adapter", () => {
 
   test("parses native HID input report body using the shared ABI layout", () => {
     const body = new Uint8Array(NATIVE_HID_REPORT_BODY_SIZE);
-    body.set([0x88, 0x77, 0x66, 0x55], 0);
-    body.set([0x44, 0x33, 0x22, 0x11], 4);
-    body.set([0x04, 0x03, 0x02, 0x01], 8);
-    body.set([0x9e, 0x13], 12);
-    body.set([0x38, 0xff], 14);
-    body.set([0x2c, 0x01], 16);
-    body.set([0x58, 0x02], 18);
-    body.set([0x84, 0x03], 20);
-    body.set([0xb0, 0x04], 22);
-    body[24] = MONITOR_EVENT.PD_SOP0;
-    body[25] = 1;
-    body[26] = 4;
-    body.set([0xa1, 0x71, 0x2c, 0x91], 27);
+    body[0] = NATIVE_HID_REPORT_TYPE.EVENT;
+    body[1] = MONITOR_EVENT.PD_SOP0;
+    body[2] = 4;
+    body[3] = 1;
+    body.set([0x88, 0x77, 0x66, 0x55], 4);
+    body.set([0x44, 0x33, 0x22, 0x11], 8);
+    body.set([0x04, 0x03, 0x02, 0x01], 12);
+    body.set([0x9e, 0x13], 16);
+    body.set([0xc0, 0xf2, 0xfc, 0xff], 18);
+    body.set([0x2c, 0x01], 22);
+    body.set([0x58, 0x02], 24);
+    body.set([0x84, 0x03], 26);
+    body.set([0xb0, 0x04], 28);
+    body.set([0xa1, 0x71, 0x2c, 0x91], 30);
 
     const report = parseNativeMonitorHidReportBody(body);
 
+    expect(report.reportType).toBe(NATIVE_HID_REPORT_TYPE.EVENT);
     expect(report.timestampUs).toBe(Number(0x1122334455667788n));
     expect(report.recvCount).toBe(0x01020304);
     expect(report.snapshot).toEqual({
       vbusMv: 5022,
-      ibusMa: -200,
+      ibusUa: -200000,
       cc1Mv: 300,
       cc2Mv: 600,
       dpMv: 900,
@@ -120,12 +120,51 @@ describe("pd-device-native-hid adapter", () => {
 
   test("clamps native HID payload length to the fixed monitor payload field", () => {
     const body = new Uint8Array(NATIVE_HID_REPORT_BODY_SIZE);
-    body[26] = 0xff;
+    body[0] = NATIVE_HID_REPORT_TYPE.EVENT;
+    body[2] = 0xff;
 
     const report = parseNativeMonitorHidReportBody(body);
 
+    expect(report.reportType).toBe(NATIVE_HID_REPORT_TYPE.EVENT);
     expect(report.payloadLen).toBe(NATIVE_MONITOR_PAYLOAD_MAX_LEN);
     expect(report.payload.length).toBe(NATIVE_MONITOR_PAYLOAD_MAX_LEN);
+  });
+
+  test("parses native HID status report body", () => {
+    const body = new Uint8Array(NATIVE_HID_REPORT_BODY_SIZE);
+    body[0] = NATIVE_HID_REPORT_TYPE.STATUS;
+    body[1] = 0x00;
+    body[2] = 4;
+    body[3] = 2;
+    body.set([0x88, 0x77, 0x66, 0x55], 4);
+    body.set([0x44, 0x33, 0x22, 0x11], 8);
+    body.set([0x08, 0x07, 0x06, 0x05], 12);
+    body.set([0x9e, 0x13], 16);
+    body.set([0x40, 0x0d, 0x03, 0x00], 18);
+    body.set([0x2c, 0x01], 22);
+    body.set([0x58, 0x02], 24);
+    body.set([0x84, 0x03], 26);
+    body.set([0xb0, 0x04], 28);
+    body.set([0x10, 0x32, 0x54, 0x76], 30);
+
+    const report = parseNativeMonitorHidReportBody(body);
+
+    expect(report).toMatchObject({
+      reportType: NATIVE_HID_REPORT_TYPE.STATUS,
+      statusType: 0,
+      payloadLen: 4,
+      activeCC: 2,
+      recvCount: 0x05060708,
+      dropCount: 0x76543210,
+      snapshot: {
+        vbusMv: 5022,
+        ibusUa: 200000,
+        cc1Mv: 300,
+        cc2Mv: 600,
+        dpMv: 900,
+        dmMv: 1200,
+      },
+    });
   });
 
   test("encodes raw SOP command body for native HID OUT", () => {
@@ -152,6 +191,10 @@ describe("pd-device-native-hid adapter", () => {
       cc1: "rd",
       cc2: "rp"
     }))).toEqual([MONITOR_TX_CMD.SET_CC_MODE, 2, 1, 3]);
+
+    expect(Array.from(encodeNativeMonitorCommandPayload({
+      opcode: MONITOR_TX_CMD.GET_STATUS,
+    }))).toEqual([MONITOR_TX_CMD.GET_STATUS]);
   });
 
   test("rejects raw SOP command payloads outside the message-without-CRC length range", () => {
@@ -177,13 +220,19 @@ describe("pd-device-native-hid adapter", () => {
     const cableReset = encodeNativeMonitorTxCommandBody({
       opcode: MONITOR_TX_CMD.SEND_CABLE_RESET
     });
+    const getStatus = encodeNativeMonitorTxCommandBody({
+      opcode: MONITOR_TX_CMD.GET_STATUS
+    });
 
     expect(hardReset.length).toBe(NATIVE_HID_REPORT_BODY_SIZE);
     expect(cableReset.length).toBe(NATIVE_HID_REPORT_BODY_SIZE);
+    expect(getStatus.length).toBe(NATIVE_HID_REPORT_BODY_SIZE);
     expect(hardReset[0]).toBe(MONITOR_TX_CMD.SEND_HARD_RESET);
     expect(cableReset[0]).toBe(MONITOR_TX_CMD.SEND_CABLE_RESET);
+    expect(getStatus[0]).toBe(MONITOR_TX_CMD.GET_STATUS);
     expect(hardReset[1]).toBe(0);
     expect(cableReset[1]).toBe(0);
+    expect(getStatus[1]).toBe(0);
   });
 
   test("encodes CC mode command for native HID OUT", () => {

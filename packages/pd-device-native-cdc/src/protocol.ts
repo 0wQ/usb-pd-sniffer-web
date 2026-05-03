@@ -15,7 +15,7 @@ export const NATIVE_CDC_FRAME_MAGIC = Uint8Array.from([0x0a, 0x55, 0x50, 0x53]);
 export const NATIVE_CDC_FRAME_TYPE_EVENT = 0x01;
 export const NATIVE_CDC_FRAME_TYPE_CMD = 0x80;
 export const NATIVE_CDC_FRAME_HEADER_SIZE = 7;
-export const NATIVE_CDC_EVENT_HEADER_SIZE = 26;
+export const NATIVE_CDC_EVENT_HEADER_SIZE = 28;
 export const NATIVE_CDC_EVENT_DATA_MAX_LEN = 65;
 export const NATIVE_CDC_EVENT_PAYLOAD_MAX_LEN = NATIVE_CDC_EVENT_HEADER_SIZE + NATIVE_CDC_EVENT_DATA_MAX_LEN;
 export const NATIVE_CDC_CMD_DATA_MAX_LEN = 62;
@@ -30,9 +30,9 @@ function getU16LE(bytes: Uint8Array, offset: number): number {
   return bytes[offset] | (bytes[offset + 1] << 8);
 }
 
-function getI16LE(bytes: Uint8Array, offset: number): number {
-  const value = getU16LE(bytes, offset);
-  return value & 0x8000 ? value - 0x10000 : value;
+function getI32LE(bytes: Uint8Array, offset: number): number {
+  const value = getU32LE(bytes, offset);
+  return value > 0x7fffffff ? value - 0x100000000 : value;
 }
 
 function getU32LE(bytes: Uint8Array, offset: number): number {
@@ -89,7 +89,6 @@ function isKnownMonitorEvent(eventType: number): boolean {
     case MONITOR_EVENT.DISCONNECT:
     case MONITOR_EVENT.CC1_CONNECT:
     case MONITOR_EVENT.CC2_CONNECT:
-    case MONITOR_EVENT.POWER_TELEMETRY:
     case MONITOR_EVENT.PD_SOP0:
     case MONITOR_EVENT.PD_SOP1:
     case MONITOR_EVENT.PD_SOP2:
@@ -115,12 +114,12 @@ function validateNativeCdcEventPayload(payload: Uint8Array): void {
     throw new Error(`Native CDC event payload is too long: ${payload.length} bytes.`);
   }
 
-  const eventType = payload[24] ?? 0;
+  const eventType = payload[26] ?? 0;
   if (!isKnownMonitorEvent(eventType)) {
     throw new Error(`Unknown native CDC event type ${eventType}.`);
   }
 
-  const activeCC = payload[25] ?? 0;
+  const activeCC = payload[27] ?? 0;
   if (activeCC > 2) {
     throw new Error(`Unexpected native CDC active CC value ${activeCC}.`);
   }
@@ -194,13 +193,13 @@ export function parseNativeCdcEventPayload(payload: Uint8Array): MonitorRecord {
     timestamp_us: Number(timestampUs),
     recv_counter: getU32LE(payload, 8),
     vbus_mv: getU16LE(payload, 12),
-    ibus_ma: getI16LE(payload, 14),
-    cc1_mv: getU16LE(payload, 16),
-    cc2_mv: getU16LE(payload, 18),
-    dp_mv: getU16LE(payload, 20),
-    dm_mv: getU16LE(payload, 22),
-    event_type: payload[24] ?? 0,
-    active_cc: payload[25] ?? 0,
+    ibus_ma: getI32LE(payload, 14) / 1000,
+    cc1_mv: getU16LE(payload, 18),
+    cc2_mv: getU16LE(payload, 20),
+    dp_mv: getU16LE(payload, 22),
+    dm_mv: getU16LE(payload, 24),
+    event_type: payload[26] ?? 0,
+    active_cc: payload[27] ?? 0,
     data_len: data.length,
     data: Array.from(data),
   };
