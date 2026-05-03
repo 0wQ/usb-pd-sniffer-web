@@ -6,7 +6,7 @@ import { X } from 'lucide-react'
 import type { ActiveCCMode, CCMode, CCModeConfig, PdTxSop } from '@/lib/devices/deviceDrivers'
 import { applyFieldRawValue, formatEditedBytes } from '@/lib/analyzer/fieldEdit'
 import { hasPdTxPayloadNewline, parsePdHexPayload, previewPdTxFrame, splitPdTxPayloadLines } from '@/lib/analyzer/txPreview'
-import { hexBytes, IssueList, SectionView } from '@/components/decode/DecodedSectionsView'
+import { hexBytes, IssueList, SectionView } from '@/components/protocol/decode/DecodedSectionsView'
 
 type SendMode = 'raw' | 'hard_reset' | 'cable_reset'
 const MULTILINE_TX_INTERVAL_MS = 50

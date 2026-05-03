@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from 'react'
-import Layout from '@/components/common/Layout'
+import ProtocolPage from '@/components/pages/ProtocolPage'
 import PowerPage from '@/components/pages/PowerPage'
-import { type AppView } from '@/components/common/ViewTabs'
-import { DeviceWorkspaceProvider } from '@/components/common/DeviceWorkspaceContext'
+import { type AppView } from '@/components/app/ViewTabs'
+import { DeviceWorkspaceProvider } from '@/components/app/DeviceWorkspaceContext'
 import { useCaptureDevice } from '@/hooks/useCaptureDevice'
 import useDeviceStore from '@/stores/deviceStore'
 import type { CCModeConfig, PdTxSop } from '@/lib/devices/deviceDrivers'
@@ -155,7 +155,7 @@ const DeviceWorkspace = ({ currentView, onViewChange }: Props) => {
         </div>
       )}
 
-      {currentView === 'protocol' ? <Layout /> : <PowerPage />}
+      {currentView === 'protocol' ? <ProtocolPage /> : <PowerPage />}
     </DeviceWorkspaceProvider>
   )
 }

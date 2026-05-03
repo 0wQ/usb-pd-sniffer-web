@@ -4,7 +4,7 @@ import type { DecodedPacket } from '@usb-pd-sniffer/pd-core'
 import useDeviceStore from '@/stores/deviceStore'
 import { decodeRecordAtIndex, decodeSingleRecord } from '@/lib/analyzer/decode'
 import { decodeUfcsRecordType, formatUfcsTypeSummary, type UfcsTypeDecode } from '@/lib/ufcs/ufcsType'
-import { hexBytes, IssueList, SectionView } from '@/components/decode/DecodedSectionsView'
+import { hexBytes, IssueList, SectionView } from '@/components/protocol/decode/DecodedSectionsView'
 
 const DETAIL_CONTEXT_BACKTRACK_RECORDS = 10_000
 

@@ -1,6 +1,6 @@
 import { Toaster } from 'sonner'
-import DeviceWorkspace from '@/components/common/DeviceWorkspace'
-import { type AppView } from '@/components/common/ViewTabs'
+import DeviceWorkspace from '@/components/app/DeviceWorkspace'
+import { type AppView } from '@/components/app/ViewTabs'
 import { useBeforeUnloadWarning } from '@/hooks/useBeforeUnloadWarning'
 import { useState } from 'react'
 

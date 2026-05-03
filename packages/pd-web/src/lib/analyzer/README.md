@@ -3,7 +3,7 @@ Current `pd-web` analyzer boundary:
 1. Native capture device support -> `@usb-pd-sniffer/pd-device-native-hid` and `@usb-pd-sniffer/pd-device-native-cdc`
 2. Device subscriptions -> `src/hooks/useCaptureDevice.ts`
 3. `CaptureRecord` -> `MessagePacket`/`pd-core` -> `src/lib/analyzer/decode.ts`
-4. UI rendering -> `src/components/card/TableCard.tsx`, `src/components/card/DecodeCard.tsx`, and `src/components/pages/PowerPage.tsx`
+4. UI rendering -> `src/components/protocol/ProtocolTableCard.tsx`, `src/components/protocol/ProtocolDecodeCard.tsx`, and `src/components/pages/PowerPage.tsx`
 
 `pd-web` must not parse HID report bodies or hold `HIDDevice` directly. Device
 transport and native device ABI handling belong to the `pd-device-*` packages.

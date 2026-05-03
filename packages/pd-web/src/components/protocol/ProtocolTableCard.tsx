@@ -1,12 +1,12 @@
 import { useEffect, useState, useMemo, memo, useCallback, useRef } from 'react'
 import { List, useListCallbackRef, type RowComponentProps } from 'react-window'
 import { toast } from 'sonner'
-import { useDeviceWorkspaceContext } from '@/components/common/DeviceWorkspaceContext'
+import { useDeviceWorkspaceContext } from '@/components/app/DeviceWorkspaceContext'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
 import type { ImportMode } from '@/types/csv'
 import { exportToCsv, importFromCsv, generateFilename, downloadCsv, readFile } from '@/utils/csvHelper'
-import ImportDialog from '@/components/common/ImportDialog'
-import ViewTabs from '@/components/common/ViewTabs'
+import ImportDialog from '@/components/shared/ImportDialog'
+import ViewTabs from '@/components/app/ViewTabs'
 import clsx from 'clsx'
 import {
   CirclePause,
@@ -483,7 +483,7 @@ type CardProps = {
   onOpenTxDialog: () => void
 }
 
-const Card = memo(({
+const ProtocolTableCard = memo(({
   className,
   decodeLayoutMode,
   onToggleDecodeLayoutMode,
@@ -815,6 +815,6 @@ const Card = memo(({
   )
 })
 
-Card.displayName = 'Card'
+ProtocolTableCard.displayName = 'ProtocolTableCard'
 
-export default Card
+export default ProtocolTableCard

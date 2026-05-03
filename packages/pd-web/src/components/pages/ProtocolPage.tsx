@@ -1,7 +1,7 @@
-import TableCard from '@/components/card/TableCard'
-import DecodeCard from '@/components/card/DecodeCard'
-import SendPdDialog from '@/components/common/SendPdDialog'
-import { useDeviceWorkspaceContext } from '@/components/common/DeviceWorkspaceContext'
+import ProtocolTableCard from '@/components/protocol/ProtocolTableCard'
+import ProtocolDecodeCard from '@/components/protocol/ProtocolDecodeCard'
+import SendPdDialog from '@/components/protocol/SendPdDialog'
+import { useDeviceWorkspaceContext } from '@/components/app/DeviceWorkspaceContext'
 import { Group, Panel, Separator, useDefaultLayout, usePanelCallbackRef, type PanelSize } from 'react-resizable-panels'
 import { decodeSingleRecord } from '@/lib/analyzer/decode'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -61,7 +61,7 @@ function writeDecodeCollapsed(value: boolean): void {
   }
 }
 
-const Layout = () => {
+const ProtocolPage = () => {
   const {
     selectedIndex,
     setSelectedIndex,
@@ -185,7 +185,7 @@ const Layout = () => {
           minSize={`${MIN_TABLE_SIZE[decodeLayoutMode]}%`}
           className={tablePanelClassName}
         >
-          <TableCard
+          <ProtocolTableCard
             className="card bg-base-100 h-full min-h-0 min-w-0"
             decodeLayoutMode={decodeLayoutMode}
             onToggleDecodeLayoutMode={toggleDecodeLayoutMode}
@@ -215,7 +215,7 @@ const Layout = () => {
           className={decodePanelClassName}
           onResize={handleDecodeResize}
         >
-          <DecodeCard className="card bg-base-100 h-full min-h-0" selectedIndex={selectedIndex} />
+          <ProtocolDecodeCard className="card bg-base-100 h-full min-h-0" selectedIndex={selectedIndex} />
         </Panel>
       </Group>
 
@@ -233,4 +233,4 @@ const Layout = () => {
   )
 }
 
-export default Layout
+export default ProtocolPage
