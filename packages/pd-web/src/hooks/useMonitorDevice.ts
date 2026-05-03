@@ -19,6 +19,19 @@ function statusError(status: MonitorDeviceStatusLike, apiName: string): string |
   return status.error
 }
 
+function shouldUseDeviceAutoReconnect(_kind: MonitorDeviceKind): boolean {
+  return true
+}
+
+function logDevice(message: string, details?: Record<string, unknown>) {
+  const prefix = `[monitor-device ${new Date().toISOString()}] ${message}`
+  if (details === undefined) {
+    console.log(prefix)
+    return
+  }
+  console.log(prefix, details)
+}
+
 export function useMonitorDevice() {
   const setIsConnected = useDeviceStore((state) => state.setIsConnected)
   const setIsConnecting = useDeviceStore((state) => state.setIsConnecting)
@@ -41,6 +54,7 @@ export function useMonitorDevice() {
   const latestPowerCaptureEnabled = useRef(powerCaptureEnabled)
   const latestAutoReconnect = useRef(autoReconnectOnHotplug)
   const latestFingerprint = useRef(selectedFingerprint)
+  const autoConnectAttempted = useRef(false)
   const [isDeviceSupported, setIsDeviceSupported] = useState(false)
   const [deviceError, setDeviceError] = useState<string | null>(null)
   const [isSending, setIsSending] = useState(false)
@@ -52,14 +66,22 @@ export function useMonitorDevice() {
   useEffect(() => {
     latestAutoReconnect.current = autoReconnectOnHotplug
     latestFingerprint.current = selectedFingerprint
-    deviceRef.current?.setAutoReconnect(autoReconnectOnHotplug, selectedFingerprint)
-  }, [autoReconnectOnHotplug, selectedFingerprint])
+    deviceRef.current?.setAutoReconnect(
+      shouldUseDeviceAutoReconnect(selectedMonitorDeviceKind) && autoReconnectOnHotplug,
+      selectedFingerprint,
+    )
+  }, [autoReconnectOnHotplug, selectedFingerprint, selectedMonitorDeviceKind])
 
   useEffect(() => {
     const driver = getMonitorDeviceDriver(selectedMonitorDeviceKind)
+    logDevice('create monitor device', { kind: driver.kind, label: driver.label })
     const monitorDevice = driver.createDevice()
     deviceRef.current = monitorDevice
-    monitorDevice.setAutoReconnect(latestAutoReconnect.current, latestFingerprint.current)
+    autoConnectAttempted.current = false
+    monitorDevice.setAutoReconnect(
+      shouldUseDeviceAutoReconnect(driver.kind) && latestAutoReconnect.current,
+      latestFingerprint.current,
+    )
 
     const offRecord = monitorDevice.onRecord((record) => {
       addRecord(record)
@@ -90,6 +112,7 @@ export function useMonitorDevice() {
     })
 
     return () => {
+      logDevice('dispose monitor device', { kind: driver.kind })
       offRecord()
       offPowerSample()
       offStatus()
@@ -108,7 +131,11 @@ export function useMonitorDevice() {
   ])
 
   const tryAutoConnectAuthorizedDevice = useCallback(async () => {
+    if (!shouldUseDeviceAutoReconnect(selectedMonitorDeviceKind)) return
+    logDevice('try auto connect authorized', { kind: selectedMonitorDeviceKind })
     if (manualDisconnect) return
+    if (autoConnectAttempted.current) return
+    autoConnectAttempted.current = true
     try {
       await deviceRef.current?.connectAuthorized(selectedFingerprint)
     } catch (err) {
@@ -116,19 +143,23 @@ export function useMonitorDevice() {
         setDeviceError(err.message)
       }
     }
-  }, [manualDisconnect, selectedFingerprint])
+  }, [manualDisconnect, selectedFingerprint, selectedMonitorDeviceKind])
 
   const connectDevice = useCallback(async () => {
     const monitorDevice = deviceRef.current
+    logDevice('connect button invoked', { kind: selectedMonitorDeviceKind, supported: monitorDevice?.isSupported ?? false })
     if (monitorDevice === null || !monitorDevice.isSupported) {
       alert(`${selectedDriver.apiName} is not supported in your browser. Please use Chrome, Edge, or Opera.`)
       return
     }
 
     try {
+      logDevice('manual connect start', { kind: selectedMonitorDeviceKind })
       await monitorDevice.connect()
+      logDevice('manual connect resolved', { kind: selectedMonitorDeviceKind })
       setManualDisconnect(false)
     } catch (err) {
+      logDevice('manual connect failed', { kind: selectedMonitorDeviceKind, error: err instanceof Error ? err.message : String(err) })
       if (err instanceof Error) {
         if (err.name === 'NotFoundError') {
           return
@@ -182,6 +213,7 @@ export function useMonitorDevice() {
   const selectMonitorDeviceKind = useCallback((kind: MonitorDeviceKind) => {
     if (kind === selectedMonitorDeviceKind) return
     setManualDisconnect(true)
+    autoConnectAttempted.current = false
     void deviceRef.current?.disconnect().finally(() => {
       setSelectedMonitorDeviceKind(kind)
       resetDevice()

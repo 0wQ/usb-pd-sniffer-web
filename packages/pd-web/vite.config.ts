@@ -23,6 +23,9 @@ export default defineConfig({
       "@usb-pd-sniffer/pd-device-native-hid": fileURLToPath(
         new URL("../pd-device-native-hid/src/index.ts", import.meta.url)
       ),
+      "@usb-pd-sniffer/pd-device-native-cdc": fileURLToPath(
+        new URL("../pd-device-native-cdc/src/index.ts", import.meta.url)
+      ),
       "@usb-pd-sniffer/pd-device-atk-c2": fileURLToPath(
         new URL("../pd-device-atk-c2/src/index.ts", import.meta.url)
       ),

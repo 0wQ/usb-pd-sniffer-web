@@ -47,12 +47,8 @@ export const MONITOR_EVENT = {
   CABLE_RESET: 26,
   PD_ERROR: 30,
   BUFFER_OVERFLOW: 31,
-  UFCS_DP_SINGLE: 40,
-  UFCS_DM_SINGLE: 41,
-  UFCS_DP_CHUNK0: 42,
-  UFCS_DM_CHUNK0: 43,
-  UFCS_DP_CHUNK1: 44,
-  UFCS_DM_CHUNK1: 45
+  UFCS_DP: 40,
+  UFCS_DM: 41
 } as const;
 
 export const NATIVE_HID_REPORT_ID = 0x00;
@@ -165,6 +161,10 @@ function isPdResetOrErrorEvent(eventType: number): boolean {
   );
 }
 
+export function isUfcsMonitorEvent(eventType: number): boolean {
+  return eventType === MONITOR_EVENT.UFCS_DP || eventType === MONITOR_EVENT.UFCS_DM;
+}
+
 export function monitorEventName(eventType: number): string {
   switch (eventType) {
     case MONITOR_EVENT.DISCONNECT:
@@ -193,18 +193,10 @@ export function monitorEventName(eventType: number): string {
       return "PD_ERROR";
     case MONITOR_EVENT.BUFFER_OVERFLOW:
       return "BUFFER_OVERFLOW";
-    case MONITOR_EVENT.UFCS_DP_SINGLE:
-      return "UFCS_DP_SINGLE";
-    case MONITOR_EVENT.UFCS_DM_SINGLE:
-      return "UFCS_DM_SINGLE";
-    case MONITOR_EVENT.UFCS_DP_CHUNK0:
-      return "UFCS_DP_CHUNK0";
-    case MONITOR_EVENT.UFCS_DM_CHUNK0:
-      return "UFCS_DM_CHUNK0";
-    case MONITOR_EVENT.UFCS_DP_CHUNK1:
-      return "UFCS_DP_CHUNK1";
-    case MONITOR_EVENT.UFCS_DM_CHUNK1:
-      return "UFCS_DM_CHUNK1";
+    case MONITOR_EVENT.UFCS_DP:
+      return "UFCS_DP";
+    case MONITOR_EVENT.UFCS_DM:
+      return "UFCS_DM";
     default:
       return `EVENT_${eventType}`;
   }
@@ -272,11 +264,8 @@ export function parseNativeMonitorHidReportBody(body: Uint8Array): NativeMonitor
   };
 }
 
-export function encodeNativeMonitorTxCommandBody(command: NativeMonitorTxCommand): Uint8Array {
-  const body = new Uint8Array(NATIVE_HID_REPORT_BODY_SIZE);
+export function encodeNativeMonitorCommandPayload(command: NativeMonitorTxCommand): Uint8Array {
   const payload = command.payload ?? new Uint8Array(0);
-
-  body[0] = command.opcode;
 
   switch (command.opcode) {
     case MONITOR_TX_CMD.SEND_RAW_SOP0:
@@ -285,28 +274,41 @@ export function encodeNativeMonitorTxCommandBody(command: NativeMonitorTxCommand
       if (payload.length < NATIVE_PD_TX_MESSAGE_MIN_LEN || payload.length > NATIVE_PD_TX_MESSAGE_MAX_LEN) {
         throw new Error(`Raw PD TX payload length must be ${NATIVE_PD_TX_MESSAGE_MIN_LEN}..${NATIVE_PD_TX_MESSAGE_MAX_LEN} bytes without CRC, got ${payload.length}.`);
       }
-      body[1] = payload.length;
-      body.set(payload.subarray(0, Math.min(payload.length, NATIVE_TX_PAYLOAD_MAX_LEN)), 2);
-      return body;
+      return Uint8Array.from([command.opcode, ...payload]);
     case MONITOR_TX_CMD.SEND_HARD_RESET:
     case MONITOR_TX_CMD.SEND_CABLE_RESET:
       if (payload.length !== 0) {
         throw new Error(`Reset command payload length must be 0 bytes, got ${payload.length}.`);
       }
-      body[1] = 0;
-      return body;
+      return Uint8Array.from([command.opcode]);
     case MONITOR_TX_CMD.SET_CC_MODE:
       if (payload.length !== 0) {
         throw new Error(`CC mode command payload must be encoded from activeCC/cc1/cc2, got ${payload.length} raw bytes.`);
       }
-      body[1] = 3;
-      body[2] = activeCCModeToByte(command.activeCC);
-      body[3] = ccModeToByte(command.cc1);
-      body[4] = ccModeToByte(command.cc2);
-      return body;
+      return Uint8Array.from([
+        command.opcode,
+        activeCCModeToByte(command.activeCC),
+        ccModeToByte(command.cc1),
+        ccModeToByte(command.cc2)
+      ]);
   }
 
   throw new Error("Unsupported native monitor TX command.");
+}
+
+export function encodeNativeMonitorTxCommandBody(command: NativeMonitorTxCommand): Uint8Array {
+  const body = new Uint8Array(NATIVE_HID_REPORT_BODY_SIZE);
+  const commandPayload = encodeNativeMonitorCommandPayload(command);
+  const payloadLen = commandPayload.length - 1;
+
+  if (payloadLen > NATIVE_TX_PAYLOAD_MAX_LEN) {
+    throw new Error(`Native HID command payload is too long: ${payloadLen} bytes.`);
+  }
+
+  body[0] = commandPayload[0] ?? 0;
+  body[1] = payloadLen;
+  body.set(commandPayload.subarray(1), 2);
+  return body;
 }
 
 export function toPdObservedFrameFromMonitorEvent(

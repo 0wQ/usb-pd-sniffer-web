@@ -46,8 +46,8 @@ describe('UFCS temporary type decoder', () => {
   })
 
   test('maps UFCS single events to physical line labels', () => {
-    const dp = record(MONITOR_EVENT.UFCS_DP_SINGLE, [0xAA, 0x24, 0x09])
-    const dm = record(MONITOR_EVENT.UFCS_DM_SINGLE, [0xAA, 0x24, 0x09])
+    const dp = record(MONITOR_EVENT.UFCS_DP, [0xAA, 0x24, 0x09])
+    const dm = record(MONITOR_EVENT.UFCS_DM, [0xAA, 0x24, 0x09])
 
     expect(formatUfcsSignal(dp)).toBe('D+')
     expect(formatUfcsSignal(dm)).toBe('D-')

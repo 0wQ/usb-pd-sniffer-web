@@ -5,6 +5,7 @@ import {
   MONITOR_TX_CMD,
   NATIVE_HID_REPORT_BODY_SIZE,
   NATIVE_HID_REPORT_ID,
+  NATIVE_MONITOR_PAYLOAD_MAX_LEN,
   parseNativeMonitorHidReportBody,
   type MonitorCCModeConfig,
   type NativeMonitorTxCommand,
@@ -243,40 +244,15 @@ function isPassthroughMonitorRecordEvent(eventType: number): boolean {
   );
 }
 
-function ufcsSingleEventType(eventType: number): number | null {
+function ufcsDirection(eventType: number): UfcsDirection | null {
   switch (eventType) {
-    case MONITOR_EVENT.UFCS_DP_SINGLE:
-    case MONITOR_EVENT.UFCS_DM_SINGLE:
-      return eventType;
-    default:
-      return null;
-  }
-}
-
-function ufcsChunk0Direction(eventType: number): UfcsDirection | null {
-  switch (eventType) {
-    case MONITOR_EVENT.UFCS_DP_CHUNK0:
+    case MONITOR_EVENT.UFCS_DP:
       return "dp";
-    case MONITOR_EVENT.UFCS_DM_CHUNK0:
+    case MONITOR_EVENT.UFCS_DM:
       return "dm";
     default:
       return null;
   }
-}
-
-function ufcsChunk1Direction(eventType: number): UfcsDirection | null {
-  switch (eventType) {
-    case MONITOR_EVENT.UFCS_DP_CHUNK1:
-      return "dp";
-    case MONITOR_EVENT.UFCS_DM_CHUNK1:
-      return "dm";
-    default:
-      return null;
-  }
-}
-
-function ufcsAssembledEventType(direction: UfcsDirection): number {
-  return direction === "dp" ? MONITOR_EVENT.UFCS_DP_SINGLE : MONITOR_EVENT.UFCS_DM_SINGLE;
 }
 
 function cloneRecord(record: MonitorRecord): MonitorRecord {
@@ -286,7 +262,7 @@ function cloneRecord(record: MonitorRecord): MonitorRecord {
   };
 }
 
-function assembleUfcsRecord(chunk0: MonitorRecord, chunk1: MonitorRecord, direction: UfcsDirection): MonitorRecord {
+function assembleUfcsRecord(chunk0: MonitorRecord, chunk1: MonitorRecord): MonitorRecord {
   const data = [
     ...chunk0.data.slice(0, chunk0.data_len),
     ...chunk1.data.slice(0, chunk1.data_len),
@@ -294,17 +270,22 @@ function assembleUfcsRecord(chunk0: MonitorRecord, chunk1: MonitorRecord, direct
 
   return {
     ...chunk0,
-    event_type: ufcsAssembledEventType(direction),
     data_len: data.length,
     data: data,
   };
 }
 
-function pendingChunkAsSingle(chunk0: MonitorRecord, direction: UfcsDirection): MonitorRecord {
-  return {
-    ...cloneRecord(chunk0),
-    event_type: ufcsAssembledEventType(direction),
-  };
+function flushPending(pending: PendingUfcsChunks): MonitorRecord[] {
+  const flushed: MonitorRecord[] = [];
+  if (pending.dp !== null) {
+    flushed.push(cloneRecord(pending.dp));
+    pending.dp = null;
+  }
+  if (pending.dm !== null) {
+    flushed.push(cloneRecord(pending.dm));
+    pending.dm = null;
+  }
+  return flushed;
 }
 
 export function createMonitorRecordNormalizer(): MonitorRecordNormalizer {
@@ -315,39 +296,41 @@ export function createMonitorRecordNormalizer(): MonitorRecordNormalizer {
 
   return {
     push(record: MonitorRecord): MonitorRecord[] {
-      const singleEventType = ufcsSingleEventType(record.event_type);
-      if (singleEventType !== null) {
-        const direction: UfcsDirection = singleEventType === MONITOR_EVENT.UFCS_DP_SINGLE ? "dp" : "dm";
+      const direction = ufcsDirection(record.event_type);
+      if (direction !== null) {
+        const otherDirection: UfcsDirection = direction === "dp" ? "dm" : "dp";
+        const otherPrevious = pending[otherDirection];
+        pending[otherDirection] = null;
         const previous = pending[direction];
         pending[direction] = null;
-        return previous === null
-          ? [record]
-          : [pendingChunkAsSingle(previous, direction), record];
-      }
 
-      const chunk0Direction = ufcsChunk0Direction(record.event_type);
-      if (chunk0Direction !== null) {
-        const previous = pending[chunk0Direction];
-        pending[chunk0Direction] = cloneRecord(record);
-        return previous === null ? [] : [pendingChunkAsSingle(previous, chunk0Direction)];
-      }
-
-      const chunk1Direction = ufcsChunk1Direction(record.event_type);
-      if (chunk1Direction !== null) {
-        const chunk0 = pending[chunk1Direction];
-        pending[chunk1Direction] = null;
-        if (chunk0 === null) {
-          return [];
+        if (
+          otherPrevious === null &&
+          previous !== null &&
+          previous.recv_counter === record.recv_counter &&
+          previous.event_type === record.event_type
+        ) {
+          return [assembleUfcsRecord(previous, record)];
         }
 
-        if (chunk0.recv_counter !== record.recv_counter) {
-          return [pendingChunkAsSingle(chunk0, chunk1Direction)];
+        const output = previous === null ? [] : [cloneRecord(previous)];
+        if (otherPrevious !== null) {
+          output.push(cloneRecord(otherPrevious));
+        }
+        if (record.data_len >= NATIVE_MONITOR_PAYLOAD_MAX_LEN) {
+          pending[direction] = cloneRecord(record);
+          return output;
         }
 
-        return [assembleUfcsRecord(chunk0, record, chunk1Direction)];
+        output.push(record);
+        return output;
       }
 
-      return isPassthroughMonitorRecordEvent(record.event_type) ? [record] : [];
+      const output = flushPending(pending);
+      if (isPassthroughMonitorRecordEvent(record.event_type)) {
+        output.push(record);
+      }
+      return output;
     },
     reset(): void {
       pending.dp = null;

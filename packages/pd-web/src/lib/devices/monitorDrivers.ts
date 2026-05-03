@@ -1,8 +1,9 @@
 import { createMonitorDevice } from '@usb-pd-sniffer/pd-device-native-hid'
 import type { MonitorActiveCCMode, MonitorCCMode, MonitorCCModeConfig } from '@usb-pd-sniffer/pd-device-native-hid'
+import { createNativeCdcMonitorDevice } from '@usb-pd-sniffer/pd-device-native-cdc'
 import { createAtkC2MonitorDevice } from '@usb-pd-sniffer/pd-device-atk-c2'
 
-export type MonitorDeviceKind = 'native' | 'atk-c2'
+export type MonitorDeviceKind = 'native' | 'native-cdc' | 'atk-c2'
 
 export type MonitorRecordLike = {
   timestamp_us: number
@@ -93,6 +94,18 @@ export const MONITOR_DEVICE_DRIVERS: Record<MonitorDeviceKind, MonitorDeviceDriv
       powerTelemetry: true,
     },
   },
+  'native-cdc': {
+    kind: 'native-cdc',
+    label: 'Native CDC',
+    shortLabel: 'CDC',
+    apiName: 'Web Serial',
+    createDevice: createNativeCdcMonitorDevice,
+    capabilities: {
+      capture: true,
+      tx: true,
+      powerTelemetry: true,
+    },
+  },
   'atk-c2': {
     kind: 'atk-c2',
     label: 'ATK C2',
@@ -114,5 +127,5 @@ export function getMonitorDeviceDriver(kind: MonitorDeviceKind): MonitorDeviceDr
 }
 
 export function isMonitorDeviceKind(value: string): value is MonitorDeviceKind {
-  return value === 'native' || value === 'atk-c2'
+  return value === 'native' || value === 'native-cdc' || value === 'atk-c2'
 }

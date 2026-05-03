@@ -130,12 +130,11 @@ Current record emission behavior:
 - `PD_SOP0`, `PD_SOP1`, `PD_SOP2`, `PD_SOP1_DEBUG`, and `PD_SOP2_DEBUG` emit records with raw PD packet bytes.
 - `HARD_RESET`, `CABLE_RESET`, and `PD_ERROR` are accepted by the monitor path.
 - `POWER_TELEMETRY` emits through `onPowerSample()`, not `onRecord()`.
-- `UFCS_DP_SINGLE` and `UFCS_DM_SINGLE` emit records directly.
-- `UFCS_DP_CHUNK0` and `UFCS_DM_CHUNK0` are cached independently by direction.
-- `UFCS_DP_CHUNK1` and `UFCS_DM_CHUNK1` assemble with the pending same-direction chunk0 only when `recv_counter` matches.
-- If a same-direction single or new chunk0 arrives before the pending chunk1, the pending chunk0 is emitted as `UFCS_*_SINGLE` before the new record is processed.
-- A chunk1 with no pending same-direction chunk0 is dropped.
-- Non-UFCS records and opposite-direction UFCS records do not flush pending chunks.
+- `UFCS_DP` and `UFCS_DM` emit records with UFCS raw frames.
+- HID may split `UFCS_DP` / `UFCS_DM` records across two consecutive reports when the raw frame is longer than 34 bytes.
+- A full 34-byte UFCS HID report is held until the next report decides whether it is complete or the first split chunk.
+- The second split report assembles only when it is consecutive, has the same `recv_counter`, and has the same UFCS event type.
+- Any different next record flushes the pending 34-byte UFCS report before the new record is processed.
 
 ## Power Samples
 
@@ -196,9 +195,11 @@ These exports remain available for tests and tooling, but `pd-web` should prefer
 - `NATIVE_MONITOR_PAYLOAD_MAX_LEN`
 - `NATIVE_TX_PAYLOAD_MAX_LEN`
 - `parseNativeMonitorHidReportBody(body)`
+- `encodeNativeMonitorCommandPayload(command)`
 - `encodeNativeMonitorTxCommandBody(command)`
 - `monitorEventName(eventType)`
 - `isPdMonitorEvent(eventType)`
+- `isUfcsMonitorEvent(eventType)`
 - `toPdObservedFrameFromMonitorEvent(input)`
 
 ## Boundary Rules

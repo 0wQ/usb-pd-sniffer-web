@@ -1,7 +1,9 @@
 import { describe, expect, test } from "vitest";
 import {
+  encodeNativeMonitorCommandPayload,
   encodeNativeMonitorTxCommandBody,
   isPdMonitorEvent,
+  isUfcsMonitorEvent,
   MONITOR_EVENT,
   MONITOR_TX_CMD,
   NATIVE_HID_REPORT_BODY_SIZE,
@@ -26,6 +28,9 @@ describe("pd-device-native-hid adapter", () => {
     expect(MONITOR_EVENT.HARD_RESET).toBe(25);
     expect(MONITOR_EVENT.CABLE_RESET).toBe(26);
     expect(MONITOR_EVENT.PD_ERROR).toBe(30);
+    expect(MONITOR_EVENT.BUFFER_OVERFLOW).toBe(31);
+    expect(MONITOR_EVENT.UFCS_DP).toBe(40);
+    expect(MONITOR_EVENT.UFCS_DM).toBe(41);
   });
 
   test("maps native PD event families to stable monitor names and SOP variants", () => {
@@ -35,6 +40,8 @@ describe("pd-device-native-hid adapter", () => {
     expect(monitorEventName(MONITOR_EVENT.HARD_RESET)).toBe("HARD_RESET");
     expect(monitorEventName(MONITOR_EVENT.CABLE_RESET)).toBe("CABLE_RESET");
     expect(monitorEventName(MONITOR_EVENT.POWER_TELEMETRY)).toBe("POWER_TELEMETRY");
+    expect(monitorEventName(MONITOR_EVENT.UFCS_DP)).toBe("UFCS_DP");
+    expect(monitorEventName(MONITOR_EVENT.UFCS_DM)).toBe("UFCS_DM");
 
     expect(monitorEventSop(MONITOR_EVENT.PD_SOP0)).toBe("SOP");
     expect(monitorEventSop(MONITOR_EVENT.PD_SOP1)).toBe("SOP_PRIME");
@@ -53,6 +60,9 @@ describe("pd-device-native-hid adapter", () => {
     expect(isPdMonitorEvent(MONITOR_EVENT.PD_SOP0)).toBe(true);
     expect(isPdMonitorEvent(MONITOR_EVENT.HARD_RESET)).toBe(true);
     expect(isPdMonitorEvent(MONITOR_EVENT.CABLE_RESET)).toBe(true);
+    expect(isUfcsMonitorEvent(MONITOR_EVENT.UFCS_DP)).toBe(true);
+    expect(isUfcsMonitorEvent(MONITOR_EVENT.UFCS_DM)).toBe(true);
+    expect(isUfcsMonitorEvent(MONITOR_EVENT.PD_SOP0)).toBe(false);
 
     expect(
       toPdObservedFrameFromMonitorEvent({
@@ -128,6 +138,20 @@ describe("pd-device-native-hid adapter", () => {
     expect(body[0]).toBe(MONITOR_TX_CMD.SEND_RAW_SOP1);
     expect(body[1]).toBe(4);
     expect(Array.from(body.subarray(2, 6))).toEqual([0x42, 0x10, 0xaa, 0xbb]);
+  });
+
+  test("encodes stream command payloads without HID length byte", () => {
+    expect(Array.from(encodeNativeMonitorCommandPayload({
+      opcode: MONITOR_TX_CMD.SEND_RAW_SOP1,
+      payload: Uint8Array.from([0x42, 0x10, 0xaa, 0xbb])
+    }))).toEqual([MONITOR_TX_CMD.SEND_RAW_SOP1, 0x42, 0x10, 0xaa, 0xbb]);
+
+    expect(Array.from(encodeNativeMonitorCommandPayload({
+      opcode: MONITOR_TX_CMD.SET_CC_MODE,
+      activeCC: "cc2",
+      cc1: "rd",
+      cc2: "rp"
+    }))).toEqual([MONITOR_TX_CMD.SET_CC_MODE, 2, 1, 3]);
   });
 
   test("rejects raw SOP command payloads outside the message-without-CRC length range", () => {

@@ -8,6 +8,9 @@
       "path": "./packages/pd-device-native-hid"
     },
     {
+      "path": "./packages/pd-device-native-cdc"
+    },
+    {
       "path": "./packages/pd-device-atk-c2"
     },
     {

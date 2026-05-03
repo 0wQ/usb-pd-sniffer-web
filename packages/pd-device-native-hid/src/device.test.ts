@@ -22,6 +22,10 @@ function record(eventType: number, recvCounter: number, pdRaw: number[]): Monito
   };
 }
 
+function bytes(count: number, start = 0): number[] {
+  return Array.from({ length: count }, (_, index) => start + index);
+}
+
 describe("monitor record normalizer", () => {
   test("passes connection and monitor status records through unchanged", () => {
     const normalizer = createMonitorRecordNormalizer();
@@ -42,83 +46,60 @@ describe("monitor record normalizer", () => {
     expect(normalizer.push(record(MONITOR_EVENT.POWER_TELEMETRY, 5, []))).toEqual([]);
   });
 
-  test("passes UFCS single records through unchanged", () => {
+  test("passes short UFCS records through unchanged", () => {
     const normalizer = createMonitorRecordNormalizer();
-    const input = record(MONITOR_EVENT.UFCS_DP_SINGLE, 7, [1, 2, 3]);
+    const input = record(MONITOR_EVENT.UFCS_DP, 7, [1, 2, 3]);
 
     expect(normalizer.push(input)).toEqual([input]);
   });
 
-  test("assembles UFCS chunk0 and chunk1 into one single record", () => {
+  test("assembles consecutive same-counter UFCS HID reports", () => {
     const normalizer = createMonitorRecordNormalizer();
-    const chunk0 = record(MONITOR_EVENT.UFCS_DP_CHUNK0, 10, [1, 2, 3]);
-    const chunk1 = record(MONITOR_EVENT.UFCS_DP_CHUNK1, 10, [4, 5]);
+    const chunk0 = record(MONITOR_EVENT.UFCS_DP, 10, bytes(34));
+    const chunk1 = record(MONITOR_EVENT.UFCS_DP, 10, [34, 35]);
 
     expect(normalizer.push(chunk0)).toEqual([]);
     const output = normalizer.push(chunk1);
 
     expect(output).toHaveLength(1);
     expect(output[0]).toMatchObject({
-      event_type: MONITOR_EVENT.UFCS_DP_SINGLE,
+      event_type: MONITOR_EVENT.UFCS_DP,
       recv_counter: 10,
-      data_len: 5,
-      data: [1, 2, 3, 4, 5],
+      data_len: 36,
+      data: bytes(36),
     });
   });
 
-  test("does not assemble chunks with different directions or counters", () => {
+  test("flushes pending UFCS report when the counter changes", () => {
     const normalizer = createMonitorRecordNormalizer();
+    const first = record(MONITOR_EVENT.UFCS_DP, 10, bytes(34));
+    const second = record(MONITOR_EVENT.UFCS_DP, 11, [50, 51]);
 
-    expect(normalizer.push(record(MONITOR_EVENT.UFCS_DP_CHUNK0, 10, [1, 2]))).toEqual([]);
-    expect(normalizer.push(record(MONITOR_EVENT.UFCS_DM_CHUNK1, 10, [3, 4]))).toEqual([]);
-    expect(normalizer.push(record(MONITOR_EVENT.UFCS_DP_CHUNK1, 11, [5, 6]))).toMatchObject([
+    expect(normalizer.push(first)).toEqual([]);
+    expect(normalizer.push(second)).toMatchObject([
       {
-        event_type: MONITOR_EVENT.UFCS_DP_SINGLE,
+        event_type: MONITOR_EVENT.UFCS_DP,
         recv_counter: 10,
-        data_len: 2,
-        data: [1, 2],
-      }
+        data_len: 34,
+      },
+      second,
     ]);
   });
 
-  test("keeps DP and DM pending chunks independent", () => {
+  test("flushes pending UFCS report when the signal changes", () => {
     const normalizer = createMonitorRecordNormalizer();
+    const dp = record(MONITOR_EVENT.UFCS_DP, 30, bytes(34));
+    const dm = record(MONITOR_EVENT.UFCS_DM, 31, [3, 4]);
 
-    expect(normalizer.push(record(MONITOR_EVENT.UFCS_DP_CHUNK0, 20, [1, 2]))).toEqual([]);
-    expect(normalizer.push(record(MONITOR_EVENT.UFCS_DM_CHUNK0, 21, [9]))).toEqual([]);
-
-    expect(normalizer.push(record(MONITOR_EVENT.UFCS_DP_CHUNK1, 20, [3]))).toMatchObject([
+    expect(normalizer.push(dp)).toEqual([]);
+    expect(normalizer.push(dm)).toMatchObject([
       {
-        event_type: MONITOR_EVENT.UFCS_DP_SINGLE,
-        recv_counter: 20,
-        data_len: 3,
-        data: [1, 2, 3],
-      }
-    ]);
-
-    expect(normalizer.push(record(MONITOR_EVENT.UFCS_DM_CHUNK1, 21, [10, 11]))).toMatchObject([
-      {
-        event_type: MONITOR_EVENT.UFCS_DM_SINGLE,
-        recv_counter: 21,
-        data_len: 3,
-        data: [9, 10, 11],
-      }
-    ]);
-  });
-
-  test("flushes same-direction pending chunk0 before a new single record", () => {
-    const normalizer = createMonitorRecordNormalizer();
-
-    expect(normalizer.push(record(MONITOR_EVENT.UFCS_DP_CHUNK0, 30, [1, 2]))).toEqual([]);
-    expect(normalizer.push(record(MONITOR_EVENT.UFCS_DP_SINGLE, 31, [3, 4]))).toMatchObject([
-      {
-        event_type: MONITOR_EVENT.UFCS_DP_SINGLE,
+        event_type: MONITOR_EVENT.UFCS_DP,
         recv_counter: 30,
-        data_len: 2,
-        data: [1, 2],
+        data_len: 34,
       },
       {
-        event_type: MONITOR_EVENT.UFCS_DP_SINGLE,
+        event_type: MONITOR_EVENT.UFCS_DM,
         recv_counter: 31,
         data_len: 2,
         data: [3, 4],
@@ -126,39 +107,28 @@ describe("monitor record normalizer", () => {
     ]);
   });
 
-  test("flushes same-direction pending chunk0 before replacing it with a new chunk0", () => {
+  test("flushes pending UFCS report before a non-UFCS record", () => {
     const normalizer = createMonitorRecordNormalizer();
+    const ufcs = record(MONITOR_EVENT.UFCS_DM, 40, bytes(34));
+    const pd = record(MONITOR_EVENT.PD_SOP0, 41, [0x42, 0x10]);
 
-    expect(normalizer.push(record(MONITOR_EVENT.UFCS_DM_CHUNK0, 40, [1]))).toEqual([]);
-    expect(normalizer.push(record(MONITOR_EVENT.UFCS_DM_CHUNK0, 41, [2, 3]))).toMatchObject([
+    expect(normalizer.push(ufcs)).toEqual([]);
+    expect(normalizer.push(pd)).toMatchObject([
       {
-        event_type: MONITOR_EVENT.UFCS_DM_SINGLE,
+        event_type: MONITOR_EVENT.UFCS_DM,
         recv_counter: 40,
-        data_len: 1,
-        data: [1],
-      }
-    ]);
-    expect(normalizer.push(record(MONITOR_EVENT.UFCS_DM_CHUNK1, 41, [4]))).toMatchObject([
-      {
-        event_type: MONITOR_EVENT.UFCS_DM_SINGLE,
-        recv_counter: 41,
-        data_len: 3,
-        data: [2, 3, 4],
-      }
+        data_len: 34,
+      },
+      pd,
     ]);
   });
 
-  test("drops chunk1 when no same-direction pending chunk0 exists", () => {
+  test("reset drops pending UFCS HID reports", () => {
     const normalizer = createMonitorRecordNormalizer();
+    const input = record(MONITOR_EVENT.UFCS_DM, 12, [3, 4]);
 
-    expect(normalizer.push(record(MONITOR_EVENT.UFCS_DP_CHUNK1, 50, [1, 2]))).toEqual([]);
-  });
-
-  test("reset drops pending UFCS chunk0 records", () => {
-    const normalizer = createMonitorRecordNormalizer();
-
-    expect(normalizer.push(record(MONITOR_EVENT.UFCS_DM_CHUNK0, 12, [1, 2]))).toEqual([]);
+    expect(normalizer.push(record(MONITOR_EVENT.UFCS_DM, 12, bytes(34)))).toEqual([]);
     normalizer.reset();
-    expect(normalizer.push(record(MONITOR_EVENT.UFCS_DM_CHUNK1, 12, [3, 4]))).toEqual([]);
+    expect(normalizer.push(input)).toEqual([input]);
   });
 });
