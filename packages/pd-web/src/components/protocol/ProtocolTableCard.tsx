@@ -860,8 +860,8 @@ const ProtocolTableCard = memo(
                   </button>
                 </ToolbarTooltip>
 
-                <ToolbarTooltip tip="Theme">
-                  <div className="group dropdown dropdown-end">
+                <div className="group dropdown dropdown-end">
+                  <ToolbarTooltip tip="Theme">
                     <button
                       className={TOOLBAR_ICON_BUTTON_CLASS}
                       aria-label="Theme"
@@ -869,6 +869,7 @@ const ProtocolTableCard = memo(
                     >
                       <Palette className={TOOLBAR_ICON_CLASS} />
                     </button>
+                  </ToolbarTooltip>
                     <ul
                       tabIndex={-1}
                       className="dropdown-content z-20 mt-2 grid w-[26rem] grid-cols-3 gap-1 rounded-box bg-base-200 p-2 border-[length:var(--border)] border-white/5 shadow-md outline-[length:var(--border)] outline-black/5 pointer-events-none group-focus-within:pointer-events-auto"
@@ -877,11 +878,12 @@ const ProtocolTableCard = memo(
                         <li key={option} className="list-none">
                           <button
                             className={clsx(
-                              'grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1.5 rounded-btn px-1.5 py-1.5 text-left text-sm leading-5 capitalize transition-colors',
+                              'btn btn-ghost h-auto min-h-0 w-full grid-cols-[auto_minmax(0,1fr)_auto] justify-start gap-1.5 rounded-btn px-1.5 py-1.5 text-left text-sm leading-5 font-normal capitalize transition-colors',
                               {
-                                'bg-base-300/70 text-base-content pointer-events-none cursor-default':
+                                'bg-base-300/70 text-base-content shadow-none pointer-events-none cursor-default':
                                   theme === option,
-                                'hover:bg-base-200': theme !== option,
+                                'cursor-pointer hover:bg-base-300/70 hover:text-base-content':
+                                  theme !== option,
                               },
                             )}
                             aria-current={theme === option ? 'true' : undefined}
@@ -913,8 +915,7 @@ const ProtocolTableCard = memo(
                         </li>
                       ))}
                     </ul>
-                  </div>
-                </ToolbarTooltip>
+                </div>
                 <ToolbarTooltip tip={autoScroll ? 'Pause auto scroll' : 'Auto Scroll'}>
                   <button
                     className={TOOLBAR_ICON_BUTTON_CLASS}
