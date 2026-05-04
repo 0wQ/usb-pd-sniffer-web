@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { createJSONStorage, persist } from 'zustand/middleware'
 import type { AppView } from '@/components/app/ViewTabs'
 import type { PdTxSop } from '@/lib/devices/deviceDrivers'
 
@@ -37,100 +38,6 @@ export type TxDialogDraft = {
   hexPayload: string
 }
 
-const APP_STORAGE_KEYS = {
-  currentView: 'usb-pd-app-current-view',
-  decodeLayoutMode: 'usb-pd-layout-decode-mode',
-  decodeCollapsed: 'usb-pd-layout-decode-collapsed',
-  theme: 'usb-pd-theme',
-  txDialogDraft: 'usb-pd-tx-dialog-draft-v1',
-} as const
-
-function readString(key: string, fallback: string): string {
-  try {
-    const value = localStorage.getItem(key)
-    return value ?? fallback
-  } catch {
-    return fallback
-  }
-}
-
-function readBool(key: string, fallback: boolean): boolean {
-  try {
-    const value = localStorage.getItem(key)
-    if (value === 'true') return true
-    if (value === 'false') return false
-    return fallback
-  } catch {
-    return fallback
-  }
-}
-
-function writeValue(key: string, value: string): void {
-  try {
-    localStorage.setItem(key, value)
-  } catch {
-    // ignore
-  }
-}
-
-function isAppView(value: string): value is AppView {
-  return value === 'protocol' || value === 'power'
-}
-
-function isSendMode(value: unknown): value is SendMode {
-  return value === 'raw' || value === 'hard_reset' || value === 'cable_reset'
-}
-
-function isTxSop(value: unknown): value is PdTxSop {
-  return value === 'SOP' || value === 'SOP_PRIME' || value === 'SOP_DPRIME'
-}
-
-function readCurrentView(): AppView {
-  const value = readString(APP_STORAGE_KEYS.currentView, 'protocol')
-  return isAppView(value) ? value : 'protocol'
-}
-
-function readDecodeLayoutMode(): DecodeLayoutMode {
-  const value = readString(APP_STORAGE_KEYS.decodeLayoutMode, 'vertical')
-  return value === 'horizontal' ? 'horizontal' : 'vertical'
-}
-
-function isAppTheme(value: string): value is AppTheme {
-  return APP_THEMES.includes(value as AppTheme)
-}
-
-function readTheme(): AppTheme {
-  const value = readString(APP_STORAGE_KEYS.theme, 'silk')
-  return isAppTheme(value) ? value : 'silk'
-}
-
-function applyTheme(theme: AppTheme): void {
-  if (typeof document === 'undefined') return
-  document.documentElement.setAttribute('data-theme', theme)
-}
-
-const DEFAULT_TX_DIALOG_DRAFT: TxDialogDraft = {
-  mode: 'raw',
-  sop: 'SOP',
-  hexPayload: 'A7 00',
-}
-
-function readTxDialogDraft(): TxDialogDraft {
-  try {
-    const rawValue = localStorage.getItem(APP_STORAGE_KEYS.txDialogDraft)
-    if (rawValue === null) return DEFAULT_TX_DIALOG_DRAFT
-
-    const parsed = JSON.parse(rawValue) as Partial<TxDialogDraft>
-    return {
-      mode: isSendMode(parsed.mode) ? parsed.mode : DEFAULT_TX_DIALOG_DRAFT.mode,
-      sop: isTxSop(parsed.sop) ? parsed.sop : DEFAULT_TX_DIALOG_DRAFT.sop,
-      hexPayload: typeof parsed.hexPayload === 'string' ? parsed.hexPayload : DEFAULT_TX_DIALOG_DRAFT.hexPayload,
-    }
-  } catch {
-    return DEFAULT_TX_DIALOG_DRAFT
-  }
-}
-
 interface AppState {
   currentView: AppView
   decodeLayoutMode: DecodeLayoutMode
@@ -144,41 +51,69 @@ interface AppState {
   setTxDialogDraft: (draft: TxDialogDraft) => void
 }
 
-const initialTheme = readTheme()
-applyTheme(initialTheme)
+type AppPersistedState = Pick<
+  AppState,
+  'currentView' | 'decodeLayoutMode' | 'decodeCollapsed' | 'theme' | 'txDialogDraft'
+>
 
-const useAppStore = create<AppState>()((set) => ({
-  currentView: readCurrentView(),
-  decodeLayoutMode: readDecodeLayoutMode(),
-  decodeCollapsed: readBool(APP_STORAGE_KEYS.decodeCollapsed, false),
-  theme: initialTheme,
-  txDialogDraft: readTxDialogDraft(),
+const APP_STORE_STORAGE_KEY = 'usb-pd-app-store'
 
-  setCurrentView: (currentView) => {
-    writeValue(APP_STORAGE_KEYS.currentView, currentView)
-    set({ currentView })
-  },
+const DEFAULT_TX_DIALOG_DRAFT: TxDialogDraft = {
+  mode: 'raw',
+  sop: 'SOP',
+  hexPayload: 'A7 00',
+}
 
-  setDecodeLayoutMode: (decodeLayoutMode) => {
-    writeValue(APP_STORAGE_KEYS.decodeLayoutMode, decodeLayoutMode)
-    set({ decodeLayoutMode })
-  },
+const DEFAULT_APP_PERSISTED_STATE: AppPersistedState = {
+  currentView: 'protocol',
+  decodeLayoutMode: 'vertical',
+  decodeCollapsed: false,
+  theme: 'silk',
+  txDialogDraft: DEFAULT_TX_DIALOG_DRAFT,
+}
 
-  setDecodeCollapsed: (decodeCollapsed) => {
-    writeValue(APP_STORAGE_KEYS.decodeCollapsed, String(decodeCollapsed))
-    set({ decodeCollapsed })
-  },
+function applyTheme(theme: AppTheme): void {
+  if (typeof document === 'undefined') return
+  document.documentElement.setAttribute('data-theme', theme)
+}
 
-  setTheme: (theme) => {
-    writeValue(APP_STORAGE_KEYS.theme, theme)
-    applyTheme(theme)
-    set({ theme })
-  },
+applyTheme(DEFAULT_APP_PERSISTED_STATE.theme)
 
-  setTxDialogDraft: (txDialogDraft) => {
-    writeValue(APP_STORAGE_KEYS.txDialogDraft, JSON.stringify(txDialogDraft))
-    set({ txDialogDraft })
-  },
-}))
+const useAppStore = create<AppState>()(
+  persist(
+    (set) => ({
+      ...DEFAULT_APP_PERSISTED_STATE,
+
+      setCurrentView: (currentView) => set({ currentView }),
+
+      setDecodeLayoutMode: (decodeLayoutMode) => set({ decodeLayoutMode }),
+
+      setDecodeCollapsed: (decodeCollapsed) => set({ decodeCollapsed }),
+
+      setTheme: (theme) => {
+        applyTheme(theme)
+        set({ theme })
+      },
+
+      setTxDialogDraft: (txDialogDraft) => set({ txDialogDraft }),
+    }),
+    {
+      name: APP_STORE_STORAGE_KEY,
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        currentView: state.currentView,
+        decodeLayoutMode: state.decodeLayoutMode,
+        decodeCollapsed: state.decodeCollapsed,
+        theme: state.theme,
+        txDialogDraft: state.txDialogDraft,
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state !== undefined) {
+          applyTheme(state.theme)
+        }
+      },
+    },
+  ),
+)
 
 export default useAppStore
