@@ -29,11 +29,11 @@ function getRecordAt(
   records: readonly CaptureRecord[] | CaptureRecordSource,
   index: number,
 ): CaptureRecord | undefined {
-  if (Array.isArray(records)) {
-    return records[index]
+  if ('get' in records) {
+    return records.get(index)
   }
 
-  return records.get(index)
+  return records[index]
 }
 
 type ContextLookupResult<T> = {

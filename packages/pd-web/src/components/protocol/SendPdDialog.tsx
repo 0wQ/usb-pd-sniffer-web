@@ -22,6 +22,7 @@ import {
   IssueList,
   SectionView,
 } from '@/components/protocol/decode/DecodedSectionsView'
+import RawPacketView from '@/components/protocol/decode/RawPacketView'
 
 const MULTILINE_TX_INTERVAL_MS = 50
 
@@ -536,9 +537,11 @@ const SendPdDialog = ({
                       <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">
                         Raw Payload
                       </div>
-                      <div className="mt-2 break-all font-mono text-xs leading-5 text-base-content">
-                        {hexBytes(preview.result.frame.bytes)}
-                      </div>
+                      <RawPacketView
+                        className="mt-2"
+                        bytes={preview.result.frame.bytes}
+                        sections={preview.result.decoded.sections}
+                      />
                       <div className="mt-2 text-[11px] text-base-content/55">
                         CRC is not part of this TX preview. The PD PHY generates
                         CRC during transmission.

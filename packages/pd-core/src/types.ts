@@ -109,7 +109,6 @@ export type Section = {
   byteOffset: number
   byteLength: number
   rawBytes: Uint8Array
-  rawValue?: number | bigint
   fields: BitField[]
   issues: DecodeIssue[]
 }

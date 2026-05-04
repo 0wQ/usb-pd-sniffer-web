@@ -201,7 +201,6 @@ export function explainMessageHeader(
     byteOffset: 0,
     byteLength: 2,
     rawBytes: frame.bytes.slice(0, 2),
-    rawValue: header.raw16,
     fields,
     issues,
   }

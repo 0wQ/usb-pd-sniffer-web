@@ -47,7 +47,6 @@ export function explainExtendedMessageHeader(
     byteOffset: 2,
     byteLength: 2,
     rawBytes: bytes.slice(0, 2),
-    rawValue: header.raw16,
     fields: [
       field(
         'chunked',

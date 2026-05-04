@@ -6,6 +6,7 @@ import {
   parseFieldEditValue,
   type FieldEditMode,
 } from '@/lib/analyzer/fieldEdit'
+import RawPacketView from '@/components/protocol/decode/RawPacketView'
 
 export function hexBytes(bytes: readonly number[] | Uint8Array): string {
   return Array.from(bytes, (byte) =>
@@ -19,17 +20,6 @@ function bitRangeLabel(bitStart: number, bitLength: number): string {
   }
 
   return `B${bitStart + bitLength - 1}..${bitStart}`
-}
-
-function formatRawValue(rawValue: number | bigint | undefined): string {
-  if (rawValue === undefined) return '-'
-
-  if (typeof rawValue === 'bigint') {
-    return `0x${rawValue.toString(16).toUpperCase()}`
-  }
-
-  const normalized = rawValue >>> 0
-  return `0x${normalized.toString(16).toUpperCase()}`
 }
 
 function formatFieldRawValue(field: BitField): string {
@@ -241,36 +231,30 @@ export function SectionView({
 
   return (
     <div className="rounded-xl border border-base-300 bg-base-100/80">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-base-300/80 px-3 py-3">
-        <div className="min-w-0">
-          <div className="text-sm font-semibold text-base-content">
-            {section.title}
-          </div>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-base-content/50">
-            <span>
-              {formatByteRange(section.byteOffset, section.byteLength)}
-            </span>
-            {section.semanticKind !== undefined ? (
-              <>
-                <span>•</span>
-                <span className="font-mono">{section.semanticKind}</span>
-              </>
-            ) : (
-              <>
-                <span>•</span>
-                <span className="font-mono">{section.kind}</span>
-              </>
-            )}
-          </div>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-base-300/80 px-3 py-3">
+        <div className="min-w-0 text-sm font-semibold text-base-content">
+          {section.title}
         </div>
-
-        {section.rawValue !== undefined && (
-          <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-right">
-            <div className="font-mono text-[11px] text-base-content/60">
-              {formatRawValue(section.rawValue)}
-            </div>
-          </div>
-        )}
+        <div className="flex min-w-0 flex-wrap items-baseline justify-end gap-x-2 gap-y-1 text-right">
+          <span className="text-[11px] text-base-content/50">
+            {formatByteRange(section.byteOffset, section.byteLength)}
+          </span>
+          {section.semanticKind !== undefined ? (
+            <>
+              <span className="text-[11px] text-base-content/50">•</span>
+              <span className="font-mono text-[11px] text-base-content/50">
+                {section.semanticKind}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="text-[11px] text-base-content/50">•</span>
+              <span className="font-mono text-[11px] text-base-content/50">
+                {section.kind}
+              </span>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="px-3 py-3">
@@ -279,9 +263,11 @@ export function SectionView({
             <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">
               Raw Bytes
             </div>
-            <div className="mt-2 break-all font-mono text-xs leading-5 text-base-content">
-              {hexBytes(section.rawBytes)}
-            </div>
+            <RawPacketView
+              className="mt-2"
+              bytes={section.rawBytes}
+              ungroupedToneClassName="text-base-content"
+            />
           </div>
           <div className="rounded-lg border border-base-300/80 bg-base-200/45 px-3 py-2">
             <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">

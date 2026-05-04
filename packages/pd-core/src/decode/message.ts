@@ -223,7 +223,6 @@ function buildCrcSection(layout: PacketLayout, crc: PacketCrc): Section {
     byteOffset: layout.crcByteOffset ?? layout.actualMessageByteLength,
     byteLength: crc.rawBytes.length,
     rawBytes: crc.rawBytes,
-    rawValue: crc.raw32 ?? undefined,
     fields:
       crc.raw32 === null
         ? []

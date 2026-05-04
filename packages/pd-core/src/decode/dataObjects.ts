@@ -155,7 +155,6 @@ function createSection(
     byteOffset,
     byteLength: 4,
     rawBytes: raw32Bytes(raw32),
-    rawValue: raw32,
     fields,
     issues,
   }

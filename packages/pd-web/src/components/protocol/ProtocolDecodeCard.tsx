@@ -9,10 +9,10 @@ import {
   type UfcsTypeDecode,
 } from '@/lib/ufcs/ufcsType'
 import {
-  hexBytes,
   IssueList,
   SectionView,
 } from '@/components/protocol/decode/DecodedSectionsView'
+import RawPacketView from '@/components/protocol/decode/RawPacketView'
 
 const DETAIL_CONTEXT_BACKTRACK_RECORDS = 10_000
 
@@ -249,12 +249,14 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
               <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">
                 Raw Packet
               </div>
-              <div className="mt-2 break-all font-mono text-xs leading-5">
-                {hexBytes(
+              <RawPacketView
+                className="mt-2"
+                bytes={
                   decodedFrame?.packet.bytes ??
-                    selectedRecord.data.slice(0, selectedRecord.data_len),
-                )}
-              </div>
+                  selectedRecord.data.slice(0, selectedRecord.data_len)
+                }
+                sections={decodedFrame?.sections}
+              />
             </div>
 
             {decodedFrame !== null && decodedFrame.issues.length > 0 && (
