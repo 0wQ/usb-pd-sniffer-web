@@ -124,25 +124,27 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
   const captureBuffer = useDeviceStore((state) => state.captureBuffer)
   const captureVersion = useDeviceStore((state) => state.captureVersion)
 
-  const records = useMemo(() => {
+  const selectedRecord = useMemo(() => {
     void captureVersion
-    return captureBuffer.getAll()
-  }, [captureBuffer, captureVersion])
+    return selectedIndex === null ? null : (captureBuffer.get(selectedIndex) ?? null)
+  }, [captureBuffer, captureVersion, selectedIndex])
 
-  const selectedRecord = selectedIndex !== null ? records[selectedIndex] : null
-  const previousRecord =
-    selectedIndex !== null && selectedIndex > 0
-      ? records[selectedIndex - 1]
+  const previousRecord = useMemo(() => {
+    void captureVersion
+    return selectedIndex !== null && selectedIndex > 0
+      ? (captureBuffer.get(selectedIndex - 1) ?? null)
       : null
+  }, [captureBuffer, captureVersion, selectedIndex])
 
   const decodeResult = useMemo(() => {
+    void captureVersion
     if (selectedIndex === null) return null
     return decodeRecordAtIndex(
-      records,
+      captureBuffer,
       selectedIndex,
       DETAIL_CONTEXT_BACKTRACK_RECORDS,
     )
-  }, [records, selectedIndex])
+  }, [captureBuffer, captureVersion, selectedIndex])
   const decodedFrame = decodeResult?.decoded ?? null
   const contextBacktrackUsed = decodeResult?.contextBacktrackUsed ?? 0
 
