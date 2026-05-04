@@ -40,8 +40,8 @@ import type { DeviceKind } from '@/lib/devices/deviceDrivers'
 const ROW_HEIGHT = 30
 const TOOLBAR_ICON_BUTTON_CLASS = 'btn btn-sm btn-square btn-ghost'
 const TOOLBAR_ICON_CLASS = 'h-5 w-5'
-const SMOOTH_FOLLOW_MIN_INTERVAL_MS = 180
-const SMOOTH_FOLLOW_MAX_RECORD_DELTA = 4
+const SMOOTH_FOLLOW_MIN_INTERVAL_MS = 10
+const SMOOTH_FOLLOW_MAX_RECORD_DELTA = 10
 type DecodeLayoutMode = 'vertical' | 'horizontal'
 
 type ToolbarTooltipProps = {
