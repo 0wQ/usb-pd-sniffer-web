@@ -1,4 +1,5 @@
 import clsx from 'clsx'
+import { Fragment } from 'react'
 import type { Section } from '@usb-pd-sniffer/pd-core'
 
 const RAW_PACKET_SECTION_TONES = [
@@ -95,17 +96,17 @@ const RawPacketView = ({
   return (
     <div
       className={clsx(
-        'flex flex-wrap gap-y-1 font-mono text-xs leading-5',
+        'font-mono text-xs leading-5',
         className,
       )}
     >
       {chunks.map((chunk, index) => (
-        <span
-          key={chunk.key}
-          className={clsx('whitespace-pre font-medium', chunk.toneClassName)}
-        >
-          {index < chunks.length - 1 ? `${chunk.text} ` : chunk.text}
-        </span>
+        <Fragment key={chunk.key}>
+          <span className={clsx('font-medium', chunk.toneClassName)}>
+            {chunk.text}
+          </span>
+          {index < chunks.length - 1 && ' '}
+        </Fragment>
       ))}
     </div>
   )

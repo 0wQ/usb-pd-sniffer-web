@@ -255,7 +255,7 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
                   decodedFrame?.packet.bytes ??
                   selectedRecord.data.slice(0, selectedRecord.data_len)
                 }
-                sections={decodedFrame?.sections}
+                sections={decodedWithoutContext?.sections}
               />
             </div>
 
