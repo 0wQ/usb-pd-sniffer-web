@@ -548,7 +548,7 @@ type CardProps = {
   className?: string
   decodeLayoutMode: DecodeLayoutMode
   onToggleDecodeLayoutMode: () => void
-  onRowClick: (index: number) => void
+  onRowClick: (index: number | null) => void
   selectedIndex: number | null
   onOpenTxDialog: () => void
 }
@@ -600,9 +600,9 @@ const ProtocolTableCard = memo(
         if (AUTO_SCROLL_CONFIG.STOP_ON_ROW_CLICK) {
           setAutoScroll(false)
         }
-        onRowClick(index)
+        onRowClick(selectedIndex === index ? null : index)
       },
-      [onRowClick],
+      [onRowClick, selectedIndex],
     )
 
     const handleScrollToSelection = useCallback(() => {

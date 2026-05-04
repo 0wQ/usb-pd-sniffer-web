@@ -52,6 +52,7 @@ const ProtocolPage = () => {
   const setDecodeCollapsed = useAppStore((state) => state.setDecodeCollapsed)
   const [decodeHandleHighlighted, setDecodeHandleHighlighted] = useState(false)
   const [decodePanel, setDecodePanel] = usePanelCallbackRef()
+  const hasSelectedRecord = selectedIndex !== null
   const layoutId = `pd-web-main-layout-${decodeLayoutMode}`
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
     id: layoutId,
@@ -87,7 +88,7 @@ const ProtocolPage = () => {
   useEffect(() => {
     if (decodePanel === null) return
     try {
-      if (decodeCollapsed) {
+      if (!hasSelectedRecord || decodeCollapsed) {
         decodePanel.collapse()
       } else if (decodePanel.isCollapsed()) {
         decodePanel.expand()
@@ -95,7 +96,7 @@ const ProtocolPage = () => {
     } catch {
       // Ignore stale panel handles from layout updates.
     }
-  }, [decodeCollapsed, decodePanel])
+  }, [decodeCollapsed, decodePanel, hasSelectedRecord])
 
   const toggleDecodeLayoutMode = useCallback(() => {
     setDecodeLayoutMode((current) =>
@@ -115,12 +116,14 @@ const ProtocolPage = () => {
   }, [decodeHandleHighlighted])
 
   const handleDecodeResize = useCallback((panelSize: PanelSize) => {
+    if (!hasSelectedRecord) return
     setDecodeCollapsed(panelSize.asPercentage <= 0.001)
-  }, [setDecodeCollapsed])
+  }, [hasSelectedRecord, setDecodeCollapsed])
 
   const handleDecodeSeparatorDoubleClick = useCallback(() => {
+    if (!hasSelectedRecord) return
     setDecodeCollapsed((current) => !current)
-  }, [setDecodeCollapsed])
+  }, [hasSelectedRecord, setDecodeCollapsed])
 
   const defaultLayoutForMode = useMemo(() => defaultLayout, [defaultLayout])
   const selectedRecord =
