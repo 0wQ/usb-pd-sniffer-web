@@ -484,6 +484,7 @@ const ProtocolTableCard = memo(({
     setAutoConnectOnLoad,
     setAutoReconnectOnHotplug,
   } = useDeviceWorkspaceContext()
+  const theme = useAppStore((state) => state.theme)
   const setTheme = useAppStore((state) => state.setTheme)
 
   const handleRowClick = useCallback((index: number) => {
@@ -694,9 +695,19 @@ const ProtocolTableCard = memo(({
                   <Palette className={TOOLBAR_ICON_CLASS} />
                 </label>
                 <ul tabIndex={-1} className="dropdown-content z-20 max-h-72 w-50 overflow-y-auto rounded-box bg-base-100 p-2 shadow-md menu">
-                  {APP_THEMES.map((theme) => (
-                    <li key={theme} onClick={() => setTheme(theme)}>
-                      <a className="capitalize">{theme}</a>
+                  {APP_THEMES.map((option) => (
+                    <li
+                      key={option}
+                      onClick={theme === option ? undefined : () => setTheme(option)}
+                    >
+                      <a
+                        className={clsx('capitalize transition-colors', {
+                          'bg-base-300 text-base-content font-semibold pointer-events-none cursor-default': theme === option,
+                        })}
+                        aria-current={theme === option ? 'true' : undefined}
+                      >
+                        {option}
+                      </a>
                     </li>
                   ))}
                 </ul>

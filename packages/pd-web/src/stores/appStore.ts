@@ -38,17 +38,19 @@ export type TxDialogDraft = {
   hexPayload: string
 }
 
+type StateUpdater<T> = T | ((current: T) => T)
+
 interface AppState {
   currentView: AppView
   decodeLayoutMode: DecodeLayoutMode
   decodeCollapsed: boolean
   theme: AppTheme
   txDialogDraft: TxDialogDraft
-  setCurrentView: (view: AppView) => void
-  setDecodeLayoutMode: (mode: DecodeLayoutMode) => void
-  setDecodeCollapsed: (collapsed: boolean) => void
-  setTheme: (theme: AppTheme) => void
-  setTxDialogDraft: (draft: TxDialogDraft) => void
+  setCurrentView: (view: StateUpdater<AppView>) => void
+  setDecodeLayoutMode: (mode: StateUpdater<DecodeLayoutMode>) => void
+  setDecodeCollapsed: (collapsed: StateUpdater<boolean>) => void
+  setTheme: (theme: StateUpdater<AppTheme>) => void
+  setTxDialogDraft: (draft: StateUpdater<TxDialogDraft>) => void
 }
 
 type AppPersistedState = Pick<
@@ -77,25 +79,38 @@ function applyTheme(theme: AppTheme): void {
   document.documentElement.setAttribute('data-theme', theme)
 }
 
+function resolveUpdater<T>(updater: StateUpdater<T>, current: T): T {
+  return typeof updater === 'function' ? (updater as (value: T) => T)(current) : updater
+}
+
 applyTheme(DEFAULT_APP_PERSISTED_STATE.theme)
 
 const useAppStore = create<AppState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       ...DEFAULT_APP_PERSISTED_STATE,
 
-      setCurrentView: (currentView) => set({ currentView }),
-
-      setDecodeLayoutMode: (decodeLayoutMode) => set({ decodeLayoutMode }),
-
-      setDecodeCollapsed: (decodeCollapsed) => set({ decodeCollapsed }),
-
-      setTheme: (theme) => {
-        applyTheme(theme)
-        set({ theme })
+      setCurrentView: (currentView) => {
+        set({ currentView: resolveUpdater(currentView, get().currentView) })
       },
 
-      setTxDialogDraft: (txDialogDraft) => set({ txDialogDraft }),
+      setDecodeLayoutMode: (decodeLayoutMode) => {
+        set({ decodeLayoutMode: resolveUpdater(decodeLayoutMode, get().decodeLayoutMode) })
+      },
+
+      setDecodeCollapsed: (decodeCollapsed) => {
+        set({ decodeCollapsed: resolveUpdater(decodeCollapsed, get().decodeCollapsed) })
+      },
+
+      setTheme: (theme) => {
+        const nextTheme = resolveUpdater(theme, get().theme)
+        applyTheme(nextTheme)
+        set({ theme: nextTheme })
+      },
+
+      setTxDialogDraft: (txDialogDraft) => {
+        set({ txDialogDraft: resolveUpdater(txDialogDraft, get().txDialogDraft) })
+      },
     }),
     {
       name: APP_STORE_STORAGE_KEY,
