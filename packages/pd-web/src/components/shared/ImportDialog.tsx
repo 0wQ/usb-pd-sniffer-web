@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import type { ImportMode } from '@/types/csv'
+import type { ImportMode } from '@/types/import'
 
 type Props = {
   isOpen: boolean
@@ -45,13 +45,13 @@ const ImportDialog = ({ isOpen, recordCount, onClose, onConfirm }: Props) => {
       onClose={onClose}
     >
       <div className="modal-box">
-        <h3 className="font-bold text-lg">Import CSV Data</h3>
+        <h3 className="font-bold text-lg">Import Capture Data</h3>
         <p className="py-4">
           Found{' '}
           <span className="font-mono font-semibold text-primary">
             {recordCount.toLocaleString()}
           </span>{' '}
-          records in the CSV file.
+          records in the selected file.
         </p>
         <p className="text-sm text-base-content/70 mb-4">
           How would you like to import this data?

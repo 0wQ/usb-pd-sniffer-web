@@ -8,7 +8,7 @@ import type {
   PdTxSop,
 } from '@/lib/devices/deviceDrivers'
 import type { AppView } from '@/components/app/ViewTabs'
-import type { ImportMode } from '@/types/csv'
+import type { ImportMode } from '@/types/import'
 
 export type DeviceWorkspaceContextValue = {
   currentView: AppView

@@ -5,14 +5,9 @@ import { useDeviceWorkspaceContext } from '@/components/app/DeviceWorkspaceConte
 import useAppStore, { APP_THEMES } from '@/stores/appStore'
 import useDeviceStore from '@/stores/deviceStore'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
-import type { ImportMode } from '@/types/csv'
-import {
-  exportToCsv,
-  importFromCsv,
-  generateFilename,
-  downloadCsv,
-  readFile,
-} from '@/utils/csvHelper'
+import type { ImportMode } from '@/types/import'
+import { exportToCsv, generateFilename, downloadCsv } from '@/utils/csvHelper'
+import { importCaptureFile } from '@/lib/capture-io/import'
 import ImportDialog from '@/components/shared/ImportDialog'
 import ViewTabs from '@/components/app/ViewTabs'
 import clsx from 'clsx'
@@ -632,7 +627,7 @@ const ProtocolTableCard = memo(
       }
     }, [captureBuffer])
 
-    const handleImportCsv = useCallback(() => {
+    const handleImportCapture = useCallback(() => {
       fileInputRef.current?.click()
     }, [])
 
@@ -643,8 +638,7 @@ const ProtocolTableCard = memo(
 
         try {
           setIsProcessing(true)
-          const content = await readFile(file)
-          const { records, errors } = importFromCsv(content)
+          const { records, errors, format } = await importCaptureFile(file)
 
           if (errors.length > 0) {
             const errorMessage = errors
@@ -662,7 +656,7 @@ const ProtocolTableCard = memo(
           }
 
           if (records.length === 0) {
-            toast.error('No valid records found in CSV file')
+            toast.error(`No valid records found in ${format} file`)
             return
           }
 
@@ -948,12 +942,12 @@ const ProtocolTableCard = memo(
                     <Download className={TOOLBAR_ICON_CLASS} />
                   </button>
                 </ToolbarTooltip>
-                <ToolbarTooltip tip="Import from CSV">
+                <ToolbarTooltip tip="Import capture file">
                   <button
                     className={TOOLBAR_ICON_BUTTON_CLASS}
-                    onClick={handleImportCsv}
+                    onClick={handleImportCapture}
                     disabled={isProcessing}
-                    aria-label="Import from CSV"
+                    aria-label="Import capture file"
                     type="button"
                   >
                     <Upload className={TOOLBAR_ICON_CLASS} />
@@ -986,11 +980,11 @@ const ProtocolTableCard = memo(
           </div>
         </div>
 
-        {/* Hidden file input for CSV import */}
+        {/* Hidden file input for capture import */}
         <input
           ref={fileInputRef}
           type="file"
-          accept=".csv"
+          accept=".csv,.pdstream,.pdStream,.atkcc"
           onChange={handleFileChange}
           style={{ display: 'none' }}
         />

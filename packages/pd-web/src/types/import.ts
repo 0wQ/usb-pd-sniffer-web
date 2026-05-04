@@ -11,3 +11,9 @@ export interface ImportResult {
 }
 
 export type ImportMode = 'replace' | 'append'
+
+export type CaptureImportFormat = 'csv' | 'pdStream' | 'atkcc'
+
+export interface ImportFileResult extends ImportResult {
+  format: CaptureImportFormat
+}

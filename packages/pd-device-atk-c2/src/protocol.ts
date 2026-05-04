@@ -346,7 +346,9 @@ export class AtkC2BmcDecoder {
   }
 }
 
-function eventTypeForDecodedEvent(event: AtkC2DecodedEvent): CaptureEventType {
+export function mapAtkC2DecodedEventToCaptureEvent(
+  event: AtkC2DecodedEvent,
+): CaptureEventType {
   if ('kind' in event) {
     return event.kind === 'hard_reset'
       ? CAPTURE_EVENT.PD_HARD_RESET
@@ -422,7 +424,7 @@ export class AtkC2ProtocolDecoder {
       cc2_mv: this.snapshot.cc2Mv,
       dp_mv: this.snapshot.dpMv,
       dm_mv: this.snapshot.dmMv,
-      event_type: eventTypeForDecodedEvent(event),
+      event_type: mapAtkC2DecodedEventToCaptureEvent(event),
       active_cc: this.snapshot.activeCC,
       data_len: data.length,
       data,

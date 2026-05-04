@@ -1,5 +1,5 @@
 import Papa from 'papaparse'
-import type { ValidationError, ImportResult } from '@/types/csv'
+import type { ValidationError, ImportResult } from '@/types/import'
 import {
   CAPTURE_EVENT,
   type CaptureEventType,
@@ -43,8 +43,6 @@ const CAPTURE_EVENT_BY_NAME = {
 } as const
 
 const CAPTURE_EVENT_NAMES = new Set<string>(Object.keys(CAPTURE_EVENT_BY_NAME))
-const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
-
 const NUMERIC_FIELDS: readonly CaptureCsvHeader[] = [
   'timestamp_us',
   'seq',
@@ -325,39 +323,4 @@ export const downloadCsv = (content: string, filename: string): void => {
   document.body.removeChild(link)
 
   setTimeout(() => URL.revokeObjectURL(url), 100)
-}
-
-export const readFile = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    if (file.size > MAX_FILE_SIZE) {
-      reject(
-        new Error(
-          `File size (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds maximum allowed size (50MB)`,
-        ),
-      )
-      return
-    }
-
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      reject(new Error('Invalid file type. Please select a CSV file'))
-      return
-    }
-
-    const reader = new FileReader()
-
-    reader.onload = (event) => {
-      const content = event.target?.result
-      if (typeof content === 'string') {
-        resolve(content)
-      } else {
-        reject(new Error('Failed to read file as text'))
-      }
-    }
-
-    reader.onerror = () => {
-      reject(new Error('Failed to read file'))
-    }
-
-    reader.readAsText(file, 'UTF-8')
-  })
 }
