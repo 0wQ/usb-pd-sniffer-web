@@ -32,7 +32,9 @@ const DeviceWorkspace = ({ currentView, onViewChange }: Props) => {
   const [isTxDialogOpen, setIsTxDialogOpen] = useState(false)
 
   const selectedIndex = useDeviceStore((state) => state.protocolSelectedIndex)
-  const setSelectedIndex = useDeviceStore((state) => state.setProtocolSelectedIndex)
+  const setSelectedIndex = useDeviceStore(
+    (state) => state.setProtocolSelectedIndex,
+  )
   const captureBuffer = useDeviceStore((state) => state.captureBuffer)
   const captureCount = useDeviceStore((state) => state.captureCount)
   const clearRecords = useDeviceStore((state) => state.clearRecords)
@@ -40,9 +42,15 @@ const DeviceWorkspace = ({ currentView, onViewChange }: Props) => {
   const isConnected = useDeviceStore((state) => state.isConnected)
   const isConnecting = useDeviceStore((state) => state.isConnecting)
   const autoConnectOnLoad = useDeviceStore((state) => state.autoConnectOnLoad)
-  const autoReconnectOnHotplug = useDeviceStore((state) => state.autoReconnectOnHotplug)
-  const setAutoConnectOnLoad = useDeviceStore((state) => state.setAutoConnectOnLoad)
-  const setAutoReconnectOnHotplug = useDeviceStore((state) => state.setAutoReconnectOnHotplug)
+  const autoReconnectOnHotplug = useDeviceStore(
+    (state) => state.autoReconnectOnHotplug,
+  )
+  const setAutoConnectOnLoad = useDeviceStore(
+    (state) => state.setAutoConnectOnLoad,
+  )
+  const setAutoReconnectOnHotplug = useDeviceStore(
+    (state) => state.setAutoReconnectOnHotplug,
+  )
 
   const handleConnectBtnClick = useCallback(async () => {
     if (isConnecting) return
@@ -54,73 +62,88 @@ const DeviceWorkspace = ({ currentView, onViewChange }: Props) => {
     await connectDevice()
   }, [connectDevice, disconnectDevice, isConnected, isConnecting])
 
-  const handleSendRawPdFrame = useCallback((sop: PdTxSop, hexPayload: string) => {
-    return sendRawPdFrame(sop, hexPayload)
-  }, [sendRawPdFrame])
+  const handleSendRawPdFrame = useCallback(
+    (sop: PdTxSop, hexPayload: string) => {
+      return sendRawPdFrame(sop, hexPayload)
+    },
+    [sendRawPdFrame],
+  )
 
-  const handleSendHardReset = useCallback(() => sendHardReset(), [sendHardReset])
+  const handleSendHardReset = useCallback(
+    () => sendHardReset(),
+    [sendHardReset],
+  )
 
-  const handleSendCableReset = useCallback(() => sendCableReset(), [sendCableReset])
+  const handleSendCableReset = useCallback(
+    () => sendCableReset(),
+    [sendCableReset],
+  )
 
-  const handleSetCCMode = useCallback((config: CCModeConfig) => setCCMode(config), [setCCMode])
+  const handleSetCCMode = useCallback(
+    (config: CCModeConfig) => setCCMode(config),
+    [setCCMode],
+  )
 
-  const workspaceValue = useMemo(() => ({
-    currentView,
-    onViewChange,
-    selectedIndex,
-    setSelectedIndex,
-    captureBuffer,
-    captureCount,
-    clearRecords,
-    importRecords,
-    isConnected,
-    isConnecting,
-    autoConnectOnLoad,
-    autoReconnectOnHotplug,
-    selectedDeviceKind,
-    deviceOptions,
-    supportsTx,
-    isSending,
-    isDeviceSupported,
-    deviceError,
-    selectDeviceKind,
-    connectDevice: handleConnectBtnClick,
-    disconnectDevice,
-    sendRawPdFrame: handleSendRawPdFrame,
-    sendHardReset: handleSendHardReset,
-    sendCableReset: handleSendCableReset,
-    setCCMode: handleSetCCMode,
-    setAutoConnectOnLoad,
-    setAutoReconnectOnHotplug,
-  }), [
-    autoConnectOnLoad,
-    autoReconnectOnHotplug,
-    captureBuffer,
-    captureCount,
-    clearRecords,
-    currentView,
-    deviceError,
-    deviceOptions,
-    disconnectDevice,
-    handleConnectBtnClick,
-    handleSendCableReset,
-    handleSendHardReset,
-    handleSendRawPdFrame,
-    handleSetCCMode,
-    importRecords,
-    isConnected,
-    isConnecting,
-    isDeviceSupported,
-    isSending,
-    onViewChange,
-    selectedDeviceKind,
-    selectedIndex,
-    selectDeviceKind,
-    setAutoConnectOnLoad,
-    setAutoReconnectOnHotplug,
-    setSelectedIndex,
-    supportsTx,
-  ])
+  const workspaceValue = useMemo(
+    () => ({
+      currentView,
+      onViewChange,
+      selectedIndex,
+      setSelectedIndex,
+      captureBuffer,
+      captureCount,
+      clearRecords,
+      importRecords,
+      isConnected,
+      isConnecting,
+      autoConnectOnLoad,
+      autoReconnectOnHotplug,
+      selectedDeviceKind,
+      deviceOptions,
+      supportsTx,
+      isSending,
+      isDeviceSupported,
+      deviceError,
+      selectDeviceKind,
+      connectDevice: handleConnectBtnClick,
+      disconnectDevice,
+      sendRawPdFrame: handleSendRawPdFrame,
+      sendHardReset: handleSendHardReset,
+      sendCableReset: handleSendCableReset,
+      setCCMode: handleSetCCMode,
+      setAutoConnectOnLoad,
+      setAutoReconnectOnHotplug,
+    }),
+    [
+      autoConnectOnLoad,
+      autoReconnectOnHotplug,
+      captureBuffer,
+      captureCount,
+      clearRecords,
+      currentView,
+      deviceError,
+      deviceOptions,
+      disconnectDevice,
+      handleConnectBtnClick,
+      handleSendCableReset,
+      handleSendHardReset,
+      handleSendRawPdFrame,
+      handleSetCCMode,
+      importRecords,
+      isConnected,
+      isConnecting,
+      isDeviceSupported,
+      isSending,
+      onViewChange,
+      selectedDeviceKind,
+      selectedIndex,
+      selectDeviceKind,
+      setAutoConnectOnLoad,
+      setAutoReconnectOnHotplug,
+      setSelectedIndex,
+      supportsTx,
+    ],
+  )
 
   return (
     <DeviceWorkspaceProvider
@@ -148,7 +171,8 @@ const DeviceWorkspace = ({ currentView, onViewChange }: Props) => {
             <div>
               <h3 className="font-bold">Device API Not Supported</h3>
               <div className="text-sm">
-                {deviceError || 'Your browser does not support the required device API. Please use Chrome, Edge, or Opera (version 89+).'}
+                {deviceError ||
+                  'Your browser does not support the required device API. Please use Chrome, Edge, or Opera (version 89+).'}
               </div>
             </div>
           </div>

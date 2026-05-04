@@ -3,9 +3,7 @@ import {
   type DecodedPacket,
   type MessagePacket,
 } from '@usb-pd-sniffer/pd-core'
-import {
-  type PdFrame,
-} from '@usb-pd-sniffer/pd-device-native-hid'
+import { type PdFrame } from '@usb-pd-sniffer/pd-device-native-hid'
 import { CAPTURE_EVENT } from '@usb-pd-sniffer/pd-device-types'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
 
@@ -15,7 +13,9 @@ export function recordToMessagePacket(record: CaptureRecord) {
   return frame
 }
 
-export function decodeSingleRecord(record: CaptureRecord): DecodedPacket | null {
+export function decodeSingleRecord(
+  record: CaptureRecord,
+): DecodedPacket | null {
   const packet = recordToMessagePacket(record)
   return packet === null ? null : decodePacket(packet)
 }
@@ -50,7 +50,9 @@ function findPreviousChunkedExtendedPackets(
     return { value: undefined, scannedRecords: 0 }
   }
 
-  const previousChunks = new Array<MessagePacket | undefined>(extendedHeader.chunkNumber)
+  const previousChunks = new Array<MessagePacket | undefined>(
+    extendedHeader.chunkNumber,
+  )
   let scannedRecords = 0
 
   for (let index = targetIndex - 1; index >= startIndex; index -= 1) {
@@ -82,7 +84,10 @@ function findPreviousChunkedExtendedPackets(
     }
 
     const chunkNumber = candidateExtendedHeader.chunkNumber
-    if (chunkNumber >= extendedHeader.chunkNumber || previousChunks[chunkNumber] !== undefined) {
+    if (
+      chunkNumber >= extendedHeader.chunkNumber ||
+      previousChunks[chunkNumber] !== undefined
+    ) {
       continue
     }
 
@@ -130,7 +135,7 @@ function findNearestSourceCapabilitiesFrame(
 export function decodeRecordAtIndex(
   records: readonly CaptureRecord[],
   targetIndex: number,
-  backtrackRecords: number | null = null
+  backtrackRecords: number | null = null,
 ): DecodeRecordAtIndexResult | null {
   if (targetIndex < 0 || targetIndex >= records.length) {
     return null
@@ -143,9 +148,8 @@ export function decodeRecordAtIndex(
 
   const singleFrameDecoded = decodePacket(packet)
 
-  const startIndex = backtrackRecords === null
-    ? 0
-    : Math.max(0, targetIndex - backtrackRecords)
+  const startIndex =
+    backtrackRecords === null ? 0 : Math.max(0, targetIndex - backtrackRecords)
   const sourceCapabilities = needsSourceCapabilitiesContext(singleFrameDecoded)
     ? findNearestSourceCapabilitiesFrame(records, targetIndex, startIndex)
     : { value: undefined, scannedRecords: 0 }
@@ -158,20 +162,24 @@ export function decodeRecordAtIndex(
 
   return {
     decoded: decodePacket(packet, {
-      sourceCapabilities: sourceCapabilities.value === undefined
-      ? undefined
-      : {
-          kind: 'packet',
-          packet: sourceCapabilities.value,
-        },
-      chunkedExtendedMessage: previousChunkedExtendedPackets.value === undefined
-      ? undefined
-      : {
-          previousChunks: previousChunkedExtendedPackets.value.map((previousPacket) => ({
-            kind: 'packet' as const,
-            packet: previousPacket,
-          })),
-        },
+      sourceCapabilities:
+        sourceCapabilities.value === undefined
+          ? undefined
+          : {
+              kind: 'packet',
+              packet: sourceCapabilities.value,
+            },
+      chunkedExtendedMessage:
+        previousChunkedExtendedPackets.value === undefined
+          ? undefined
+          : {
+              previousChunks: previousChunkedExtendedPackets.value.map(
+                (previousPacket) => ({
+                  kind: 'packet' as const,
+                  packet: previousPacket,
+                }),
+              ),
+            },
     }),
     contextBacktrackUsed: Math.max(
       sourceCapabilities.scannedRecords,
@@ -179,7 +187,10 @@ export function decodeRecordAtIndex(
     ),
   }
 }
-function recordToPdFrame(eventType: CaptureRecord['event_type'], payload: Uint8Array): PdFrame | null {
+function recordToPdFrame(
+  eventType: CaptureRecord['event_type'],
+  payload: Uint8Array,
+): PdFrame | null {
   switch (eventType) {
     case CAPTURE_EVENT.PD_SOP0:
       return { sop: 'SOP', bytes: payload }

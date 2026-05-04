@@ -1,7 +1,7 @@
 import { CAPTURE_EVENT } from '@usb-pd-sniffer/pd-device-types'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
 
-const UFCS_TRAINING_BYTE = 0xAA
+const UFCS_TRAINING_BYTE = 0xaa
 
 const UFCS_MESSAGE_TYPE_NAMES = {
   0: 'CTRL',
@@ -20,12 +20,12 @@ const UFCS_CTRL_COMMAND_NAMES = {
   0x07: 'GET_SOURCE_INFO',
   0x08: 'GET_SINK_INFO',
   0x09: 'GET_CABLE_INFO',
-  0x0A: 'GET_DEVICE_INFO',
-  0x0B: 'GET_ERROR_INFO',
-  0x0C: 'DETECT_CABLE_INFO',
-  0x0D: 'START_CABLE_DETECT',
-  0x0E: 'END_CABLE_DETECT',
-  0x0F: 'EXIT_UFCS_MODE',
+  0x0a: 'GET_DEVICE_INFO',
+  0x0b: 'GET_ERROR_INFO',
+  0x0c: 'DETECT_CABLE_INFO',
+  0x0d: 'START_CABLE_DETECT',
+  0x0e: 'END_CABLE_DETECT',
+  0x0f: 'EXIT_UFCS_MODE',
 } as const
 
 const UFCS_DATA_COMMAND_NAMES = {
@@ -38,10 +38,10 @@ const UFCS_DATA_COMMAND_NAMES = {
   0x07: 'ERROR_INFO',
   0x08: 'CONFIG_WDOG',
   0x09: 'REFUSE',
-  0x0A: 'VERIFY_REQUEST',
-  0x0B: 'VERIFY_RESPONSE',
-  0x0C: 'POWER_CHANGE',
-  0xFF: 'TEST_REQUEST',
+  0x0a: 'VERIFY_REQUEST',
+  0x0b: 'VERIFY_RESPONSE',
+  0x0c: 'POWER_CHANGE',
+  0xff: 'TEST_REQUEST',
 } as const
 
 export type UfcsMessageTypeName = 'CTRL' | 'DATA' | 'CUSTOM' | 'RESERVED'
@@ -65,17 +65,27 @@ export function isUfcsRecord(record: CaptureRecord): boolean {
 
 function commandNameFor(type: number, commandId: number): string | null {
   if (type === 0) {
-    return UFCS_CTRL_COMMAND_NAMES[commandId as keyof typeof UFCS_CTRL_COMMAND_NAMES] ?? null
+    return (
+      UFCS_CTRL_COMMAND_NAMES[
+        commandId as keyof typeof UFCS_CTRL_COMMAND_NAMES
+      ] ?? null
+    )
   }
 
   if (type === 1) {
-    return UFCS_DATA_COMMAND_NAMES[commandId as keyof typeof UFCS_DATA_COMMAND_NAMES] ?? null
+    return (
+      UFCS_DATA_COMMAND_NAMES[
+        commandId as keyof typeof UFCS_DATA_COMMAND_NAMES
+      ] ?? null
+    )
   }
 
   return null
 }
 
-export function decodeUfcsType(bytes: readonly number[] | Uint8Array): UfcsTypeDecode | null {
+export function decodeUfcsType(
+  bytes: readonly number[] | Uint8Array,
+): UfcsTypeDecode | null {
   const frame = Array.from(bytes)
   const headerOffset = frame[0] === UFCS_TRAINING_BYTE ? 1 : 0
   if (frame.length < headerOffset + 2) return null
@@ -89,11 +99,12 @@ export function decodeUfcsType(bytes: readonly number[] | Uint8Array): UfcsTypeD
   const versionLo = lo >>> 3
   const type = lo - versionLo * 8
   const version = versionHi * 32 + versionLo
-  const typeName = UFCS_MESSAGE_TYPE_NAMES[type as keyof typeof UFCS_MESSAGE_TYPE_NAMES] ?? 'RESERVED'
+  const typeName =
+    UFCS_MESSAGE_TYPE_NAMES[type as keyof typeof UFCS_MESSAGE_TYPE_NAMES] ??
+    'RESERVED'
   const commandOffset = headerOffset + 2
-  const commandId = type === 0 || type === 1
-    ? frame[commandOffset] ?? null
-    : null
+  const commandId =
+    type === 0 || type === 1 ? (frame[commandOffset] ?? null) : null
 
   return {
     address,
@@ -106,7 +117,9 @@ export function decodeUfcsType(bytes: readonly number[] | Uint8Array): UfcsTypeD
   }
 }
 
-export function decodeUfcsRecordType(record: CaptureRecord): UfcsTypeDecode | null {
+export function decodeUfcsRecordType(
+  record: CaptureRecord,
+): UfcsTypeDecode | null {
   if (!isUfcsRecord(record)) return null
   return decodeUfcsType(record.data.slice(0, record.data_len))
 }
@@ -117,10 +130,13 @@ export function formatUfcsSignal(record: CaptureRecord): string | null {
   return null
 }
 
-export function formatUfcsTypeSummary(decoded: UfcsTypeDecode | null): string | null {
+export function formatUfcsTypeSummary(
+  decoded: UfcsTypeDecode | null,
+): string | null {
   if (decoded === null) return null
   if (decoded.commandName !== null) return decoded.commandName
-  if (decoded.commandId !== null) return `CMD_0x${decoded.commandId.toString(16).toUpperCase().padStart(2, '0')}`
+  if (decoded.commandId !== null)
+    return `CMD_0x${decoded.commandId.toString(16).toUpperCase().padStart(2, '0')}`
   if (decoded.typeName === 'RESERVED') return `TYPE_${decoded.type}`
   return decoded.typeName
 }

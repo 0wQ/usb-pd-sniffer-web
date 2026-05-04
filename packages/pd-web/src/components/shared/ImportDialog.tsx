@@ -47,17 +47,18 @@ const ImportDialog = ({ isOpen, recordCount, onClose, onConfirm }: Props) => {
       <div className="modal-box">
         <h3 className="font-bold text-lg">Import CSV Data</h3>
         <p className="py-4">
-          Found <span className="font-mono font-semibold text-primary">{recordCount.toLocaleString()}</span> records in the CSV file.
+          Found{' '}
+          <span className="font-mono font-semibold text-primary">
+            {recordCount.toLocaleString()}
+          </span>{' '}
+          records in the CSV file.
         </p>
         <p className="text-sm text-base-content/70 mb-4">
           How would you like to import this data?
         </p>
 
         <div className="flex flex-col gap-3">
-          <button
-            className="btn btn-primary"
-            onClick={handleReplace}
-          >
+          <button className="btn btn-primary" onClick={handleReplace}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-5 w-5"
@@ -76,10 +77,7 @@ const ImportDialog = ({ isOpen, recordCount, onClose, onConfirm }: Props) => {
             <span className="text-xs opacity-70">(Clear existing records)</span>
           </button>
 
-          <button
-            className="btn btn-secondary"
-            onClick={handleAppend}
-          >
+          <button className="btn btn-secondary" onClick={handleAppend}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-5 w-5"

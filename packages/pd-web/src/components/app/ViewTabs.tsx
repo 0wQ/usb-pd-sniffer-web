@@ -21,8 +21,9 @@ const ViewTabs = ({ currentView, onViewChange }: Props) => (
           'rounded-full px-3 py-1.5 text-xs font-medium tracking-[0.08em] transition-all duration-150',
           {
             'bg-base-100 text-primary shadow-sm': currentView === option.key,
-            'text-base-content/55 hover:bg-base-100/70 hover:text-base-content/80': currentView !== option.key,
-          }
+            'text-base-content/55 hover:bg-base-100/70 hover:text-base-content/80':
+              currentView !== option.key,
+          },
         )}
         onClick={() => onViewChange(option.key)}
         type="button"

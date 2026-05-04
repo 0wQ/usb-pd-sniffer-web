@@ -17,11 +17,15 @@ function App() {
         toastOptions={{
           unstyled: true,
           classNames: {
-            toast: 'bg-base-100 text-base-content/80 text-sm font-mono rounded-lg shadow-xl p-3 flex items-center gap-2 select-none',
+            toast:
+              'bg-base-100 text-base-content/80 text-sm font-mono rounded-lg shadow-xl p-3 flex items-center gap-2 select-none',
           },
         }}
       />
-      <DeviceWorkspace currentView={currentView} onViewChange={setCurrentView} />
+      <DeviceWorkspace
+        currentView={currentView}
+        onViewChange={setCurrentView}
+      />
     </div>
   )
 }

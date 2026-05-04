@@ -12,12 +12,16 @@
     "web:dev": "pnpm -C packages/pd-web dev",
     "web:build": "pnpm -C packages/pd-web build",
     "web:preview": "pnpm -C packages/pd-web preview",
+    "lint": "biome lint packages",
+    "format": "biome format --write packages",
+    "check": "biome check packages",
     "build": "pnpm run clean && pnpm exec tsc -b tsconfig.json",
     "clean": "rm -rf packages/*/dist packages/*/*.tsbuildinfo",
     "test": "pnpm exec vitest run",
     "typecheck": "pnpm exec tsc -b tsconfig.json --pretty false"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.3.11",
     "@types/node": "latest",
     "typescript": "latest",
     "vitest": "latest"

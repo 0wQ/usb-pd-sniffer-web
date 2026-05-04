@@ -1,5 +1,12 @@
-import { decodeMessage, type DecodedMessage, type MessageFrame } from '@usb-pd-sniffer/pd-core'
-import { parsePdHexPayload, type PdTxSop } from '@usb-pd-sniffer/pd-device-native-hid'
+import {
+  decodeMessage,
+  type DecodedMessage,
+  type MessageFrame,
+} from '@usb-pd-sniffer/pd-core'
+import {
+  parsePdHexPayload,
+  type PdTxSop,
+} from '@usb-pd-sniffer/pd-device-native-hid'
 
 export { parsePdHexPayload } from '@usb-pd-sniffer/pd-device-native-hid'
 
@@ -25,7 +32,10 @@ function messageSopForTxSop(sop: PdTxSop): MessageFrame['sop'] {
   }
 }
 
-export function previewPdTxFrame(sop: PdTxSop, hexPayload: string): {
+export function previewPdTxFrame(
+  sop: PdTxSop,
+  hexPayload: string,
+): {
   frame: MessageFrame
   decoded: DecodedMessage
 } {

@@ -1,14 +1,14 @@
-const PD_CRC32_INITIAL = 0xFFFFFFFF;
-const PD_CRC32_POLY = 0x04C11DB6;
+const PD_CRC32_INITIAL = 0xffffffff
+const PD_CRC32_POLY = 0x04c11db6
 
 function reverse32(value: number): number {
-  let result = 0;
+  let result = 0
 
   for (let index = 0; index < 32; index += 1) {
-    result = (result | (((value >>> index) & 1) << (31 - index))) >>> 0;
+    result = (result | (((value >>> index) & 1) << (31 - index))) >>> 0
   }
 
-  return result >>> 0;
+  return result >>> 0
 }
 
 /**
@@ -19,16 +19,18 @@ function reverse32(value: number): number {
  * reverse the final 32-bit remainder before comparing to the little-endian
  * CRC32 field carried on the wire.
  */
-export function calculatePdCrc32(messageBytes: readonly number[] | Uint8Array): number {
-  let crc = PD_CRC32_INITIAL;
+export function calculatePdCrc32(
+  messageBytes: readonly number[] | Uint8Array,
+): number {
+  let crc = PD_CRC32_INITIAL
 
   for (const byte of messageBytes) {
     for (let bitIndex = 0; bitIndex < 8; bitIndex += 1) {
-      const newBit = (((crc >>> 31) ^ ((byte >>> bitIndex) & 1)) & 1) >>> 0;
-      const shifted = (((crc << 1) >>> 0) | newBit) >>> 0;
-      crc = (shifted ^ (newBit === 1 ? PD_CRC32_POLY : 0)) >>> 0;
+      const newBit = (((crc >>> 31) ^ ((byte >>> bitIndex) & 1)) & 1) >>> 0
+      const shifted = (((crc << 1) >>> 0) | newBit) >>> 0
+      crc = (shifted ^ (newBit === 1 ? PD_CRC32_POLY : 0)) >>> 0
     }
   }
 
-  return reverse32((~crc) >>> 0);
+  return reverse32(~crc >>> 0)
 }

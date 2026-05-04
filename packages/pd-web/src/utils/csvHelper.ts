@@ -1,6 +1,10 @@
 import Papa from 'papaparse'
 import type { ValidationError, ImportResult } from '@/types/csv'
-import { CAPTURE_EVENT, type CaptureEventType, type CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
+import {
+  CAPTURE_EVENT,
+  type CaptureEventType,
+  type CaptureRecord,
+} from '@usb-pd-sniffer/pd-device-types'
 
 const CSV_HEADERS = [
   'timestamp_us',
@@ -14,10 +18,10 @@ const CSV_HEADERS = [
   'event_type',
   'active_cc',
   'data',
-  'note'
+  'note',
 ] as const
 
-type CaptureCsvHeader = typeof CSV_HEADERS[number]
+type CaptureCsvHeader = (typeof CSV_HEADERS)[number]
 
 const CAPTURE_EVENT_BY_NAME = {
   DISCONNECT: CAPTURE_EVENT.DISCONNECT,
@@ -65,7 +69,9 @@ const UNSIGNED_NUMERIC_FIELDS = new Set<CaptureCsvHeader>([
 ])
 
 export const serializeData = (bytes: number[]): string => {
-  return bytes.map(byte => byte.toString(16).padStart(2, '0').toUpperCase()).join('')
+  return bytes
+    .map((byte) => byte.toString(16).padStart(2, '0').toUpperCase())
+    .join('')
 }
 
 export const deserializeData = (value: string): number[] => {
@@ -73,7 +79,9 @@ export const deserializeData = (value: string): number[] => {
   if (compact === '') return []
 
   if (compact.length % 2 !== 0) {
-    throw new Error(`Invalid hex string length: ${compact.length} (must be even)`)
+    throw new Error(
+      `Invalid hex string length: ${compact.length} (must be even)`,
+    )
   }
   if (!/^[0-9A-Fa-f]*$/.test(compact)) {
     throw new Error('Invalid hex characters in data')
@@ -94,7 +102,10 @@ function parseCaptureEventName(value: string): CaptureEventType {
   return CAPTURE_EVENT_BY_NAME[name as keyof typeof CAPTURE_EVENT_BY_NAME]
 }
 
-function validateRow(row: Record<string, unknown>, rowIndex: number): ValidationError[] {
+function validateRow(
+  row: Record<string, unknown>,
+  rowIndex: number,
+): ValidationError[] {
   const errors: ValidationError[] = []
 
   for (const header of CSV_HEADERS) {
@@ -103,7 +114,7 @@ function validateRow(row: Record<string, unknown>, rowIndex: number): Validation
         row: rowIndex,
         field: header,
         value: '',
-        reason: 'Missing column'
+        reason: 'Missing column',
       })
     }
   }
@@ -115,7 +126,7 @@ function validateRow(row: Record<string, unknown>, rowIndex: number): Validation
         row: rowIndex,
         field,
         value: String(value),
-        reason: 'Empty value'
+        reason: 'Empty value',
       })
       continue
     }
@@ -126,14 +137,14 @@ function validateRow(row: Record<string, unknown>, rowIndex: number): Validation
         row: rowIndex,
         field,
         value: String(value),
-        reason: 'Not a number'
+        reason: 'Not a number',
       })
     } else if (UNSIGNED_NUMERIC_FIELDS.has(field) && numberValue < 0) {
       errors.push({
         row: rowIndex,
         field,
         value: String(value),
-        reason: 'Negative number not allowed'
+        reason: 'Negative number not allowed',
       })
     }
   }
@@ -145,7 +156,7 @@ function validateRow(row: Record<string, unknown>, rowIndex: number): Validation
         row: rowIndex,
         field: 'active_cc',
         value: String(row.active_cc),
-        reason: 'active_cc must be 0, 1, or 2'
+        reason: 'active_cc must be 0, 1, or 2',
       })
     }
   }
@@ -155,7 +166,7 @@ function validateRow(row: Record<string, unknown>, rowIndex: number): Validation
       row: rowIndex,
       field: 'event_type',
       value: String(row.event_type),
-      reason: 'event_type must be a capture event name'
+      reason: 'event_type must be a capture event name',
     })
   } else {
     try {
@@ -165,7 +176,7 @@ function validateRow(row: Record<string, unknown>, rowIndex: number): Validation
         row: rowIndex,
         field: 'event_type',
         value: row.event_type,
-        reason: error instanceof Error ? error.message : 'Invalid event_type'
+        reason: error instanceof Error ? error.message : 'Invalid event_type',
       })
     }
   }
@@ -175,7 +186,7 @@ function validateRow(row: Record<string, unknown>, rowIndex: number): Validation
       row: rowIndex,
       field: 'data',
       value: String(row.data),
-      reason: 'data must be a hex string'
+      reason: 'data must be a hex string',
     })
   } else {
     try {
@@ -185,7 +196,7 @@ function validateRow(row: Record<string, unknown>, rowIndex: number): Validation
         row: rowIndex,
         field: 'data',
         value: row.data,
-        reason: error instanceof Error ? error.message : 'Invalid data'
+        reason: error instanceof Error ? error.message : 'Invalid data',
       })
     }
   }
@@ -194,7 +205,7 @@ function validateRow(row: Record<string, unknown>, rowIndex: number): Validation
 }
 
 export const exportToCsv = (records: CaptureRecord[]): string => {
-  const data = records.map(record => ({
+  const data = records.map((record) => ({
     timestamp_us: record.timestamp_us,
     seq: record.seq,
     vbus_mv: record.vbus_mv,
@@ -206,14 +217,14 @@ export const exportToCsv = (records: CaptureRecord[]): string => {
     event_type: record.event_type,
     active_cc: record.active_cc,
     data: serializeData(record.data.slice(0, record.data_len)),
-    note: ''
+    note: '',
   }))
 
   return Papa.unparse(data, {
     columns: CSV_HEADERS as unknown as string[],
     header: true,
     delimiter: ',',
-    newline: '\r\n'
+    newline: '\r\n',
   })
 }
 
@@ -221,32 +232,37 @@ export const importFromCsv = (content: string): ImportResult => {
   const errors: ValidationError[] = []
   const records: CaptureRecord[] = []
 
-  const parseResult = Papa.parse<Record<string, string>>(content.replace(/^\uFEFF/, ''), {
-    header: true,
-    skipEmptyLines: true,
-    dynamicTyping: false,
-    transformHeader: (header: string) => header.trim()
-  })
+  const parseResult = Papa.parse<Record<string, string>>(
+    content.replace(/^\uFEFF/, ''),
+    {
+      header: true,
+      skipEmptyLines: true,
+      dynamicTyping: false,
+      transformHeader: (header: string) => header.trim(),
+    },
+  )
 
   if (parseResult.errors.length > 0) {
-    parseResult.errors.forEach(error => {
+    parseResult.errors.forEach((error) => {
       errors.push({
         row: error.row ?? -1,
         field: 'parsing',
         value: '',
-        reason: error.message
+        reason: error.message,
       })
     })
   }
 
   const headers = parseResult.meta.fields || []
-  const missingHeaders = CSV_HEADERS.filter(header => !headers.includes(header))
+  const missingHeaders = CSV_HEADERS.filter(
+    (header) => !headers.includes(header),
+  )
   if (missingHeaders.length > 0) {
     errors.push({
       row: 0,
       field: 'headers',
       value: missingHeaders.join(', '),
-      reason: `Missing required headers: ${missingHeaders.join(', ')}`
+      reason: `Missing required headers: ${missingHeaders.join(', ')}`,
     })
     return { records: [], errors }
   }
@@ -279,7 +295,8 @@ export const importFromCsv = (content: string): ImportResult => {
         row: index + 2,
         field: 'transformation',
         value: '',
-        reason: error instanceof Error ? error.message : 'Failed to transform row'
+        reason:
+          error instanceof Error ? error.message : 'Failed to transform row',
       })
     }
   })
@@ -313,7 +330,11 @@ export const downloadCsv = (content: string, filename: string): void => {
 export const readFile = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     if (file.size > MAX_FILE_SIZE) {
-      reject(new Error(`File size (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds maximum allowed size (50MB)`))
+      reject(
+        new Error(
+          `File size (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds maximum allowed size (50MB)`,
+        ),
+      )
       return
     }
 

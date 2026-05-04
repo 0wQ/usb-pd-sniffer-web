@@ -30,7 +30,7 @@ export const APP_THEMES = [
   'sunset',
   'silk',
 ] as const
-export type AppTheme = typeof APP_THEMES[number]
+export type AppTheme = (typeof APP_THEMES)[number]
 export type SendMode = 'raw' | 'hard_reset' | 'cable_reset'
 export type TxDialogDraft = {
   mode: SendMode
@@ -55,7 +55,11 @@ interface AppState {
 
 type AppPersistedState = Pick<
   AppState,
-  'currentView' | 'decodeLayoutMode' | 'decodeCollapsed' | 'theme' | 'txDialogDraft'
+  | 'currentView'
+  | 'decodeLayoutMode'
+  | 'decodeCollapsed'
+  | 'theme'
+  | 'txDialogDraft'
 >
 
 const APP_STORE_STORAGE_KEY = 'usb-pd-app-store'
@@ -80,7 +84,9 @@ function applyTheme(theme: AppTheme): void {
 }
 
 function resolveUpdater<T>(updater: StateUpdater<T>, current: T): T {
-  return typeof updater === 'function' ? (updater as (value: T) => T)(current) : updater
+  return typeof updater === 'function'
+    ? (updater as (value: T) => T)(current)
+    : updater
 }
 
 applyTheme(DEFAULT_APP_PERSISTED_STATE.theme)
@@ -95,11 +101,21 @@ const useAppStore = create<AppState>()(
       },
 
       setDecodeLayoutMode: (decodeLayoutMode) => {
-        set({ decodeLayoutMode: resolveUpdater(decodeLayoutMode, get().decodeLayoutMode) })
+        set({
+          decodeLayoutMode: resolveUpdater(
+            decodeLayoutMode,
+            get().decodeLayoutMode,
+          ),
+        })
       },
 
       setDecodeCollapsed: (decodeCollapsed) => {
-        set({ decodeCollapsed: resolveUpdater(decodeCollapsed, get().decodeCollapsed) })
+        set({
+          decodeCollapsed: resolveUpdater(
+            decodeCollapsed,
+            get().decodeCollapsed,
+          ),
+        })
       },
 
       setTheme: (theme) => {
@@ -109,7 +125,9 @@ const useAppStore = create<AppState>()(
       },
 
       setTxDialogDraft: (txDialogDraft) => {
-        set({ txDialogDraft: resolveUpdater(txDialogDraft, get().txDialogDraft) })
+        set({
+          txDialogDraft: resolveUpdater(txDialogDraft, get().txDialogDraft),
+        })
       },
     }),
     {

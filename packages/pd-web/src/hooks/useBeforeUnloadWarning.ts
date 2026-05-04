@@ -14,10 +14,10 @@ export function useBeforeUnloadWarning() {
       if (captureCount > 0) {
         // 标准方式
         event.preventDefault()
-        
+
         // Chrome 需要设置 returnValue
         event.returnValue = ''
-        
+
         // 某些浏览器支持自定义消息（虽然现代浏览器通常忽略它）
         return ''
       }

@@ -65,7 +65,11 @@ const PowerPage = () => {
                     Device Session
                   </div>
                   <div className="mt-1 text-sm text-base-content">
-                    {isConnected ? 'Connected' : isConnecting ? 'Connecting' : 'Disconnected'}
+                    {isConnected
+                      ? 'Connected'
+                      : isConnecting
+                        ? 'Connecting'
+                        : 'Disconnected'}
                   </div>
                 </div>
                 <div className="rounded-xl border border-base-300 bg-base-100/80 px-3 py-2">
@@ -84,7 +88,8 @@ const PowerPage = () => {
                 Power Curves
               </div>
               <div className="mt-3 rounded-xl border border-dashed border-base-300 bg-base-100/50 p-6 text-sm text-base-content/55">
-                Chart temporarily removed. This page is kept as a layout placeholder for the later refactor.
+                Chart temporarily removed. This page is kept as a layout
+                placeholder for the later refactor.
               </div>
             </div>
           </div>

@@ -8,7 +8,10 @@ import {
   type DeviceKind,
   type PdTxSop,
 } from '@/lib/devices/deviceDrivers'
-import type { CaptureDevice, CaptureDeviceState } from '@usb-pd-sniffer/pd-device-types'
+import type {
+  CaptureDevice,
+  CaptureDeviceState,
+} from '@usb-pd-sniffer/pd-device-types'
 import useDeviceStore from '@/stores/deviceStore'
 
 function shouldUseDeviceAutoReconnect(_kind: DeviceKind): boolean {
@@ -28,11 +31,19 @@ export function useCaptureDevice() {
   const setIsConnected = useDeviceStore((state) => state.setIsConnected)
   const setIsConnecting = useDeviceStore((state) => state.setIsConnecting)
   const autoConnectOnLoad = useDeviceStore((state) => state.autoConnectOnLoad)
-  const autoReconnectOnHotplug = useDeviceStore((state) => state.autoReconnectOnHotplug)
+  const autoReconnectOnHotplug = useDeviceStore(
+    (state) => state.autoReconnectOnHotplug,
+  )
   const selectedDeviceKind = useDeviceStore((state) => state.selectedDeviceKind)
-  const setSelectedDeviceKind = useDeviceStore((state) => state.setSelectedDeviceKind)
-  const lastDeviceFingerprints = useDeviceStore((state) => state.lastDeviceFingerprints)
-  const setLastDeviceFingerprintForKind = useDeviceStore((state) => state.setLastDeviceFingerprintForKind)
+  const setSelectedDeviceKind = useDeviceStore(
+    (state) => state.setSelectedDeviceKind,
+  )
+  const lastDeviceFingerprints = useDeviceStore(
+    (state) => state.lastDeviceFingerprints,
+  )
+  const setLastDeviceFingerprintForKind = useDeviceStore(
+    (state) => state.setLastDeviceFingerprintForKind,
+  )
   const addRecord = useDeviceStore((state) => state.addRecord)
   const resetDevice = useDeviceStore((state) => state.resetDevice)
   const selectedDriver = getDeviceDriver(selectedDeviceKind)
@@ -47,27 +58,34 @@ export function useCaptureDevice() {
   const [deviceError, setDeviceError] = useState<string | null>(null)
   const [isSending, setIsSending] = useState(false)
 
-  const syncDeviceState = useCallback((deviceState: CaptureDeviceState): void => {
-    setIsDeviceSupported(deviceState.isSupported)
-    setDeviceError(deviceState.error)
-    setIsConnected(deviceState.isConnected)
-    setIsConnecting(deviceState.isConnecting)
-    setIsSending(deviceState.isSending)
-    if (deviceState.fingerprint !== null) {
-      setLastDeviceFingerprintForKind(selectedDeviceKind, deviceState.fingerprint)
-    }
-  }, [
-    selectedDeviceKind,
-    setIsConnected,
-    setIsConnecting,
-    setLastDeviceFingerprintForKind,
-  ])
+  const syncDeviceState = useCallback(
+    (deviceState: CaptureDeviceState): void => {
+      setIsDeviceSupported(deviceState.isSupported)
+      setDeviceError(deviceState.error)
+      setIsConnected(deviceState.isConnected)
+      setIsConnecting(deviceState.isConnecting)
+      setIsSending(deviceState.isSending)
+      if (deviceState.fingerprint !== null) {
+        setLastDeviceFingerprintForKind(
+          selectedDeviceKind,
+          deviceState.fingerprint,
+        )
+      }
+    },
+    [
+      selectedDeviceKind,
+      setIsConnected,
+      setIsConnecting,
+      setLastDeviceFingerprintForKind,
+    ],
+  )
 
   useEffect(() => {
     latestAutoReconnect.current = autoReconnectOnHotplug
     latestFingerprint.current = selectedFingerprint
     deviceRef.current?.setAutoReconnect(
-      shouldUseDeviceAutoReconnect(selectedDeviceKind) && autoReconnectOnHotplug,
+      shouldUseDeviceAutoReconnect(selectedDeviceKind) &&
+        autoReconnectOnHotplug,
       selectedFingerprint,
     )
   }, [autoReconnectOnHotplug, selectedFingerprint, selectedDeviceKind])
@@ -120,9 +138,14 @@ export function useCaptureDevice() {
 
   const connectDevice = useCallback(async () => {
     const device = deviceRef.current
-    logDevice('connect button invoked', { kind: selectedDeviceKind, supported: device?.isSupported ?? false })
+    logDevice('connect button invoked', {
+      kind: selectedDeviceKind,
+      supported: device?.isSupported ?? false,
+    })
     if (device === null || !device.isSupported) {
-      alert(`${selectedDriver.apiName} is not supported in your browser. Please use Chrome, Edge, or Opera.`)
+      alert(
+        `${selectedDriver.apiName} is not supported in your browser. Please use Chrome, Edge, or Opera.`,
+      )
       return
     }
 
@@ -133,7 +156,10 @@ export function useCaptureDevice() {
       logDevice('manual connect resolved', { kind: selectedDeviceKind })
     } catch (err) {
       setIsConnecting(false)
-      logDevice('manual connect failed', { kind: selectedDeviceKind, error: err instanceof Error ? err.message : String(err) })
+      logDevice('manual connect failed', {
+        kind: selectedDeviceKind,
+        error: err instanceof Error ? err.message : String(err),
+      })
       if (err instanceof Error) {
         if (err.name === 'NotFoundError') {
           return
@@ -143,27 +169,35 @@ export function useCaptureDevice() {
         alert(`Failed to connect: ${err.message}`)
       }
     }
-  }, [selectedDriver.apiName, selectedDeviceKind, setIsConnected, setIsConnecting])
+  }, [
+    selectedDriver.apiName,
+    selectedDeviceKind,
+    setIsConnected,
+    setIsConnecting,
+  ])
 
   const disconnectDevice = useCallback(async () => {
     await deviceRef.current?.disconnect()
     resetDevice()
   }, [resetDevice, setIsConnected, setIsConnecting])
 
-  const sendRawPdFrame = useCallback(async (sop: PdTxSop, hexPayload: string) => {
-    const device = deviceRef.current
-    if (device === null || !isNativeHidDevice(device, selectedDeviceKind)) {
-      throw new Error(`${selectedDriver.label} does not support PD TX.`)
-    }
+  const sendRawPdFrame = useCallback(
+    async (sop: PdTxSop, hexPayload: string) => {
+      const device = deviceRef.current
+      if (device === null || !isNativeHidDevice(device, selectedDeviceKind)) {
+        throw new Error(`${selectedDriver.label} does not support PD TX.`)
+      }
 
-    const payload = parsePdHexPayload(hexPayload)
-    setIsSending(true)
-    try {
-      await device.sendRawPd(sop, payload)
-    } finally {
-      setIsSending(false)
-    }
-  }, [selectedDriver, selectedDeviceKind])
+      const payload = parsePdHexPayload(hexPayload)
+      setIsSending(true)
+      try {
+        await device.sendRawPd(sop, payload)
+      } finally {
+        setIsSending(false)
+      }
+    },
+    [selectedDriver, selectedDeviceKind],
+  )
 
   const sendHardReset = useCallback(async () => {
     const device = deviceRef.current
@@ -193,28 +227,36 @@ export function useCaptureDevice() {
     }
   }, [selectedDriver, selectedDeviceKind])
 
-  const setCCMode = useCallback(async (config: CCModeConfig) => {
-    const device = deviceRef.current
-    if (device === null || !isNativeHidDevice(device, selectedDeviceKind)) {
-      throw new Error(`${selectedDriver.label} does not support CC mode control.`)
-    }
+  const setCCMode = useCallback(
+    async (config: CCModeConfig) => {
+      const device = deviceRef.current
+      if (device === null || !isNativeHidDevice(device, selectedDeviceKind)) {
+        throw new Error(
+          `${selectedDriver.label} does not support CC mode control.`,
+        )
+      }
 
-    setIsSending(true)
-    try {
-      await device.setCCMode(config)
-    } finally {
-      setIsSending(false)
-    }
-  }, [selectedDriver, selectedDeviceKind])
+      setIsSending(true)
+      try {
+        await device.setCCMode(config)
+      } finally {
+        setIsSending(false)
+      }
+    },
+    [selectedDriver, selectedDeviceKind],
+  )
 
-  const selectDeviceKind = useCallback((kind: DeviceKind) => {
-    if (kind === selectedDeviceKind) return
-    autoConnectAttempted.current = false
-    void deviceRef.current?.disconnect().finally(() => {
-      setSelectedDeviceKind(kind)
-      resetDevice()
-    })
-  }, [resetDevice, selectedDeviceKind, setSelectedDeviceKind])
+  const selectDeviceKind = useCallback(
+    (kind: DeviceKind) => {
+      if (kind === selectedDeviceKind) return
+      autoConnectAttempted.current = false
+      void deviceRef.current?.disconnect().finally(() => {
+        setSelectedDeviceKind(kind)
+        resetDevice()
+      })
+    },
+    [resetDevice, selectedDeviceKind, setSelectedDeviceKind],
+  )
 
   useEffect(() => {
     if (!isDeviceSupported) return
@@ -236,6 +278,6 @@ export function useCaptureDevice() {
     setCCMode,
     isSending,
     isDeviceSupported,
-    deviceError
+    deviceError,
   }
 }

@@ -1,8 +1,12 @@
-import type {
-  CaptureDevice,
-} from '@usb-pd-sniffer/pd-device-types'
+import type { CaptureDevice } from '@usb-pd-sniffer/pd-device-types'
 import { createNativeHidDevice } from '@usb-pd-sniffer/pd-device-native-hid'
-import type { ActiveCCMode, CCMode, CCModeConfig, NativeHidDevice, PdTxSop } from '@usb-pd-sniffer/pd-device-native-hid'
+import type {
+  ActiveCCMode,
+  CCMode,
+  CCModeConfig,
+  NativeHidDevice,
+  PdTxSop,
+} from '@usb-pd-sniffer/pd-device-native-hid'
 import { createNativeCdcDevice } from '@usb-pd-sniffer/pd-device-native-cdc'
 import { createAtkC2Device } from '@usb-pd-sniffer/pd-device-atk-c2'
 
@@ -56,6 +60,9 @@ export function isDeviceKind(value: string): value is DeviceKind {
   return value === 'native' || value === 'native-cdc' || value === 'atk-c2'
 }
 
-export function isNativeHidDevice(_device: CaptureDevice, kind: DeviceKind): _device is HidDeviceHandle {
+export function isNativeHidDevice(
+  _device: CaptureDevice,
+  kind: DeviceKind,
+): _device is HidDeviceHandle {
   return kind === 'native'
 }

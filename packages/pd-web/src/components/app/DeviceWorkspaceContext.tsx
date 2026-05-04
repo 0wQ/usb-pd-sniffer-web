@@ -1,7 +1,12 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import type { CaptureBuffer } from '@/lib/buffers/captureBuffer'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
-import type { CCModeConfig, DeviceDriver, DeviceKind, PdTxSop } from '@/lib/devices/deviceDrivers'
+import type {
+  CCModeConfig,
+  DeviceDriver,
+  DeviceKind,
+  PdTxSop,
+} from '@/lib/devices/deviceDrivers'
 import type { AppView } from '@/components/app/ViewTabs'
 import type { ImportMode } from '@/types/csv'
 
@@ -38,10 +43,14 @@ export type DeviceWorkspaceContextValue = {
   closeTxDialog: () => void
 }
 
-const DeviceWorkspaceContext = createContext<DeviceWorkspaceContextValue | null>(null)
+const DeviceWorkspaceContext =
+  createContext<DeviceWorkspaceContextValue | null>(null)
 
 type ProviderProps = {
-  value: Omit<DeviceWorkspaceContextValue, 'isTxDialogOpen' | 'openTxDialog' | 'closeTxDialog'>
+  value: Omit<
+    DeviceWorkspaceContextValue,
+    'isTxDialogOpen' | 'openTxDialog' | 'closeTxDialog'
+  >
   isTxDialogOpen: boolean
   onOpenTxDialog: () => void
   onCloseTxDialog: () => void
@@ -55,12 +64,15 @@ export const DeviceWorkspaceProvider = ({
   onCloseTxDialog,
   children,
 }: ProviderProps) => {
-  const contextValue = useMemo<DeviceWorkspaceContextValue>(() => ({
-    ...value,
-    isTxDialogOpen,
-    openTxDialog: onOpenTxDialog,
-    closeTxDialog: onCloseTxDialog,
-  }), [isTxDialogOpen, onCloseTxDialog, onOpenTxDialog, value])
+  const contextValue = useMemo<DeviceWorkspaceContextValue>(
+    () => ({
+      ...value,
+      isTxDialogOpen,
+      openTxDialog: onOpenTxDialog,
+      closeTxDialog: onCloseTxDialog,
+    }),
+    [isTxDialogOpen, onCloseTxDialog, onOpenTxDialog, value],
+  )
 
   return (
     <DeviceWorkspaceContext.Provider value={contextValue}>
@@ -72,7 +84,9 @@ export const DeviceWorkspaceProvider = ({
 export function useDeviceWorkspaceContext(): DeviceWorkspaceContextValue {
   const context = useContext(DeviceWorkspaceContext)
   if (context === null) {
-    throw new Error('useDeviceWorkspaceContext must be used within DeviceWorkspaceProvider')
+    throw new Error(
+      'useDeviceWorkspaceContext must be used within DeviceWorkspaceProvider',
+    )
   }
   return context
 }

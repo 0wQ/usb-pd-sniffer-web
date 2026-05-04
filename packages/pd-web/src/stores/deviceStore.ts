@@ -1,7 +1,10 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { createBatchedQueue } from '@/lib/batching/batchedQueue'
-import { createCaptureBuffer, type CaptureBuffer } from '@/lib/buffers/captureBuffer'
+import {
+  createCaptureBuffer,
+  type CaptureBuffer,
+} from '@/lib/buffers/captureBuffer'
 import type { DeviceKind } from '@/lib/devices/deviceDrivers'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
 import { downloadCsv, exportToCsv, generateFilename } from '@/utils/csvHelper'
@@ -25,8 +28,13 @@ interface DeviceState {
   setAutoConnectOnLoad: (autoConnectOnLoad: boolean) => void
   setAutoReconnectOnHotplug: (autoReconnectOnHotplug: boolean) => void
   setSelectedDeviceKind: (kind: DeviceKind) => void
-  setLastDeviceFingerprintForKind: (kind: DeviceKind, fingerprint: string | null) => void
-  setDetailContextBacktrackRecords: (detailContextBacktrackRecords: number | null) => void
+  setLastDeviceFingerprintForKind: (
+    kind: DeviceKind,
+    fingerprint: string | null,
+  ) => void
+  setDetailContextBacktrackRecords: (
+    detailContextBacktrackRecords: number | null,
+  ) => void
   setProtocolSelectedIndex: (protocolSelectedIndex: number | null) => void
   addRecord: (record: CaptureRecord) => void
   flushPendingRecords: () => void
@@ -58,7 +66,9 @@ const DEFAULT_DEVICE_PERSISTED_STATE: DevicePersistedState = {
   detailContextBacktrackRecords: null,
 }
 
-function autoExportAndClearCaptureBuffer(captureBuffer: CaptureBuffer): boolean {
+function autoExportAndClearCaptureBuffer(
+  captureBuffer: CaptureBuffer,
+): boolean {
   if (captureBuffer.length < CAPTURE_AUTO_EXPORT_RECORD_LIMIT) return false
 
   const records = captureBuffer.getAll()
@@ -75,7 +85,10 @@ function autoExportAndClearCaptureBuffer(captureBuffer: CaptureBuffer): boolean 
   return true
 }
 
-function addCaptureRecordsWithAutoExport(captureBuffer: CaptureBuffer, records: CaptureRecord[]): boolean {
+function addCaptureRecordsWithAutoExport(
+  captureBuffer: CaptureBuffer,
+  records: CaptureRecord[],
+): boolean {
   let exported = false
   let offset = 0
 
@@ -90,7 +103,8 @@ function addCaptureRecordsWithAutoExport(captureBuffer: CaptureBuffer, records: 
       continue
     }
 
-    const remainingCapacity = CAPTURE_AUTO_EXPORT_RECORD_LIMIT - captureBuffer.length
+    const remainingCapacity =
+      CAPTURE_AUTO_EXPORT_RECORD_LIMIT - captureBuffer.length
     const chunkEnd = Math.min(records.length, offset + remainingCapacity)
     captureBuffer.addBatch(records.slice(offset, chunkEnd))
     offset = chunkEnd
@@ -117,10 +131,15 @@ const useDeviceStore = create<DeviceState>()(
         onFlush(records) {
           const { captureBuffer } = get()
 
-          const autoExported = addCaptureRecordsWithAutoExport(captureBuffer, records)
+          const autoExported = addCaptureRecordsWithAutoExport(
+            captureBuffer,
+            records,
+          )
 
           set({
-            protocolSelectedIndex: autoExported ? null : get().protocolSelectedIndex,
+            protocolSelectedIndex: autoExported
+              ? null
+              : get().protocolSelectedIndex,
             captureVersion: captureBuffer.currentVersion,
             captureCount: captureBuffer.length,
           })
@@ -142,9 +161,11 @@ const useDeviceStore = create<DeviceState>()(
 
         setAutoConnectOnLoad: (autoConnectOnLoad) => set({ autoConnectOnLoad }),
 
-        setAutoReconnectOnHotplug: (autoReconnectOnHotplug) => set({ autoReconnectOnHotplug }),
+        setAutoReconnectOnHotplug: (autoReconnectOnHotplug) =>
+          set({ autoReconnectOnHotplug }),
 
-        setSelectedDeviceKind: (selectedDeviceKind) => set({ selectedDeviceKind }),
+        setSelectedDeviceKind: (selectedDeviceKind) =>
+          set({ selectedDeviceKind }),
 
         setLastDeviceFingerprintForKind: (kind, fingerprint) => {
           const lastDeviceFingerprints = { ...get().lastDeviceFingerprints }
@@ -158,9 +179,11 @@ const useDeviceStore = create<DeviceState>()(
           set({ lastDeviceFingerprints })
         },
 
-        setDetailContextBacktrackRecords: (detailContextBacktrackRecords) => set({ detailContextBacktrackRecords }),
+        setDetailContextBacktrackRecords: (detailContextBacktrackRecords) =>
+          set({ detailContextBacktrackRecords }),
 
-        setProtocolSelectedIndex: (protocolSelectedIndex) => set({ protocolSelectedIndex }),
+        setProtocolSelectedIndex: (protocolSelectedIndex) =>
+          set({ protocolSelectedIndex }),
 
         addRecord: (record) => {
           captureQueue.push(record)
@@ -203,7 +226,8 @@ const useDeviceStore = create<DeviceState>()(
           captureBuffer.addBatch(records)
 
           set({
-            protocolSelectedIndex: mode === 'replace' ? null : get().protocolSelectedIndex,
+            protocolSelectedIndex:
+              mode === 'replace' ? null : get().protocolSelectedIndex,
             captureVersion: captureBuffer.currentVersion,
             captureCount: captureBuffer.length,
           })

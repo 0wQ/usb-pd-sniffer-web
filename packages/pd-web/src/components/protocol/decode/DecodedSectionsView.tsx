@@ -1,10 +1,16 @@
 import clsx from 'clsx'
 import { useEffect, useState } from 'react'
 import type { BitField, DecodeIssue, Section } from '@usb-pd-sniffer/pd-core'
-import { formatFieldEditValue, parseFieldEditValue, type FieldEditMode } from '@/lib/analyzer/fieldEdit'
+import {
+  formatFieldEditValue,
+  parseFieldEditValue,
+  type FieldEditMode,
+} from '@/lib/analyzer/fieldEdit'
 
 export function hexBytes(bytes: readonly number[] | Uint8Array): string {
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0').toUpperCase()).join(' ')
+  return Array.from(bytes, (byte) =>
+    byte.toString(16).padStart(2, '0').toUpperCase(),
+  ).join(' ')
 }
 
 function bitRangeLabel(bitStart: number, bitLength: number): string {
@@ -27,7 +33,10 @@ function formatRawValue(rawValue: number | bigint | undefined): string {
 }
 
 function formatFieldRawValue(field: BitField): string {
-  const normalized = typeof field.rawValue === 'bigint' ? field.rawValue : BigInt(field.rawValue >>> 0)
+  const normalized =
+    typeof field.rawValue === 'bigint'
+      ? field.rawValue
+      : BigInt(field.rawValue >>> 0)
 
   return normalized.toString(2).padStart(field.bitLength, '0')
 }
@@ -35,7 +44,8 @@ function formatFieldRawValue(field: BitField): string {
 function formatFieldMeaning(field: BitField): string {
   if (field.displayValue !== undefined) return field.displayValue
   if (field.decodedValue === null) return '-'
-  if (typeof field.decodedValue === 'boolean') return field.decodedValue ? 'true' : 'false'
+  if (typeof field.decodedValue === 'boolean')
+    return field.decodedValue ? 'true' : 'false'
   return String(field.decodedValue)
 }
 
@@ -69,7 +79,8 @@ type FieldRowProps = {
   onFieldEdit?: (section: Section, field: BitField, rawValue: bigint) => void
 }
 
-const fieldGridClassName = 'grid gap-x-3 md:grid-cols-[60px_minmax(0,1.5fr)_minmax(0,1fr)_minmax(140px,1.4fr)]'
+const fieldGridClassName =
+  'grid gap-x-3 md:grid-cols-[60px_minmax(0,1.5fr)_minmax(0,1fr)_minmax(140px,1.4fr)]'
 
 type FieldEditorProps = {
   field: BitField
@@ -78,7 +89,12 @@ type FieldEditorProps = {
   onApply: (rawValue: bigint) => void
 }
 
-function FieldEditor({ field, mode, disabled = false, onApply }: FieldEditorProps) {
+function FieldEditor({
+  field,
+  mode,
+  disabled = false,
+  onApply,
+}: FieldEditorProps) {
   const [value, setValue] = useState(() => formatFieldEditValue(field, mode))
   const [error, setError] = useState<string | null>(null)
 
@@ -93,7 +109,11 @@ function FieldEditor({ field, mode, disabled = false, onApply }: FieldEditorProp
       onApply(rawValue)
       setError(null)
     } catch (applyError) {
-      setError(applyError instanceof Error ? applyError.message : 'Invalid field value.')
+      setError(
+        applyError instanceof Error
+          ? applyError.message
+          : 'Invalid field value.',
+      )
     }
   }
 
@@ -123,26 +143,49 @@ function FieldEditor({ field, mode, disabled = false, onApply }: FieldEditorProp
   )
 }
 
-function FieldRow({ field, section, fieldEditDisabled = false, onFieldEdit }: FieldRowProps) {
+function FieldRow({
+  field,
+  section,
+  fieldEditDisabled = false,
+  onFieldEdit,
+}: FieldRowProps) {
   const applyFieldEdit = (rawValue: bigint) => {
     onFieldEdit?.(section, field, rawValue)
   }
   const isEditable = onFieldEdit !== undefined
 
   return (
-    <div className={clsx(fieldGridClassName, 'gap-y-1 border-b border-base-300/70 px-3 py-2 last:border-b-0')}>
-      <div className="font-mono text-[11px] text-base-content/55">{bitRangeLabel(field.bitStart, field.bitLength)}</div>
+    <div
+      className={clsx(
+        fieldGridClassName,
+        'gap-y-1 border-b border-base-300/70 px-3 py-2 last:border-b-0',
+      )}
+    >
+      <div className="font-mono text-[11px] text-base-content/55">
+        {bitRangeLabel(field.bitStart, field.bitLength)}
+      </div>
       <div className="min-w-0">
         <div className="text-xs text-base-content">{field.label}</div>
         {field.note !== undefined && (
-          <div className="mt-1 text-[11px] leading-4 text-base-content/55">{field.note}</div>
+          <div className="mt-1 text-[11px] leading-4 text-base-content/55">
+            {field.note}
+          </div>
         )}
       </div>
-      <div className="min-w-0 break-all font-mono text-xs text-base-content">{formatFieldMeaning(field)}</div>
+      <div className="min-w-0 break-all font-mono text-xs text-base-content">
+        {formatFieldMeaning(field)}
+      </div>
       {isEditable ? (
-        <FieldEditor field={field} mode="raw" disabled={fieldEditDisabled} onApply={applyFieldEdit} />
+        <FieldEditor
+          field={field}
+          mode="raw"
+          disabled={fieldEditDisabled}
+          onApply={applyFieldEdit}
+        />
       ) : (
-        <div className="break-all font-mono text-[11px] text-right text-base-content/50">{formatFieldRawValue(field)}</div>
+        <div className="break-all font-mono text-[11px] text-right text-base-content/50">
+          {formatFieldRawValue(field)}
+        </div>
       )}
     </div>
   )
@@ -165,10 +208,18 @@ export function IssueList({ issues }: IssueListProps) {
           className="rounded-lg border border-base-300/80 bg-base-200/60 px-3 py-2"
         >
           <div className="flex items-center gap-2">
-            <span className={clsx('badge badge-xs uppercase', issueTone(issue))}>{issue.severity}</span>
-            <span className="font-mono text-[11px] text-base-content/55">{issue.code}</span>
+            <span
+              className={clsx('badge badge-xs uppercase', issueTone(issue))}
+            >
+              {issue.severity}
+            </span>
+            <span className="font-mono text-[11px] text-base-content/55">
+              {issue.code}
+            </span>
           </div>
-          <div className="mt-1 text-xs leading-5 text-base-content/75">{issue.message}</div>
+          <div className="mt-1 text-xs leading-5 text-base-content/75">
+            {issue.message}
+          </div>
         </div>
       ))}
     </div>
@@ -181,16 +232,24 @@ type SectionViewProps = {
   onFieldEdit?: (section: Section, field: BitField, rawValue: bigint) => void
 }
 
-export function SectionView({ section, fieldEditDisabled = false, onFieldEdit }: SectionViewProps) {
+export function SectionView({
+  section,
+  fieldEditDisabled = false,
+  onFieldEdit,
+}: SectionViewProps) {
   const showEmptyState = section.fields.length === 0
 
   return (
     <div className="rounded-xl border border-base-300 bg-base-100/80">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-base-300/80 px-3 py-3">
         <div className="min-w-0">
-          <div className="text-sm font-semibold text-base-content">{section.title}</div>
+          <div className="text-sm font-semibold text-base-content">
+            {section.title}
+          </div>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-base-content/50">
-            <span>{formatByteRange(section.byteOffset, section.byteLength)}</span>
+            <span>
+              {formatByteRange(section.byteOffset, section.byteLength)}
+            </span>
             <span>•</span>
             <span className="font-mono">{section.kind}</span>
             {section.semanticKind !== undefined && (
@@ -204,20 +263,30 @@ export function SectionView({ section, fieldEditDisabled = false, onFieldEdit }:
 
         <div className="text-right">
           {section.index !== undefined && (
-            <div className="text-[11px] text-base-content/45">Index {section.index + 1}</div>
+            <div className="text-[11px] text-base-content/45">
+              Index {section.index + 1}
+            </div>
           )}
-          <div className="mt-1 font-mono text-[11px] text-base-content/60">{formatRawValue(section.rawValue)}</div>
+          <div className="mt-1 font-mono text-[11px] text-base-content/60">
+            {formatRawValue(section.rawValue)}
+          </div>
         </div>
       </div>
 
       <div className="px-3 py-3">
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
           <div className="min-w-0 rounded-lg border border-base-300/80 bg-base-200/45 px-3 py-2">
-            <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Raw Bytes</div>
-            <div className="mt-2 break-all font-mono text-xs leading-5 text-base-content">{hexBytes(section.rawBytes)}</div>
+            <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">
+              Raw Bytes
+            </div>
+            <div className="mt-2 break-all font-mono text-xs leading-5 text-base-content">
+              {hexBytes(section.rawBytes)}
+            </div>
           </div>
           <div className="rounded-lg border border-base-300/80 bg-base-200/45 px-3 py-2">
-            <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">Fields / Issues</div>
+            <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">
+              Fields / Issues
+            </div>
             <div className="mt-2 font-mono text-xs text-base-content">
               {section.fields.length} / {section.issues.length}
             </div>
@@ -232,7 +301,12 @@ export function SectionView({ section, fieldEditDisabled = false, onFieldEdit }:
 
         {section.fields.length > 0 ? (
           <div className="mt-3 overflow-hidden rounded-lg border border-base-300/80 bg-base-100">
-            <div className={clsx(fieldGridClassName, 'border-b border-base-300/80 bg-base-200/55 px-3 py-2 text-[10px] uppercase tracking-[0.14em] text-base-content/45')}>
+            <div
+              className={clsx(
+                fieldGridClassName,
+                'border-b border-base-300/80 bg-base-200/55 px-3 py-2 text-[10px] uppercase tracking-[0.14em] text-base-content/45',
+              )}
+            >
               <div>Bits</div>
               <div>Name</div>
               <div>Value</div>

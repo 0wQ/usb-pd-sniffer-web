@@ -23,7 +23,9 @@ const Mask = ({ hide }: MaskProps) => {
   }, [hide])
 
   return (
-    <div className={`absolute z-20 inset-0 w-full h-[calc(100%+1.25rem-1px)] sm:h-[calc(100%+2.5rem-1px)] rounded-b-2xl transition-all duration-1000 ${hide ? 'backdrop-blur-none' : 'backdrop-blur'} ${isHiddenMask ? 'hidden' : ''}`}></div>
+    <div
+      className={`absolute z-20 inset-0 w-full h-[calc(100%+1.25rem-1px)] sm:h-[calc(100%+2.5rem-1px)] rounded-b-2xl transition-all duration-1000 ${hide ? 'backdrop-blur-none' : 'backdrop-blur'} ${isHiddenMask ? 'hidden' : ''}`}
+    ></div>
   )
 }
 

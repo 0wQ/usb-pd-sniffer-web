@@ -3,7 +3,14 @@ import ProtocolDecodeCard from '@/components/protocol/ProtocolDecodeCard'
 import SendPdDialog from '@/components/protocol/SendPdDialog'
 import { useDeviceWorkspaceContext } from '@/components/app/DeviceWorkspaceContext'
 import useAppStore from '@/stores/appStore'
-import { Group, Panel, Separator, useDefaultLayout, usePanelCallbackRef, type PanelSize } from 'react-resizable-panels'
+import {
+  Group,
+  Panel,
+  Separator,
+  useDefaultLayout,
+  usePanelCallbackRef,
+  type PanelSize,
+} from 'react-resizable-panels'
 import { decodeSingleRecord } from '@/lib/analyzer/decode'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import clsx from 'clsx'
@@ -91,7 +98,9 @@ const ProtocolPage = () => {
   }, [decodeCollapsed, decodePanel])
 
   const toggleDecodeLayoutMode = useCallback(() => {
-    setDecodeLayoutMode((current) => current === 'vertical' ? 'horizontal' : 'vertical')
+    setDecodeLayoutMode((current) =>
+      current === 'vertical' ? 'horizontal' : 'vertical',
+    )
     setDecodeHandleHighlighted(true)
   }, [])
 
@@ -114,7 +123,8 @@ const ProtocolPage = () => {
   }, [])
 
   const defaultLayoutForMode = useMemo(() => defaultLayout, [defaultLayout])
-  const selectedRecord = selectedIndex === null ? null : (captureBuffer.get(selectedIndex) ?? null)
+  const selectedRecord =
+    selectedIndex === null ? null : (captureBuffer.get(selectedIndex) ?? null)
   const selectedFrameForTx = useMemo(() => {
     if (selectedRecord === null) return null
 
@@ -173,7 +183,10 @@ const ProtocolPage = () => {
           className={decodePanelClassName}
           onResize={handleDecodeResize}
         >
-          <ProtocolDecodeCard className="card bg-base-100 h-full min-h-0" selectedIndex={selectedIndex} />
+          <ProtocolDecodeCard
+            className="card bg-base-100 h-full min-h-0"
+            selectedIndex={selectedIndex}
+          />
         </Panel>
       </Group>
 
