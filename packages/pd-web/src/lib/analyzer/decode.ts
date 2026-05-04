@@ -20,6 +20,22 @@ export function decodeSingleRecord(
   return packet === null ? null : decodePacket(packet)
 }
 
+type CaptureRecordSource = {
+  get(index: number): CaptureRecord | undefined
+  readonly length: number
+}
+
+function getRecordAt(
+  records: readonly CaptureRecord[] | CaptureRecordSource,
+  index: number,
+): CaptureRecord | undefined {
+  if (Array.isArray(records)) {
+    return records[index]
+  }
+
+  return records.get(index)
+}
+
 type ContextLookupResult<T> = {
   value: T | undefined
   scannedRecords: number
@@ -35,7 +51,7 @@ function needsSourceCapabilitiesContext(decoded: DecodedPacket): boolean {
 }
 
 function findPreviousChunkedExtendedPackets(
-  records: readonly CaptureRecord[],
+  records: readonly CaptureRecord[] | CaptureRecordSource,
   targetIndex: number,
   startIndex: number,
   targetDecoded: DecodedPacket,
@@ -57,15 +73,20 @@ function findPreviousChunkedExtendedPackets(
 
   for (let index = targetIndex - 1; index >= startIndex; index -= 1) {
     scannedRecords = targetIndex - index
+    const record = getRecordAt(records, index)
 
     if (
-      records[index]?.event_type === CAPTURE_EVENT.PD_HARD_RESET ||
-      records[index]?.event_type === CAPTURE_EVENT.PD_CABLE_RESET
+      record?.event_type === CAPTURE_EVENT.PD_HARD_RESET ||
+      record?.event_type === CAPTURE_EVENT.PD_CABLE_RESET
     ) {
       break
     }
 
-    const packet = recordToMessagePacket(records[index])
+    if (record === undefined) {
+      continue
+    }
+
+    const packet = recordToMessagePacket(record)
     if (packet === null) {
       continue
     }
@@ -102,7 +123,7 @@ function findPreviousChunkedExtendedPackets(
 }
 
 function findNearestSourceCapabilitiesFrame(
-  records: readonly CaptureRecord[],
+  records: readonly CaptureRecord[] | CaptureRecordSource,
   targetIndex: number,
   startIndex: number,
 ): ContextLookupResult<MessagePacket> {
@@ -110,15 +131,20 @@ function findNearestSourceCapabilitiesFrame(
 
   for (let index = targetIndex - 1; index >= startIndex; index -= 1) {
     scannedRecords = targetIndex - index
+    const record = getRecordAt(records, index)
 
     if (
-      records[index]?.event_type === CAPTURE_EVENT.PD_HARD_RESET ||
-      records[index]?.event_type === CAPTURE_EVENT.PD_CABLE_RESET
+      record?.event_type === CAPTURE_EVENT.PD_HARD_RESET ||
+      record?.event_type === CAPTURE_EVENT.PD_CABLE_RESET
     ) {
       break
     }
 
-    const packet = recordToMessagePacket(records[index])
+    if (record === undefined) {
+      continue
+    }
+
+    const packet = recordToMessagePacket(record)
     if (packet === null) {
       continue
     }
@@ -133,7 +159,7 @@ function findNearestSourceCapabilitiesFrame(
 }
 
 export function decodeRecordAtIndex(
-  records: readonly CaptureRecord[],
+  records: readonly CaptureRecord[] | CaptureRecordSource,
   targetIndex: number,
   backtrackRecords: number | null = null,
 ): DecodeRecordAtIndexResult | null {
@@ -141,7 +167,12 @@ export function decodeRecordAtIndex(
     return null
   }
 
-  const packet = recordToMessagePacket(records[targetIndex])
+  const targetRecord = getRecordAt(records, targetIndex)
+  if (targetRecord === undefined) {
+    return null
+  }
+
+  const packet = recordToMessagePacket(targetRecord)
   if (packet === null) {
     return null
   }

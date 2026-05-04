@@ -66,6 +66,43 @@ const DEFAULT_DEVICE_PERSISTED_STATE: DevicePersistedState = {
   detailContextBacktrackRecords: null,
 }
 
+function mergePersistedDeviceState(
+  persistedState: unknown,
+  currentState: DeviceState,
+): DeviceState {
+  if (persistedState === null || typeof persistedState !== 'object') {
+    return currentState
+  }
+
+  const state = persistedState as Partial<DevicePersistedState>
+
+  return {
+    ...currentState,
+    autoConnectOnLoad:
+      typeof state.autoConnectOnLoad === 'boolean'
+        ? state.autoConnectOnLoad
+        : currentState.autoConnectOnLoad,
+    autoReconnectOnHotplug:
+      typeof state.autoReconnectOnHotplug === 'boolean'
+        ? state.autoReconnectOnHotplug
+        : currentState.autoReconnectOnHotplug,
+    selectedDeviceKind:
+      typeof state.selectedDeviceKind === 'string'
+        ? state.selectedDeviceKind
+        : currentState.selectedDeviceKind,
+    lastDeviceFingerprints:
+      state.lastDeviceFingerprints &&
+      typeof state.lastDeviceFingerprints === 'object'
+        ? state.lastDeviceFingerprints
+        : currentState.lastDeviceFingerprints,
+    detailContextBacktrackRecords:
+      typeof state.detailContextBacktrackRecords === 'number' ||
+      state.detailContextBacktrackRecords === null
+        ? state.detailContextBacktrackRecords
+        : currentState.detailContextBacktrackRecords,
+  }
+}
+
 function autoExportAndClearCaptureBuffer(
   captureBuffer: CaptureBuffer,
 ): boolean {
@@ -244,6 +281,8 @@ const useDeviceStore = create<DeviceState>()(
         lastDeviceFingerprints: state.lastDeviceFingerprints,
         detailContextBacktrackRecords: state.detailContextBacktrackRecords,
       }),
+      merge: (persistedState, currentState) =>
+        mergePersistedDeviceState(persistedState, currentState),
     },
   ),
 )

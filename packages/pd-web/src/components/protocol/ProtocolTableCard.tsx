@@ -3,6 +3,7 @@ import { List, useListCallbackRef, type RowComponentProps } from 'react-window'
 import { toast } from 'sonner'
 import { useDeviceWorkspaceContext } from '@/components/app/DeviceWorkspaceContext'
 import useAppStore, { APP_THEMES } from '@/stores/appStore'
+import useDeviceStore from '@/stores/deviceStore'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
 import type { ImportMode } from '@/types/csv'
 import {
@@ -146,17 +147,16 @@ const CellComponent = memo(
 
 CellComponent.displayName = 'CellComponent'
 
-type RowData = {
-  records: CaptureRecord[]
-  onRowClick: (index: number) => void
-  selectedIndex: number | null
-}
-
 type ColumnKey = (typeof COLUMNS)[number]['key']
 
 type DerivedRowData = {
   recordIndex: number
   cells: Record<ColumnKey, React.ReactNode>
+}
+
+type RowData = {
+  onRowClick: (index: number) => void
+  selectedIndex: number | null
 }
 
 const padNumber = (value: number, length = 2): string =>
@@ -214,16 +214,19 @@ const RowComponentInner = ({
   ariaAttributes,
   index,
   style,
-  records,
   onRowClick,
   selectedIndex,
 }: RowComponentProps<RowData>) => {
+  const captureBuffer = useDeviceStore((state) => state.captureBuffer)
+  const captureVersion = useDeviceStore((state) => state.captureVersion)
+
   const rowData = useMemo<DerivedRowData | null>(() => {
+    void captureVersion
     const recordIndex = index
-    const record = records[recordIndex]
+    const record = captureBuffer.get(recordIndex)
     if (!record) return null
 
-    const previousRecord = recordIndex > 0 ? records[recordIndex - 1] : null
+    const previousRecord = recordIndex > 0 ? captureBuffer.get(recordIndex - 1) ?? null : null
     const deltaTime = previousRecord
       ? record.timestamp_us - previousRecord.timestamp_us
       : null
@@ -269,18 +272,18 @@ const RowComponentInner = ({
     }
 
     return { recordIndex, cells }
-  }, [index, records])
+  }, [captureBuffer, captureVersion, index])
 
-  const rowStyle = useMemo(
-    () => ({ ...style, display: 'flex', alignItems: 'center' }),
-    [style],
-  )
   const isSelected = rowData !== null && selectedIndex === rowData.recordIndex
   const handleClick = useCallback(() => {
     if (rowData !== null) {
       onRowClick(rowData.recordIndex)
     }
   }, [onRowClick, rowData])
+  const rowStyle = useMemo(
+    () => ({ ...style, display: 'flex', alignItems: 'center' }),
+    [style],
+  )
 
   if (!rowData) {
     return (
@@ -291,7 +294,8 @@ const RowComponentInner = ({
   }
 
   return (
-    <button
+    <div
+      {...ariaAttributes}
       className={clsx('select-none cursor-pointer relative', {
         'bg-base-300 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-primary':
           isSelected,
@@ -299,14 +303,6 @@ const RowComponentInner = ({
       })}
       style={rowStyle}
       onClick={handleClick}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault()
-          handleClick()
-        }
-      }}
-      type="button"
-      tabIndex={0}
     >
       {COLUMNS.map((col) => (
         <CellComponent
@@ -317,9 +313,9 @@ const RowComponentInner = ({
           minWidth={col.minWidth ?? null}
         >
           {rowData.cells[col.key]}
-          </CellComponent>
+        </CellComponent>
       ))}
-    </button>
+    </div>
   )
 }
 
@@ -359,8 +355,7 @@ const TableComponent = memo(
     selectedIndex,
     scrollRequest,
   }: TableComponentProps) => {
-    const { captureBuffer, captureCount } = useDeviceWorkspaceContext()
-
+    const { captureCount } = useDeviceWorkspaceContext()
     const [list, setList] = useListCallbackRef()
     const lastScrollRequest = useRef(0)
     const isProgrammaticScroll = useRef(false)
@@ -369,7 +364,6 @@ const TableComponent = memo(
     const lastFollowScrollAt = useRef(0)
     const lastFollowRecordCount = useRef(0)
 
-    const records = captureBuffer.getAll()
     const recordCount = captureCount
 
     useEffect(() => {
@@ -478,8 +472,8 @@ const TableComponent = memo(
     )
 
     const rowProps = useMemo<RowData>(
-      () => ({ records, onRowClick, selectedIndex }),
-      [onRowClick, records, selectedIndex],
+      () => ({ onRowClick, selectedIndex }),
+      [onRowClick, selectedIndex],
     )
 
     return (
@@ -840,10 +834,7 @@ const ProtocolTableCard = memo(
                 </button>
 
                 <div className="dropdown dropdown-end">
-                  <button
-                    className={TOOLBAR_ICON_BUTTON_CLASS}
-                    type="button"
-                  >
+                  <button className={TOOLBAR_ICON_BUTTON_CLASS} type="button">
                     <Palette className={TOOLBAR_ICON_CLASS} />
                   </button>
                   <ul
@@ -921,7 +912,7 @@ const ProtocolTableCard = memo(
         </div>
 
         <div className="flex-1 min-h-0 px-5 pb-5 overflow-hidden">
-          <div className="h-full overflow-auto rounded-lg bg-base-200 font-mono text-xs">
+          <div className="h-full overflow-hidden rounded-lg bg-base-200 font-mono text-xs">
             <TableComponent
               autoScroll={autoScroll}
               setAutoScroll={setAutoScroll}
