@@ -102,7 +102,7 @@ const ProtocolPage = () => {
       current === 'vertical' ? 'horizontal' : 'vertical',
     )
     setDecodeHandleHighlighted(true)
-  }, [])
+  }, [setDecodeLayoutMode])
 
   useEffect(() => {
     if (!decodeHandleHighlighted) return
@@ -116,11 +116,11 @@ const ProtocolPage = () => {
 
   const handleDecodeResize = useCallback((panelSize: PanelSize) => {
     setDecodeCollapsed(panelSize.asPercentage <= 0.001)
-  }, [])
+  }, [setDecodeCollapsed])
 
   const handleDecodeSeparatorDoubleClick = useCallback(() => {
     setDecodeCollapsed((current) => !current)
-  }, [])
+  }, [setDecodeCollapsed])
 
   const defaultLayoutForMode = useMemo(() => defaultLayout, [defaultLayout])
   const selectedRecord =

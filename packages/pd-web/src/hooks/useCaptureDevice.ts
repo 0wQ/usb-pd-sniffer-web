@@ -114,14 +114,7 @@ export function useCaptureDevice() {
       resetDevice()
       deviceRef.current = null
     }
-  }, [
-    addRecord,
-    resetDevice,
-    selectedDeviceKind,
-    setIsConnected,
-    setIsConnecting,
-    syncDeviceState,
-  ])
+  }, [addRecord, resetDevice, selectedDeviceKind, syncDeviceState])
 
   const tryAutoConnectAuthorizedDevice = useCallback(async () => {
     logDevice('try auto connect authorized', { kind: selectedDeviceKind })
@@ -169,17 +162,12 @@ export function useCaptureDevice() {
         alert(`Failed to connect: ${err.message}`)
       }
     }
-  }, [
-    selectedDriver.apiName,
-    selectedDeviceKind,
-    setIsConnected,
-    setIsConnecting,
-  ])
+  }, [selectedDriver.apiName, selectedDeviceKind, setIsConnecting])
 
   const disconnectDevice = useCallback(async () => {
     await deviceRef.current?.disconnect()
     resetDevice()
-  }, [resetDevice, setIsConnected, setIsConnecting])
+  }, [resetDevice])
 
   const sendRawPdFrame = useCallback(
     async (sop: PdTxSop, hexPayload: string) => {

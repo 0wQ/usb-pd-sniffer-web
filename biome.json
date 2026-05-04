@@ -31,8 +31,8 @@
   "linter": {
     "enabled": true,
     "domains": {
-      "react": "none",
-      "test": "none"
+      "react": "recommended",
+      "test": "recommended"
     },
     "rules": {
       "recommended": true,
