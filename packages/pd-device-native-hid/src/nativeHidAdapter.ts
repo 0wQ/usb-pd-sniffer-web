@@ -47,10 +47,9 @@ export const NATIVE_HID_EVENT = {
   PD_SOP2: 22,
   PD_SOP1_DEBUG: 23,
   PD_SOP2_DEBUG: 24,
-  HARD_RESET: 25,
-  CABLE_RESET: 26,
+  PD_HARD_RESET: 25,
+  PD_CABLE_RESET: 26,
   PD_ERROR: 30,
-  BUFFER_OVERFLOW: 31,
   UFCS_DP: 40,
   UFCS_DM: 41,
 } as const
@@ -198,8 +197,8 @@ function isPdSopFrameEvent(eventType: number): boolean {
 
 function isPdResetOrErrorEvent(eventType: number): boolean {
   return (
-    eventType === NATIVE_HID_EVENT.HARD_RESET ||
-    eventType === NATIVE_HID_EVENT.CABLE_RESET ||
+    eventType === NATIVE_HID_EVENT.PD_HARD_RESET ||
+    eventType === NATIVE_HID_EVENT.PD_CABLE_RESET ||
     eventType === NATIVE_HID_EVENT.PD_ERROR
   )
 }
@@ -229,14 +228,12 @@ export function nativeHidEventName(eventType: number): string {
       return 'PD_SOP1_DEBUG'
     case NATIVE_HID_EVENT.PD_SOP2_DEBUG:
       return 'PD_SOP2_DEBUG'
-    case NATIVE_HID_EVENT.HARD_RESET:
-      return 'HARD_RESET'
-    case NATIVE_HID_EVENT.CABLE_RESET:
-      return 'CABLE_RESET'
+    case NATIVE_HID_EVENT.PD_HARD_RESET:
+      return 'PD_HARD_RESET'
+    case NATIVE_HID_EVENT.PD_CABLE_RESET:
+      return 'PD_CABLE_RESET'
     case NATIVE_HID_EVENT.PD_ERROR:
       return 'PD_ERROR'
-    case NATIVE_HID_EVENT.BUFFER_OVERFLOW:
-      return 'BUFFER_OVERFLOW'
     case NATIVE_HID_EVENT.UFCS_DP:
       return 'UFCS_DP'
     case NATIVE_HID_EVENT.UFCS_DM:
@@ -266,9 +263,9 @@ export function nativeHidEventToCaptureEvent(
       return CAPTURE_EVENT.PD_SOP1_DEBUG
     case NATIVE_HID_EVENT.PD_SOP2_DEBUG:
       return CAPTURE_EVENT.PD_SOP2_DEBUG
-    case NATIVE_HID_EVENT.HARD_RESET:
+    case NATIVE_HID_EVENT.PD_HARD_RESET:
       return CAPTURE_EVENT.PD_HARD_RESET
-    case NATIVE_HID_EVENT.CABLE_RESET:
+    case NATIVE_HID_EVENT.PD_CABLE_RESET:
       return CAPTURE_EVENT.PD_CABLE_RESET
     case NATIVE_HID_EVENT.UFCS_DP:
       return CAPTURE_EVENT.UFCS_DP

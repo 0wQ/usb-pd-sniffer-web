@@ -103,7 +103,7 @@ type CaptureRecord = {
 Current record emission behavior:
 
 - `PD_SOP0`, `PD_SOP1`, `PD_SOP2`, `PD_SOP1_DEBUG`, and `PD_SOP2_DEBUG` emit records with raw PD packet bytes.
-- `HARD_RESET`, `CABLE_RESET`, and `PD_ERROR` are accepted by the native HID path.
+- `PD_HARD_RESET`, `PD_CABLE_RESET`, and `PD_ERROR` are accepted by the native HID path.
 - `UFCS_DP` and `UFCS_DM` emit records with UFCS raw frames.
 - HID may split `UFCS_DP` / `UFCS_DM` records across two consecutive reports when the raw frame is longer than 34 bytes.
 - A full 34-byte UFCS HID report is held until the next report decides whether it is complete or the first split chunk.
