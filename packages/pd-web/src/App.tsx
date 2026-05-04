@@ -12,7 +12,7 @@ function App() {
   return (
     <div className="app bg-base-200 w-full h-screen min-h-200 flex flex-col">
       <Toaster
-        position="top-right"
+        position="bottom-left"
         duration={10000}
         toastOptions={{
           unstyled: true,
