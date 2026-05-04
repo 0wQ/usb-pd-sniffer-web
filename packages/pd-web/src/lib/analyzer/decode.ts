@@ -3,7 +3,7 @@ import {
   type DecodedPacket,
   type MessagePacket,
 } from '@usb-pd-sniffer/pd-core'
-import { type PdFrame } from '@usb-pd-sniffer/pd-device-native-hid'
+import type { PdFrame } from '@usb-pd-sniffer/pd-device-native-hid'
 import { CAPTURE_EVENT } from '@usb-pd-sniffer/pd-device-types'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
 

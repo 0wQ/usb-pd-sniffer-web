@@ -487,8 +487,22 @@ function resolveChunkedExtendedPayloadContext(
     expectedChunkNumber < previousChunks.length;
     expectedChunkNumber += 1
   ) {
+    const previousChunk = previousChunks[expectedChunkNumber]
+    if (previousChunk === undefined) {
+      notes.push(
+        `Provided chunked Extended context was ignored because previous chunk ${expectedChunkNumber} is missing.`,
+      )
+
+      return {
+        mode: 'sequence',
+        notes,
+        payloadBytes: currentPayloadBytes,
+        rawOnly: true,
+      }
+    }
+
     const parsed = parseChunkedExtendedFrame(
-      normalizeContextMessage(previousChunks[expectedChunkNumber]!),
+      normalizeContextMessage(previousChunk),
     )
     if (parsed === null) {
       notes.push(

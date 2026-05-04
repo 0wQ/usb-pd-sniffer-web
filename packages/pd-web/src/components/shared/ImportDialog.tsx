@@ -30,7 +30,7 @@ const ImportDialog = ({ isOpen, recordCount, onClose, onConfirm }: Props) => {
     onConfirm('append')
   }
 
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDialogElement>) => {
+  const handlePointerDown = (e: React.PointerEvent<HTMLDialogElement>) => {
     // Close when clicking backdrop
     if (e.target === e.currentTarget) {
       onClose()
@@ -41,7 +41,7 @@ const ImportDialog = ({ isOpen, recordCount, onClose, onConfirm }: Props) => {
     <dialog
       ref={dialogRef}
       className="modal"
-      onClick={handleBackdropClick}
+      onPointerDown={handlePointerDown}
       onClose={onClose}
     >
       <div className="modal-box">
@@ -58,13 +58,14 @@ const ImportDialog = ({ isOpen, recordCount, onClose, onConfirm }: Props) => {
         </p>
 
         <div className="flex flex-col gap-3">
-          <button className="btn btn-primary" onClick={handleReplace}>
+          <button className="btn btn-primary" onClick={handleReplace} type="button">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-5 w-5"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -77,13 +78,14 @@ const ImportDialog = ({ isOpen, recordCount, onClose, onConfirm }: Props) => {
             <span className="text-xs opacity-70">(Clear existing records)</span>
           </button>
 
-          <button className="btn btn-secondary" onClick={handleAppend}>
+          <button className="btn btn-secondary" onClick={handleAppend} type="button">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-5 w-5"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -98,7 +100,7 @@ const ImportDialog = ({ isOpen, recordCount, onClose, onConfirm }: Props) => {
         </div>
 
         <div className="modal-action">
-          <button className="btn btn-ghost" onClick={onClose}>
+          <button className="btn btn-ghost" onClick={onClose} type="button">
             Cancel
           </button>
         </div>

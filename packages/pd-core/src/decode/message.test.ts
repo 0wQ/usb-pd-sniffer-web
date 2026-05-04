@@ -75,8 +75,8 @@ describe('decodePacket', () => {
     expect(
       decoded.sections.every(
         (section) =>
-          !Object.prototype.hasOwnProperty.call(section, 'parentSectionKey') &&
-          !Object.prototype.hasOwnProperty.call(section, 'depth'),
+          !Object.hasOwn(section, 'parentSectionKey') &&
+          !Object.hasOwn(section, 'depth'),
       ),
     ).toBe(true)
   })

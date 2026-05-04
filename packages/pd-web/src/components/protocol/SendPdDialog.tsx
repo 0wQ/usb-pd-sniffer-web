@@ -408,6 +408,7 @@ const SendPdDialog = ({
                 disabled={
                   selectedFrame === null || isSendBusy || mode !== 'raw'
                 }
+                type="button"
               >
                 Fill From Selected
               </button>
@@ -421,6 +422,7 @@ const SendPdDialog = ({
                     hasMultilinePayload &&
                     payloadLines.length === 0)
                 }
+                type="button"
               >
                 {sendButtonLabel}
               </button>

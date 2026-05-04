@@ -35,7 +35,10 @@
       "test": "none"
     },
     "rules": {
-      "recommended": false
+      "recommended": true,
+      "complexity": {
+        "useSimpleNumberKeys": "off"
+      }
     }
   }
 }

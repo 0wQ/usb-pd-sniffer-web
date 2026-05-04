@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import ProtocolPage from '@/components/pages/ProtocolPage'
 import PowerPage from '@/components/pages/PowerPage'
-import { type AppView } from '@/components/app/ViewTabs'
+import type { AppView } from '@/components/app/ViewTabs'
 import { DeviceWorkspaceProvider } from '@/components/app/DeviceWorkspaceContext'
 import { useCaptureDevice } from '@/hooks/useCaptureDevice'
 import useDeviceStore from '@/stores/deviceStore'
@@ -160,6 +160,7 @@ const DeviceWorkspace = ({ currentView, onViewChange }: Props) => {
               className="h-6 w-6 shrink-0 stroke-current"
               fill="none"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"

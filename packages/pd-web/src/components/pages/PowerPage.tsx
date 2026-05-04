@@ -30,6 +30,7 @@ const PowerPage = () => {
                   className="btn btn-sm rounded-full gap-2"
                   onClick={() => void connectDevice()}
                   disabled={isConnecting}
+                  type="button"
                 >
                   {isConnected ? (
                     <>

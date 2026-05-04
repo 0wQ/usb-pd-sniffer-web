@@ -291,7 +291,7 @@ const RowComponentInner = ({
   }
 
   return (
-    <div
+    <button
       className={clsx('select-none cursor-pointer relative', {
         'bg-base-300 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-primary':
           isSelected,
@@ -299,6 +299,14 @@ const RowComponentInner = ({
       })}
       style={rowStyle}
       onClick={handleClick}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          handleClick()
+        }
+      }}
+      type="button"
+      tabIndex={0}
     >
       {COLUMNS.map((col) => (
         <CellComponent
@@ -309,9 +317,9 @@ const RowComponentInner = ({
           minWidth={col.minWidth ?? null}
         >
           {rowData.cells[col.key]}
-        </CellComponent>
+          </CellComponent>
       ))}
-    </div>
+    </button>
   )
 }
 
@@ -717,6 +725,7 @@ const ProtocolTableCard = memo(
                     className="btn btn-sm rounded-full gap-2"
                     onClick={() => void connectDevice()}
                     disabled={isConnecting}
+                    type="button"
                   >
                     {isConnected ? (
                       <>
@@ -741,17 +750,13 @@ const ProtocolTableCard = memo(
 
               <div className="flex min-w-max shrink-0 flex-wrap items-center justify-end gap-1">
                 <div className="dropdown dropdown-end">
-                  <label
-                    tabIndex={0}
-                    role="button"
+                  <button
                     className={TOOLBAR_ICON_BUTTON_CLASS}
+                    type="button"
                   >
                     <Settings className={TOOLBAR_ICON_CLASS} />
-                  </label>
-                  <div
-                    tabIndex={0}
-                    className="dropdown-content z-20 w-72 rounded-box bg-base-100 p-3 shadow-md"
-                  >
+                  </button>
+                  <div className="dropdown-content z-20 w-72 rounded-box bg-base-100 p-3 shadow-md">
                     {isDeviceSupported && (
                       <>
                         <div className="px-1 pb-2 text-xs font-semibold text-base-content/60 select-none">
@@ -820,6 +825,7 @@ const ProtocolTableCard = memo(
                       ? 'Native PD TX'
                       : 'Selected device does not support PD TX'
                   }
+                  type="button"
                 >
                   <Send className={TOOLBAR_ICON_CLASS} />
                 </button>
@@ -828,38 +834,37 @@ const ProtocolTableCard = memo(
                   onClick={onToggleDecodeLayoutMode}
                   aria-label={decodeLayoutButtonLabel}
                   title={decodeLayoutButtonLabel}
+                  type="button"
                 >
                   <DecodeLayoutIcon className={TOOLBAR_ICON_CLASS} />
                 </button>
 
                 <div className="dropdown dropdown-end">
-                  <label
-                    tabIndex={0}
-                    role="button"
+                  <button
                     className={TOOLBAR_ICON_BUTTON_CLASS}
+                    type="button"
                   >
                     <Palette className={TOOLBAR_ICON_CLASS} />
-                  </label>
+                  </button>
                   <ul
                     tabIndex={-1}
                     className="dropdown-content z-20 max-h-72 w-50 overflow-y-auto rounded-box bg-base-100 p-2 shadow-md menu"
                   >
                     {APP_THEMES.map((option) => (
-                      <li
-                        key={option}
-                        onClick={
-                          theme === option ? undefined : () => setTheme(option)
-                        }
-                      >
-                        <a
+                      <li key={option}>
+                        <button
                           className={clsx('capitalize transition-colors', {
                             'bg-base-300 text-base-content font-semibold pointer-events-none cursor-default':
                               theme === option,
                           })}
                           aria-current={theme === option ? 'true' : undefined}
+                          onClick={
+                            theme === option ? undefined : () => setTheme(option)
+                          }
+                          type="button"
                         >
                           {option}
-                        </a>
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -871,6 +876,7 @@ const ProtocolTableCard = memo(
                   className={TOOLBAR_ICON_BUTTON_CLASS}
                   onClick={() => setAutoScroll((current) => !current)}
                   aria-label="Auto Scroll"
+                  type="button"
                 >
                   <AutoScrollIcon className={TOOLBAR_ICON_CLASS} />
                 </button>
@@ -879,6 +885,7 @@ const ProtocolTableCard = memo(
                   onClick={handleScrollToSelection}
                   disabled={selectedIndex === null}
                   aria-label="Scroll to selection"
+                  type="button"
                 >
                   <MapPin className={TOOLBAR_ICON_CLASS} />
                 </button>
@@ -887,6 +894,7 @@ const ProtocolTableCard = memo(
                   onClick={handleExportCsv}
                   disabled={captureCount === 0 || isProcessing}
                   aria-label="Export to CSV"
+                  type="button"
                 >
                   <Download className={TOOLBAR_ICON_CLASS} />
                 </button>
@@ -895,6 +903,7 @@ const ProtocolTableCard = memo(
                   onClick={handleImportCsv}
                   disabled={isProcessing}
                   aria-label="Import from CSV"
+                  type="button"
                 >
                   <Upload className={TOOLBAR_ICON_CLASS} />
                 </button>
@@ -902,6 +911,7 @@ const ProtocolTableCard = memo(
                   className={TOOLBAR_ICON_BUTTON_CLASS}
                   onClick={clearRecords}
                   aria-label="Clear"
+                  type="button"
                 >
                   <Eraser className={TOOLBAR_ICON_CLASS} />
                 </button>
