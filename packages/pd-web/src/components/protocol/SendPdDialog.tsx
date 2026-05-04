@@ -3,14 +3,13 @@ import type { BitField, MessageFrame, Section } from '@usb-pd-sniffer/pd-core'
 import clsx from 'clsx'
 import { toast } from 'sonner'
 import { X } from 'lucide-react'
+import useAppStore, { type SendMode } from '@/stores/appStore'
 import type { ActiveCCMode, CCMode, CCModeConfig, PdTxSop } from '@/lib/devices/deviceDrivers'
 import { applyFieldRawValue, formatEditedBytes } from '@/lib/analyzer/fieldEdit'
 import { hasPdTxPayloadNewline, parsePdHexPayload, previewPdTxFrame, splitPdTxPayloadLines } from '@/lib/analyzer/txPreview'
 import { hexBytes, IssueList, SectionView } from '@/components/protocol/decode/DecodedSectionsView'
 
-type SendMode = 'raw' | 'hard_reset' | 'cable_reset'
 const MULTILINE_TX_INTERVAL_MS = 50
-const TX_DIALOG_DRAFT_STORAGE_KEY = 'usb-pd-tx-dialog-draft-v1'
 
 const SEND_MODE_OPTIONS: Array<{ key: SendMode; label: string }> = [
   { key: 'raw', label: 'Raw' },
@@ -19,50 +18,6 @@ const SEND_MODE_OPTIONS: Array<{ key: SendMode; label: string }> = [
 ]
 
 const TX_SOP_OPTIONS = ['SOP', 'SOP_PRIME', 'SOP_DPRIME'] as const satisfies readonly PdTxSop[]
-
-type TxDialogDraft = {
-  mode: SendMode
-  sop: PdTxSop
-  hexPayload: string
-}
-
-const DEFAULT_TX_DIALOG_DRAFT: TxDialogDraft = {
-  mode: 'raw',
-  sop: 'SOP',
-  hexPayload: 'A7 00',
-}
-
-function isSendMode(value: unknown): value is SendMode {
-  return value === 'raw' || value === 'hard_reset' || value === 'cable_reset'
-}
-
-function isTxSop(value: unknown): value is PdTxSop {
-  return typeof value === 'string' && TX_SOP_OPTIONS.includes(value as PdTxSop)
-}
-
-function readTxDialogDraft(): TxDialogDraft {
-  try {
-    const rawValue = localStorage.getItem(TX_DIALOG_DRAFT_STORAGE_KEY)
-    if (rawValue === null) return DEFAULT_TX_DIALOG_DRAFT
-
-    const parsed = JSON.parse(rawValue) as Partial<TxDialogDraft>
-    return {
-      mode: isSendMode(parsed.mode) ? parsed.mode : DEFAULT_TX_DIALOG_DRAFT.mode,
-      sop: isTxSop(parsed.sop) ? parsed.sop : DEFAULT_TX_DIALOG_DRAFT.sop,
-      hexPayload: typeof parsed.hexPayload === 'string' ? parsed.hexPayload : DEFAULT_TX_DIALOG_DRAFT.hexPayload,
-    }
-  } catch {
-    return DEFAULT_TX_DIALOG_DRAFT
-  }
-}
-
-function writeTxDialogDraft(value: TxDialogDraft): void {
-  try {
-    localStorage.setItem(TX_DIALOG_DRAFT_STORAGE_KEY, JSON.stringify(value))
-  } catch {
-    // Ignore unavailable storage.
-  }
-}
 
 type Props = {
   isOpen: boolean
@@ -86,14 +41,11 @@ const SendPdDialog = ({
   onSetCCMode,
 }: Props) => {
   const dialogRef = useRef<HTMLDialogElement>(null)
-  const initialDraftRef = useRef<TxDialogDraft | null>(null)
-  if (initialDraftRef.current === null) {
-    initialDraftRef.current = readTxDialogDraft()
-  }
-
-  const [mode, setMode] = useState<SendMode>(initialDraftRef.current.mode)
-  const [sop, setSop] = useState<PdTxSop>(initialDraftRef.current.sop)
-  const [hexPayload, setHexPayload] = useState(initialDraftRef.current.hexPayload)
+  const txDialogDraft = useAppStore((state) => state.txDialogDraft)
+  const setTxDialogDraft = useAppStore((state) => state.setTxDialogDraft)
+  const [mode, setMode] = useState<SendMode>(txDialogDraft.mode)
+  const [sop, setSop] = useState<PdTxSop>(txDialogDraft.sop)
+  const [hexPayload, setHexPayload] = useState(txDialogDraft.hexPayload)
   const [activeCCMode, setActiveCCMode] = useState<ActiveCCMode>('auto')
   const [cc1Mode, setCC1Mode] = useState<CCMode>('open')
   const [cc2Mode, setCC2Mode] = useState<CCMode>('open')
@@ -127,8 +79,14 @@ const SendPdDialog = ({
   }, [hasMultilinePayload, hexPayload, mode, sop])
 
   useEffect(() => {
-    writeTxDialogDraft({ mode, sop, hexPayload })
-  }, [hexPayload, mode, sop])
+    setTxDialogDraft({ mode, sop, hexPayload })
+  }, [hexPayload, mode, setTxDialogDraft, sop])
+
+  useEffect(() => {
+    setMode(txDialogDraft.mode)
+    setSop(txDialogDraft.sop)
+    setHexPayload(txDialogDraft.hexPayload)
+  }, [txDialogDraft])
 
   useEffect(() => {
     const dialog = dialogRef.current

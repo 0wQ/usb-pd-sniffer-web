@@ -2,15 +2,12 @@ import ProtocolTableCard from '@/components/protocol/ProtocolTableCard'
 import ProtocolDecodeCard from '@/components/protocol/ProtocolDecodeCard'
 import SendPdDialog from '@/components/protocol/SendPdDialog'
 import { useDeviceWorkspaceContext } from '@/components/app/DeviceWorkspaceContext'
+import useAppStore from '@/stores/appStore'
 import { Group, Panel, Separator, useDefaultLayout, usePanelCallbackRef, type PanelSize } from 'react-resizable-panels'
 import { decodeSingleRecord } from '@/lib/analyzer/decode'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import clsx from 'clsx'
-
-type DecodeLayoutMode = 'vertical' | 'horizontal'
-
-const DECODE_LAYOUT_MODE_STORAGE_KEY = 'usb-pd-layout-decode-mode'
-const DECODE_COLLAPSED_STORAGE_KEY = 'usb-pd-layout-decode-collapsed'
+import type { DecodeLayoutMode } from '@/stores/appStore'
 const DEFAULT_TABLE_SIZE = {
   vertical: 88,
   horizontal: 70,
@@ -28,39 +25,6 @@ const MAX_DECODE_SIZE = {
   horizontal: '50%',
 } satisfies Record<DecodeLayoutMode, string>
 
-function readDecodeLayoutMode(): DecodeLayoutMode {
-  try {
-    const value = localStorage.getItem(DECODE_LAYOUT_MODE_STORAGE_KEY)
-    return value === 'horizontal' ? 'horizontal' : 'vertical'
-  } catch {
-    return 'vertical'
-  }
-}
-
-function readDecodeCollapsed(): boolean {
-  try {
-    return localStorage.getItem(DECODE_COLLAPSED_STORAGE_KEY) === 'true'
-  } catch {
-    return false
-  }
-}
-
-function writeDecodeLayoutMode(value: DecodeLayoutMode): void {
-  try {
-    localStorage.setItem(DECODE_LAYOUT_MODE_STORAGE_KEY, value)
-  } catch {
-    // ignore
-  }
-}
-
-function writeDecodeCollapsed(value: boolean): void {
-  try {
-    localStorage.setItem(DECODE_COLLAPSED_STORAGE_KEY, String(value))
-  } catch {
-    // ignore
-  }
-}
-
 const ProtocolPage = () => {
   const {
     selectedIndex,
@@ -75,8 +39,10 @@ const ProtocolPage = () => {
     openTxDialog,
     closeTxDialog,
   } = useDeviceWorkspaceContext()
-  const [decodeLayoutMode, setDecodeLayoutMode] = useState<DecodeLayoutMode>(() => readDecodeLayoutMode())
-  const [decodeCollapsed, setDecodeCollapsed] = useState(() => readDecodeCollapsed())
+  const decodeLayoutMode = useAppStore((state) => state.decodeLayoutMode)
+  const setDecodeLayoutMode = useAppStore((state) => state.setDecodeLayoutMode)
+  const decodeCollapsed = useAppStore((state) => state.decodeCollapsed)
+  const setDecodeCollapsed = useAppStore((state) => state.setDecodeCollapsed)
   const [decodeHandleHighlighted, setDecodeHandleHighlighted] = useState(false)
   const [decodePanel, setDecodePanel] = usePanelCallbackRef()
   const layoutId = `pd-web-main-layout-${decodeLayoutMode}`
@@ -111,14 +77,6 @@ const ProtocolPage = () => {
       'h-24 w-1.5': decodeLayoutMode === 'horizontal',
     },
   )
-  useEffect(() => {
-    writeDecodeLayoutMode(decodeLayoutMode)
-  }, [decodeLayoutMode])
-
-  useEffect(() => {
-    writeDecodeCollapsed(decodeCollapsed)
-  }, [decodeCollapsed])
-
   useEffect(() => {
     if (decodePanel === null) return
     try {

@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, memo, useCallback, useRef } from 'react'
 import { List, useListCallbackRef, type RowComponentProps } from 'react-window'
 import { toast } from 'sonner'
 import { useDeviceWorkspaceContext } from '@/components/app/DeviceWorkspaceContext'
+import useAppStore, { APP_THEMES } from '@/stores/appStore'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
 import type { ImportMode } from '@/types/csv'
 import { exportToCsv, importFromCsv, generateFilename, downloadCsv, readFile } from '@/utils/csvHelper'
@@ -27,47 +28,11 @@ import { formatCompactPowerRoleOrCable, formatCompactSop } from '@/lib/display/p
 import type { DeviceKind } from '@/lib/devices/deviceDrivers'
 
 const ROW_HEIGHT = 30
-const THEME_STORAGE_KEY = 'usb-pd-sniffer-theme'
 const TOOLBAR_ICON_BUTTON_CLASS = 'btn btn-sm btn-square btn-ghost'
 const TOOLBAR_ICON_CLASS = 'h-5 w-5'
 const SMOOTH_FOLLOW_MIN_INTERVAL_MS = 180
 const SMOOTH_FOLLOW_MAX_RECORD_DELTA = 4
 type DecodeLayoutMode = 'vertical' | 'horizontal'
-
-const themes = [
-  'light',
-  'dark',
-  'cupcake',
-  'bumblebee',
-  'emerald',
-  'corporate',
-  'halloween',
-  'garden',
-  'forest',
-  'lofi',
-  'pastel',
-  'fantasy',
-  'wireframe',
-  'black',
-  'dracula',
-  'cmyk',
-  'business',
-  'lemonade',
-  'night',
-  'winter',
-  'dim',
-  'nord',
-  'sunset',
-  'silk',
-] as const
-
-const changeTheme = (theme: string = 'light') => {
-  const html = document.querySelector('html')
-  const currentTheme = html?.getAttribute('data-theme')
-  if (currentTheme === theme) return
-  html?.setAttribute('data-theme', theme)
-  localStorage.setItem(THEME_STORAGE_KEY, theme)
-}
 
 // Configuration: Auto-scroll behavior
 const AUTO_SCROLL_CONFIG = {
@@ -519,6 +484,7 @@ const ProtocolTableCard = memo(({
     setAutoConnectOnLoad,
     setAutoReconnectOnHotplug,
   } = useDeviceWorkspaceContext()
+  const setTheme = useAppStore((state) => state.setTheme)
 
   const handleRowClick = useCallback((index: number) => {
     if (AUTO_SCROLL_CONFIG.STOP_ON_ROW_CLICK) {
@@ -728,8 +694,8 @@ const ProtocolTableCard = memo(({
                   <Palette className={TOOLBAR_ICON_CLASS} />
                 </label>
                 <ul tabIndex={-1} className="dropdown-content z-20 max-h-72 w-50 overflow-y-auto rounded-box bg-base-100 p-2 shadow-md menu">
-                  {themes.map((theme) => (
-                    <li key={theme} onClick={() => changeTheme(theme)}>
+                  {APP_THEMES.map((theme) => (
+                    <li key={theme} onClick={() => setTheme(theme)}>
                       <a className="capitalize">{theme}</a>
                     </li>
                   ))}

@@ -1,11 +1,11 @@
 import { Toaster } from 'sonner'
 import DeviceWorkspace from '@/components/app/DeviceWorkspace'
-import { type AppView } from '@/components/app/ViewTabs'
 import { useBeforeUnloadWarning } from '@/hooks/useBeforeUnloadWarning'
-import { useState } from 'react'
+import useAppStore from '@/stores/appStore'
 
 function App() {
-  const [currentView, setCurrentView] = useState<AppView>('protocol')
+  const currentView = useAppStore((state) => state.currentView)
+  const setCurrentView = useAppStore((state) => state.setCurrentView)
   // 数据丢失警告
   useBeforeUnloadWarning()
 

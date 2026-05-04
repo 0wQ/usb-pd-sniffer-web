@@ -1,18 +1,11 @@
 import { create } from 'zustand'
 import { createBatchedQueue } from '@/lib/batching/batchedQueue'
 import { createCaptureBuffer, type CaptureBuffer } from '@/lib/buffers/captureBuffer'
-import {
-  readDevicePreferences,
-  writeAutoConnectOnLoad,
-  writeAutoReconnectOnHotplug,
-  writeDetailContextBacktrackRecords,
-  writeLastDeviceFingerprints,
-  writeSelectedDeviceKind,
-  type LastDeviceFingerprints,
-} from '@/lib/preferences/devicePreferences'
 import type { DeviceKind } from '@/lib/devices/deviceDrivers'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
 import { downloadCsv, exportToCsv, generateFilename } from '@/utils/csvHelper'
+
+type LastDeviceFingerprints = Partial<Record<DeviceKind, string>>
 
 interface DeviceState {
   isConnected: boolean
@@ -49,8 +42,91 @@ const CAPTURE_BATCH_SIZE = 1000
 const CAPTURE_BATCH_TIMEOUT = 50
 const CAPTURE_BUFFER_CAPACITY = 500_000
 const CAPTURE_AUTO_EXPORT_RECORD_LIMIT = 100_000
+const DEVICE_STORAGE_KEYS = {
+  autoConnectOnLoad: 'usb-pd-device-autoConnectOnLoad',
+  autoReconnectOnHotplug: 'usb-pd-device-autoReconnectOnHotplug',
+  selectedDeviceKind: 'usb-pd-device-selected-kind',
+  lastDeviceFingerprint: 'usb-pd-device-lastDeviceFingerprint',
+  lastDeviceFingerprints: 'usb-pd-device-lastDeviceFingerprints',
+  detailContextBacktrackRecords: 'usb-pd-detail-context-backtrack-records',
+} as const
 
-const initialPreferences = readDevicePreferences()
+function readBool(key: string, fallback: boolean): boolean {
+  try {
+    const value = localStorage.getItem(key)
+    if (value === null) return fallback
+    if (value === 'true') return true
+    if (value === 'false') return false
+    return fallback
+  } catch {
+    return fallback
+  }
+}
+
+function readString(key: string, fallback: string | null): string | null {
+  try {
+    const value = localStorage.getItem(key)
+    if (value === null) return fallback
+    if (value === '') return null
+    return value
+  } catch {
+    return fallback
+  }
+}
+
+function readNullableNumber(key: string, fallback: number | null): number | null {
+  try {
+    const value = localStorage.getItem(key)
+    if (value === null) return fallback
+    if (value === 'unlimited') return null
+    const parsed = Number.parseInt(value, 10)
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback
+  } catch {
+    return fallback
+  }
+}
+
+function writeValue(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value)
+  } catch {
+    // ignore
+  }
+}
+
+function isDeviceKind(value: string): value is DeviceKind {
+  return value === 'native' || value === 'native-cdc' || value === 'atk-c2'
+}
+
+function readSelectedDeviceKind(): DeviceKind {
+  const value = readString(DEVICE_STORAGE_KEYS.selectedDeviceKind, 'native')
+  return value !== null && isDeviceKind(value) ? value : 'native'
+}
+
+function readLastDeviceFingerprints(): LastDeviceFingerprints {
+  try {
+    const raw = localStorage.getItem(DEVICE_STORAGE_KEYS.lastDeviceFingerprints)
+    const parsed = raw === null ? null : JSON.parse(raw)
+    const result: LastDeviceFingerprints = {}
+
+    if (parsed !== null && typeof parsed === 'object') {
+      for (const [kind, fingerprint] of Object.entries(parsed)) {
+        if (isDeviceKind(kind) && typeof fingerprint === 'string' && fingerprint.length > 0) {
+          result[kind] = fingerprint
+        }
+      }
+    }
+
+    const legacyFingerprint = readString(DEVICE_STORAGE_KEYS.lastDeviceFingerprint, null)
+    if (legacyFingerprint !== null && result.native === undefined) {
+      result.native = legacyFingerprint
+    }
+
+    return result
+  } catch {
+    return {}
+  }
+}
 
 function autoExportAndClearCaptureBuffer(captureBuffer: CaptureBuffer): boolean {
   if (captureBuffer.length < CAPTURE_AUTO_EXPORT_RECORD_LIMIT) return false
@@ -122,11 +198,11 @@ const useDeviceStore = create<DeviceState>()((set, get) => {
   return {
     isConnected: false,
     isConnecting: false,
-    autoConnectOnLoad: initialPreferences.autoConnectOnLoad,
-    autoReconnectOnHotplug: initialPreferences.autoReconnectOnHotplug,
-    selectedDeviceKind: initialPreferences.selectedDeviceKind,
-    lastDeviceFingerprints: initialPreferences.lastDeviceFingerprints,
-    detailContextBacktrackRecords: initialPreferences.detailContextBacktrackRecords,
+    autoConnectOnLoad: readBool(DEVICE_STORAGE_KEYS.autoConnectOnLoad, true),
+    autoReconnectOnHotplug: readBool(DEVICE_STORAGE_KEYS.autoReconnectOnHotplug, true),
+    selectedDeviceKind: readSelectedDeviceKind(),
+    lastDeviceFingerprints: readLastDeviceFingerprints(),
+    detailContextBacktrackRecords: readNullableNumber(DEVICE_STORAGE_KEYS.detailContextBacktrackRecords, null),
     protocolSelectedIndex: null,
     captureBuffer: createCaptureBuffer(CAPTURE_BUFFER_CAPACITY),
     captureVersion: 0,
@@ -137,17 +213,17 @@ const useDeviceStore = create<DeviceState>()((set, get) => {
     setIsConnecting: (isConnecting) => set({ isConnecting }),
 
     setAutoConnectOnLoad: (autoConnectOnLoad) => {
-      writeAutoConnectOnLoad(autoConnectOnLoad)
+      writeValue(DEVICE_STORAGE_KEYS.autoConnectOnLoad, String(autoConnectOnLoad))
       set({ autoConnectOnLoad })
     },
 
     setAutoReconnectOnHotplug: (autoReconnectOnHotplug) => {
-      writeAutoReconnectOnHotplug(autoReconnectOnHotplug)
+      writeValue(DEVICE_STORAGE_KEYS.autoReconnectOnHotplug, String(autoReconnectOnHotplug))
       set({ autoReconnectOnHotplug })
     },
 
     setSelectedDeviceKind: (selectedDeviceKind) => {
-      writeSelectedDeviceKind(selectedDeviceKind)
+      writeValue(DEVICE_STORAGE_KEYS.selectedDeviceKind, selectedDeviceKind)
       set({ selectedDeviceKind })
     },
 
@@ -160,12 +236,15 @@ const useDeviceStore = create<DeviceState>()((set, get) => {
         lastDeviceFingerprints[kind] = fingerprint
       }
 
-      writeLastDeviceFingerprints(lastDeviceFingerprints)
+      writeValue(DEVICE_STORAGE_KEYS.lastDeviceFingerprints, JSON.stringify(lastDeviceFingerprints))
       set({ lastDeviceFingerprints })
     },
 
     setDetailContextBacktrackRecords: (detailContextBacktrackRecords) => {
-      writeDetailContextBacktrackRecords(detailContextBacktrackRecords)
+      writeValue(
+        DEVICE_STORAGE_KEYS.detailContextBacktrackRecords,
+        detailContextBacktrackRecords === null ? 'unlimited' : String(detailContextBacktrackRecords),
+      )
       set({ detailContextBacktrackRecords })
     },
 
