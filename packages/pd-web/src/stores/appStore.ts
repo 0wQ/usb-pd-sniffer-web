@@ -72,9 +72,9 @@ const DEFAULT_TX_DIALOG_DRAFT: TxDialogDraft = {
 
 const DEFAULT_APP_PERSISTED_STATE: AppPersistedState = {
   currentView: 'protocol',
-  decodeLayoutMode: 'vertical',
+  decodeLayoutMode: 'horizontal',
   decodeCollapsed: false,
-  theme: 'silk',
+  theme: 'nord',
   txDialogDraft: DEFAULT_TX_DIALOG_DRAFT,
 }
 

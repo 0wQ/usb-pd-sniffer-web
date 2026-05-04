@@ -80,7 +80,7 @@ function UfcsTypeView({ decoded }: UfcsTypeViewProps) {
       <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">
         UFCS Type
       </div>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-3 grid grid-cols-3 gap-2">
         <div>
           <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">
             Message Type
@@ -169,7 +169,7 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
   }, [decodedFrame, decodedWithoutContext])
 
   return (
-    <section className={clsx('flex flex-col min-w-0 min-h-0', className)}>
+    <section className={clsx('flex min-w-0 min-h-0 flex-col', className)}>
       <div className="card-body p-5 flex flex-col gap-4 min-h-0 overflow-auto">
         <div className="flex items-center justify-between gap-3">
           <h2 className="card-title select-none">DECODE</h2>

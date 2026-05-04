@@ -80,7 +80,7 @@ type FieldRowProps = {
 }
 
 const fieldGridClassName =
-  'grid gap-x-3 md:grid-cols-[60px_minmax(0,1.5fr)_minmax(0,1fr)_minmax(140px,1.4fr)]'
+  'grid grid-cols-[50px_minmax(0,2fr)_minmax(0,2fr)_minmax(0,1fr)] gap-x-3'
 
 type FieldEditorProps = {
   field: BitField
@@ -250,31 +250,31 @@ export function SectionView({
             <span>
               {formatByteRange(section.byteOffset, section.byteLength)}
             </span>
-            <span>•</span>
-            <span className="font-mono">{section.kind}</span>
-            {section.semanticKind !== undefined && (
+            {section.semanticKind !== undefined ? (
               <>
                 <span>•</span>
                 <span className="font-mono">{section.semanticKind}</span>
+              </>
+            ) : (
+              <>
+                <span>•</span>
+                <span className="font-mono">{section.kind}</span>
               </>
             )}
           </div>
         </div>
 
-        <div className="text-right">
-          {section.index !== undefined && (
-            <div className="text-[11px] text-base-content/45">
-              Index {section.index + 1}
+        {section.rawValue !== undefined && (
+          <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-right">
+            <div className="font-mono text-[11px] text-base-content/60">
+              {formatRawValue(section.rawValue)}
             </div>
-          )}
-          <div className="mt-1 font-mono text-[11px] text-base-content/60">
-            {formatRawValue(section.rawValue)}
           </div>
-        </div>
+        )}
       </div>
 
       <div className="px-3 py-3">
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
+        <div className="grid grid-cols-2 gap-3">
           <div className="min-w-0 rounded-lg border border-base-300/80 bg-base-200/45 px-3 py-2">
             <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">
               Raw Bytes

@@ -17,7 +17,7 @@ import clsx from 'clsx'
 import type { DecodeLayoutMode } from '@/stores/appStore'
 const DEFAULT_TABLE_SIZE = {
   vertical: 88,
-  horizontal: 70,
+  horizontal: 75,
 } satisfies Record<DecodeLayoutMode, number>
 const MIN_TABLE_SIZE = {
   vertical: 28,
@@ -61,10 +61,10 @@ const ProtocolPage = () => {
     'pr-5': decodeLayoutMode === 'vertical',
     'pb-5': decodeLayoutMode === 'horizontal',
   })
-  const decodePanelClassName = clsx('min-h-0 min-w-0', {
-    'pb-5': decodeLayoutMode === 'vertical' && !decodeCollapsed,
-    'pr-5': decodeLayoutMode === 'horizontal' && !decodeCollapsed,
-  })
+  const decodePanelClassName = clsx(
+    'min-h-0 min-w-0',
+    !decodeCollapsed && 'pr-5 pb-5',
+  )
   const groupClassName = clsx('flex h-full min-h-0 gap-0', {
     'flex-col': decodeLayoutMode === 'vertical',
     'flex-row': decodeLayoutMode === 'horizontal',

@@ -17,6 +17,7 @@ import ImportDialog from '@/components/shared/ImportDialog'
 import ViewTabs from '@/components/app/ViewTabs'
 import clsx from 'clsx'
 import {
+  Check,
   CirclePause,
   CirclePlay,
   Download,
@@ -47,6 +48,20 @@ const TOOLBAR_ICON_CLASS = 'h-5 w-5'
 const SMOOTH_FOLLOW_MIN_INTERVAL_MS = 180
 const SMOOTH_FOLLOW_MAX_RECORD_DELTA = 4
 type DecodeLayoutMode = 'vertical' | 'horizontal'
+
+type ToolbarTooltipProps = {
+  readonly tip: string
+  readonly children: React.ReactNode
+}
+
+const ToolbarTooltip = ({
+  tip,
+  children,
+}: ToolbarTooltipProps): React.JSX.Element => (
+  <div className="tooltip tooltip-bottom" data-tip={tip}>
+    {children}
+  </div>
+)
 
 // Configuration: Auto-scroll behavior
 const AUTO_SCROLL_CONFIG = {
@@ -518,7 +533,7 @@ const RecordCounterComponent = memo(() => {
   const { captureCount } = useDeviceWorkspaceContext()
 
   return (
-    <div className="btn btn-sm rounded-full gap-1.5 border-base-300 bg-base-100 px-3 font-mono font-normal normal-case text-base-content/65 pointer-events-none cursor-default hover:bg-base-100">
+    <div className="btn btn-sm rounded-full gap-1.5 border-base-300 bg-base-100 px-3 font-mono font-normal normal-case text-base-content/65 whitespace-nowrap pointer-events-none cursor-default hover:bg-base-100">
       <span className="font-semibold text-base-content/80">
         {captureCount.toLocaleString()}
       </span>
@@ -696,27 +711,32 @@ const ProtocolTableCard = memo(
 
     const decodeLayoutButtonLabel =
       decodeLayoutMode === 'vertical'
-        ? 'Move decode panel to right side'
-        : 'Move decode panel to bottom'
+        ? 'Decode panel right'
+        : 'Decode panel bottom'
     const DecodeLayoutIcon =
       decodeLayoutMode === 'vertical' ? PanelRightOpen : PanelBottomOpen
     const AutoScrollIcon = autoScroll ? CirclePause : CirclePlay
 
     return (
-      <section className={clsx('flex min-w-0 flex-col min-h-0', className)}>
+      <section className={clsx('@container flex min-w-0 flex-col min-h-0', className)}>
         <div className="relative z-20 shrink-0 overflow-visible p-5">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex min-w-max shrink-0 flex-nowrap items-center gap-2.5">
-              <h2 className="card-title shrink-0 select-none whitespace-nowrap">
+          <div className="flex flex-col gap-3 @min-[720px]:flex-row @min-[720px]:items-center @min-[720px]:justify-between">
+            <div className="hidden min-w-max shrink-0 flex-nowrap items-center gap-2.5 @min-[960px]:flex">
+              <h2 className="card-title hidden shrink-0 select-none whitespace-nowrap @min-[960px]:flex">
                 <span className="text-primary">PD & UFCS Sniffer</span>
               </h2>
-              <ViewTabs currentView={currentView} onViewChange={onViewChange} />
+              <div className="hidden @min-[960px]:block">
+                <ViewTabs currentView={currentView} onViewChange={onViewChange} />
+              </div>
             </div>
             <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+              <div className="@min-[960px]:hidden">
+                <ViewTabs currentView={currentView} onViewChange={onViewChange} />
+              </div>
+              <div className="flex min-w-max shrink-0 flex-nowrap items-center justify-end gap-2">
                 {isDeviceSupported && (
                   <button
-                    className="btn btn-sm rounded-full gap-2"
+                    className="btn btn-sm rounded-full gap-2 whitespace-nowrap"
                     onClick={() => void connectDevice()}
                     disabled={isConnecting}
                     type="button"
@@ -742,170 +762,212 @@ const ProtocolTableCard = memo(
                 <RecordCounterComponent />
               </div>
 
-              <div className="flex min-w-max shrink-0 flex-wrap items-center justify-end gap-1">
-                <div className="dropdown dropdown-end">
-                  <button
-                    className={TOOLBAR_ICON_BUTTON_CLASS}
-                    type="button"
-                  >
-                    <Settings className={TOOLBAR_ICON_CLASS} />
-                  </button>
-                  <div className="dropdown-content z-20 w-72 rounded-box bg-base-100 p-3 shadow-md">
-                    {isDeviceSupported && (
-                      <>
-                        <div className="px-1 pb-2 text-xs font-semibold text-base-content/60 select-none">
-                          Device Settings
-                        </div>
-                        <label className="flex items-center justify-between gap-3 px-1 py-2">
-                          <span className="text-sm select-none">
-                            Auto connect on load
-                          </span>
-                          <input
-                            type="checkbox"
-                            className="toggle toggle-sm"
-                            checked={autoConnectOnLoad}
-                            onChange={(e) =>
-                              setAutoConnectOnLoad(e.target.checked)
-                            }
-                          />
-                        </label>
-                        <label className="flex items-center justify-between gap-3 px-1 py-2">
-                          <span className="text-sm select-none">
-                            Auto reconnect on plug-in
-                          </span>
-                          <input
-                            type="checkbox"
-                            className="toggle toggle-sm"
-                            checked={autoReconnectOnHotplug}
-                            onChange={(e) =>
-                              setAutoReconnectOnHotplug(e.target.checked)
-                            }
-                          />
-                        </label>
-                        <label className="flex items-center justify-between gap-3 px-1 py-2">
-                          <span className="text-sm select-none">Device</span>
-                          <select
-                            className="select select-bordered select-sm w-40"
-                            value={selectedDeviceKind}
-                            onChange={(event) =>
-                              selectDeviceKind(event.target.value as DeviceKind)
-                            }
-                            disabled={isConnecting}
-                            aria-label="Device"
-                          >
-                            {deviceOptions.map((device) => (
-                              <option key={device.kind} value={device.kind}>
-                                {device.label}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      </>
-                    )}
+              <div className="flex min-w-max shrink-0 flex-nowrap items-center justify-end gap-1">
+                <ToolbarTooltip tip="Device Settings">
+                  <div className="group dropdown dropdown-end">
+                    <button
+                      className={TOOLBAR_ICON_BUTTON_CLASS}
+                      aria-label="Device Settings"
+                      type="button"
+                    >
+                      <Settings className={TOOLBAR_ICON_CLASS} />
+                    </button>
+                    <div className="dropdown-content z-20 mt-2 w-72 rounded-box bg-base-200 p-3 border-[length:var(--border)] border-white/5 shadow-md outline-[length:var(--border)] outline-black/5 pointer-events-none group-focus-within:pointer-events-auto">
+                      {isDeviceSupported && (
+                        <>
+                          <div className="px-1 pb-2 text-xs font-semibold text-base-content/60 select-none">
+                            Device Settings
+                          </div>
+                          <label className="flex items-center justify-between gap-3 px-1 py-2">
+                            <span className="text-sm select-none">
+                              Auto connect on load
+                            </span>
+                            <input
+                              type="checkbox"
+                              className="toggle toggle-sm"
+                              checked={autoConnectOnLoad}
+                              onChange={(e) =>
+                                setAutoConnectOnLoad(e.target.checked)
+                              }
+                            />
+                          </label>
+                          <label className="flex items-center justify-between gap-3 px-1 py-2">
+                            <span className="text-sm select-none">
+                              Auto reconnect on plug-in
+                            </span>
+                            <input
+                              type="checkbox"
+                              className="toggle toggle-sm"
+                              checked={autoReconnectOnHotplug}
+                              onChange={(e) =>
+                                setAutoReconnectOnHotplug(e.target.checked)
+                              }
+                            />
+                          </label>
+                          <label className="flex items-center justify-between gap-3 px-1 py-2">
+                            <span className="text-sm select-none">Device</span>
+                            <select
+                              className="select select-bordered select-sm w-40"
+                              value={selectedDeviceKind}
+                              onChange={(event) =>
+                                selectDeviceKind(event.target.value as DeviceKind)
+                              }
+                              disabled={isConnecting}
+                              aria-label="Device"
+                            >
+                              {deviceOptions.map((device) => (
+                                <option key={device.kind} value={device.kind}>
+                                  {device.label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <button
-                  className={TOOLBAR_ICON_BUTTON_CLASS}
-                  onClick={onOpenTxDialog}
-                  disabled={
-                    !supportsTx ||
-                    !isDeviceSupported ||
-                    !isConnected ||
-                    isSending
-                  }
-                  aria-label="Native PD TX"
-                  title={
+                </ToolbarTooltip>
+                <ToolbarTooltip
+                  tip={
                     supportsTx
                       ? 'Native PD TX'
                       : 'Selected device does not support PD TX'
                   }
-                  type="button"
                 >
-                  <Send className={TOOLBAR_ICON_CLASS} />
-                </button>
-                <button
-                  className={TOOLBAR_ICON_BUTTON_CLASS}
-                  onClick={onToggleDecodeLayoutMode}
-                  aria-label={decodeLayoutButtonLabel}
-                  title={decodeLayoutButtonLabel}
-                  type="button"
-                >
-                  <DecodeLayoutIcon className={TOOLBAR_ICON_CLASS} />
-                </button>
-
-                <div className="dropdown dropdown-end">
-                  <button className={TOOLBAR_ICON_BUTTON_CLASS} type="button">
-                    <Palette className={TOOLBAR_ICON_CLASS} />
-                  </button>
-                  <ul
-                    tabIndex={-1}
-                    className="dropdown-content z-20 max-h-72 w-50 overflow-y-auto rounded-box bg-base-100 p-2 shadow-md menu"
+                  <button
+                    className={TOOLBAR_ICON_BUTTON_CLASS}
+                    onClick={onOpenTxDialog}
+                    disabled={
+                      !supportsTx ||
+                      !isDeviceSupported ||
+                      !isConnected ||
+                      isSending
+                    }
+                    aria-label="Native PD TX"
+                    type="button"
                   >
-                    {APP_THEMES.map((option) => (
-                      <li key={option}>
-                        <button
-                          className={clsx('capitalize transition-colors', {
-                            'bg-base-300 text-base-content font-semibold pointer-events-none cursor-default':
-                              theme === option,
-                          })}
-                          aria-current={theme === option ? 'true' : undefined}
-                          onClick={
-                            theme === option ? undefined : () => setTheme(option)
-                          }
-                          type="button"
-                        >
-                          {option}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
+                    <Send className={TOOLBAR_ICON_CLASS} />
+                  </button>
+                </ToolbarTooltip>
+                <ToolbarTooltip tip={decodeLayoutButtonLabel}>
+                  <button
+                    className={TOOLBAR_ICON_BUTTON_CLASS}
+                    onClick={onToggleDecodeLayoutMode}
+                    aria-label={decodeLayoutButtonLabel}
+                    type="button"
+                  >
+                    <DecodeLayoutIcon className={TOOLBAR_ICON_CLASS} />
+                  </button>
+                </ToolbarTooltip>
 
-              <div className="flex min-w-max shrink-0 flex-wrap items-center justify-end gap-1">
-                <button
-                  className={TOOLBAR_ICON_BUTTON_CLASS}
-                  onClick={() => setAutoScroll((current) => !current)}
-                  aria-label="Auto Scroll"
-                  type="button"
-                >
-                  <AutoScrollIcon className={TOOLBAR_ICON_CLASS} />
-                </button>
-                <button
-                  className={TOOLBAR_ICON_BUTTON_CLASS}
-                  onClick={handleScrollToSelection}
-                  disabled={selectedIndex === null}
-                  aria-label="Scroll to selection"
-                  type="button"
-                >
-                  <MapPin className={TOOLBAR_ICON_CLASS} />
-                </button>
-                <button
-                  className={TOOLBAR_ICON_BUTTON_CLASS}
-                  onClick={handleExportCsv}
-                  disabled={captureCount === 0 || isProcessing}
-                  aria-label="Export to CSV"
-                  type="button"
-                >
-                  <Download className={TOOLBAR_ICON_CLASS} />
-                </button>
-                <button
-                  className={TOOLBAR_ICON_BUTTON_CLASS}
-                  onClick={handleImportCsv}
-                  disabled={isProcessing}
-                  aria-label="Import from CSV"
-                  type="button"
-                >
-                  <Upload className={TOOLBAR_ICON_CLASS} />
-                </button>
-                <button
-                  className={TOOLBAR_ICON_BUTTON_CLASS}
-                  onClick={clearRecords}
-                  aria-label="Clear"
-                  type="button"
-                >
-                  <Eraser className={TOOLBAR_ICON_CLASS} />
-                </button>
+                <ToolbarTooltip tip="Theme">
+                  <div className="group dropdown dropdown-end">
+                    <button
+                      className={TOOLBAR_ICON_BUTTON_CLASS}
+                      aria-label="Theme"
+                      type="button"
+                    >
+                      <Palette className={TOOLBAR_ICON_CLASS} />
+                    </button>
+                    <ul
+                      tabIndex={-1}
+                      className="dropdown-content z-20 mt-2 grid w-[26rem] grid-cols-3 gap-1 rounded-box bg-base-200 p-2 border-[length:var(--border)] border-white/5 shadow-md outline-[length:var(--border)] outline-black/5 pointer-events-none group-focus-within:pointer-events-auto"
+                    >
+                      {APP_THEMES.map((option) => (
+                        <li key={option} className="list-none">
+                          <button
+                            className={clsx(
+                              'grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1.5 rounded-btn px-1.5 py-1.5 text-left text-sm leading-5 capitalize transition-colors',
+                              {
+                                'bg-base-300/70 text-base-content pointer-events-none cursor-default':
+                                  theme === option,
+                                'hover:bg-base-200': theme !== option,
+                              },
+                            )}
+                            aria-current={theme === option ? 'true' : undefined}
+                            onClick={
+                              theme === option
+                                ? undefined
+                                : () => setTheme(option)
+                            }
+                            type="button"
+                          >
+                            <div
+                              data-theme={option}
+                              className="bg-base-100 grid shrink-0 grid-cols-2 gap-0.5 rounded-md p-[3px]"
+                            >
+                              <div className="bg-base-content size-1 rounded-full" />
+                              <div className="bg-primary size-1 rounded-full" />
+                              <div className="bg-secondary size-1 rounded-full" />
+                              <div className="bg-accent size-1 rounded-full" />
+                            </div>
+                            <span className="block min-w-0 truncate">
+                              {option}
+                            </span>
+                            <Check
+                              className={clsx('h-2.5 w-2.5 shrink-0', {
+                                invisible: theme !== option,
+                              })}
+                            />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </ToolbarTooltip>
+                <ToolbarTooltip tip={autoScroll ? 'Pause auto scroll' : 'Auto Scroll'}>
+                  <button
+                    className={TOOLBAR_ICON_BUTTON_CLASS}
+                    onClick={() => setAutoScroll((current) => !current)}
+                    aria-label="Auto Scroll"
+                    type="button"
+                  >
+                    <AutoScrollIcon className={TOOLBAR_ICON_CLASS} />
+                  </button>
+                </ToolbarTooltip>
+                <ToolbarTooltip tip="Scroll to selection">
+                  <button
+                    className={TOOLBAR_ICON_BUTTON_CLASS}
+                    onClick={handleScrollToSelection}
+                    disabled={selectedIndex === null}
+                    aria-label="Scroll to selection"
+                    type="button"
+                  >
+                    <MapPin className={TOOLBAR_ICON_CLASS} />
+                  </button>
+                </ToolbarTooltip>
+                <ToolbarTooltip tip="Export to CSV">
+                  <button
+                    className={TOOLBAR_ICON_BUTTON_CLASS}
+                    onClick={handleExportCsv}
+                    disabled={captureCount === 0 || isProcessing}
+                    aria-label="Export to CSV"
+                    type="button"
+                  >
+                    <Download className={TOOLBAR_ICON_CLASS} />
+                  </button>
+                </ToolbarTooltip>
+                <ToolbarTooltip tip="Import from CSV">
+                  <button
+                    className={TOOLBAR_ICON_BUTTON_CLASS}
+                    onClick={handleImportCsv}
+                    disabled={isProcessing}
+                    aria-label="Import from CSV"
+                    type="button"
+                  >
+                    <Upload className={TOOLBAR_ICON_CLASS} />
+                  </button>
+                </ToolbarTooltip>
+                <ToolbarTooltip tip="Clear">
+                  <button
+                    className={TOOLBAR_ICON_BUTTON_CLASS}
+                    onClick={clearRecords}
+                    aria-label="Clear"
+                    type="button"
+                  >
+                    <Eraser className={TOOLBAR_ICON_CLASS} />
+                  </button>
+                </ToolbarTooltip>
               </div>
             </div>
           </div>
