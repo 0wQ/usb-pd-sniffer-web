@@ -40,7 +40,6 @@ import type { DeviceKind } from '@/lib/devices/deviceDrivers'
 const ROW_HEIGHT = 30
 const TOOLBAR_ICON_BUTTON_CLASS = 'btn btn-sm btn-square btn-ghost'
 const TOOLBAR_ICON_CLASS = 'h-5 w-5'
-const SMOOTH_FOLLOW_MIN_INTERVAL_MS = 10
 const SMOOTH_FOLLOW_MAX_RECORD_DELTA = 10
 type DecodeLayoutMode = 'vertical' | 'horizontal'
 
@@ -304,8 +303,10 @@ const RowComponentInner = ({
   }
 
   return (
-    <div
+    <button
       {...ariaAttributes}
+      type="button"
+      aria-pressed={isSelected}
       className={clsx('select-none cursor-pointer relative', {
         'bg-base-300 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-primary':
           isSelected,
@@ -325,7 +326,7 @@ const RowComponentInner = ({
           {rowData.cells[col.key]}
         </CellComponent>
       ))}
-    </div>
+    </button>
   )
 }
 
@@ -371,20 +372,15 @@ const TableComponent = memo(
     const isProgrammaticScroll = useRef(false)
     const lastScrollTop = useRef(0)
     const userScrollIntent = useRef<'up' | 'down' | null>(null)
-    const lastFollowScrollAt = useRef(0)
     const lastFollowRecordCount = useRef(0)
 
     const recordCount = captureCount
 
     useEffect(() => {
       if (autoScroll && recordCount > 1) {
-        const now = performance.now()
         const recordDelta = recordCount - lastFollowRecordCount.current
-        const elapsed = now - lastFollowScrollAt.current
         const followBehavior =
-          elapsed >= SMOOTH_FOLLOW_MIN_INTERVAL_MS &&
-          recordDelta > 0 &&
-          recordDelta <= SMOOTH_FOLLOW_MAX_RECORD_DELTA
+          recordDelta > 0 && recordDelta <= SMOOTH_FOLLOW_MAX_RECORD_DELTA
             ? 'smooth'
             : 'auto'
 
@@ -393,7 +389,6 @@ const TableComponent = memo(
           behavior: followBehavior,
           index: recordCount - 1,
         })
-        lastFollowScrollAt.current = now
         lastFollowRecordCount.current = recordCount
         setTimeout(() => {
           isProgrammaticScroll.current = false
