@@ -50,15 +50,17 @@ function findEndOfCentralDirectory(view: DataView): number {
 
 async function inflateRaw(data: Uint8Array): Promise<Uint8Array> {
   if (typeof DecompressionStream === 'undefined') {
-    throw new Error('Current browser does not support ZIP deflate decompression')
+    throw new Error(
+      'Current browser does not support ZIP deflate decompression',
+    )
   }
 
   const copied = new Uint8Array(data.byteLength)
   copied.set(data)
 
-  const stream = new Blob([copied]).stream().pipeThrough(
-    new DecompressionStream('deflate-raw'),
-  )
+  const stream = new Blob([copied])
+    .stream()
+    .pipeThrough(new DecompressionStream('deflate-raw'))
   const buffer = await new Response(stream).arrayBuffer()
   return new Uint8Array(buffer)
 }
@@ -120,7 +122,9 @@ export async function unzipEntries(buffer: ArrayBuffer): Promise<ZipEntry[]> {
     const commentLength = readUint16(view, offset + 32)
     const localHeaderOffset = readUint32(view, offset + 42)
     const fileNameOffset = offset + 46
-    const filename = decodeBytes(sliceBytes(bytes, fileNameOffset, fileNameLength))
+    const filename = decodeBytes(
+      sliceBytes(bytes, fileNameOffset, fileNameLength),
+    )
 
     offset += 46 + fileNameLength + extraLength + commentLength
 

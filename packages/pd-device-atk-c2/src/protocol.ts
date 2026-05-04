@@ -193,9 +193,7 @@ function getSymbol(bits: readonly number[], offset: number): number | null {
   return DEC4B5B[raw] ?? SYM_ERR
 }
 
-function scanSymbols(
-  bits: readonly number[],
-): {
+function scanSymbols(bits: readonly number[]): {
   sop: AtkC2StartOfPacket | 'CABLE_RESET' | 'HARD_RESET'
   symbols: number[]
 } | null {

@@ -1,5 +1,5 @@
-import { extractBits, readUint16Le } from '../utils/bits.js'
 import type { BitField, ExtendedMessageHeader, Section } from '../types.js'
+import { extractBits, readUint16Le } from '../utils/bits.js'
 
 function field(
   key: string,

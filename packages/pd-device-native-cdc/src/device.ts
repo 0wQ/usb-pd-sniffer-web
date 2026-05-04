@@ -4,9 +4,9 @@ import type {
   CaptureRecord,
 } from '@usb-pd-sniffer/pd-device-types'
 import {
-  NativeCdcFrameParser,
   NATIVE_CDC_FRAME_TYPE_EVENT,
   NATIVE_CDC_USB,
+  NativeCdcFrameParser,
   nativeCdcEventToCaptureEvent,
   parseNativeCdcEventPayload,
 } from './protocol.js'

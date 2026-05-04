@@ -1,17 +1,17 @@
-import { useEffect, useCallback, useRef, useState } from 'react'
 import { parsePdHexPayload } from '@usb-pd-sniffer/pd-device-native-hid'
-import {
-  getDeviceDriver,
-  isNativeHidDevice,
-  DEVICE_OPTIONS,
-  type CCModeConfig,
-  type DeviceKind,
-  type PdTxSop,
-} from '@/lib/devices/deviceDrivers'
 import type {
   CaptureDevice,
   CaptureDeviceState,
 } from '@usb-pd-sniffer/pd-device-types'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  type CCModeConfig,
+  DEVICE_OPTIONS,
+  type DeviceKind,
+  getDeviceDriver,
+  isNativeHidDevice,
+  type PdTxSop,
+} from '@/lib/devices/deviceDrivers'
 import useDeviceStore from '@/stores/deviceStore'
 
 function shouldUseDeviceAutoReconnect(_kind: DeviceKind): boolean {

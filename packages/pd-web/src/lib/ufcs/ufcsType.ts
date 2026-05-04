@@ -1,5 +1,5 @@
-import { CAPTURE_EVENT } from '@usb-pd-sniffer/pd-device-types'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
+import { CAPTURE_EVENT } from '@usb-pd-sniffer/pd-device-types'
 
 const UFCS_TRAINING_BYTE = 0xaa
 

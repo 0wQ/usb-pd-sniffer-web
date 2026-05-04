@@ -1,5 +1,5 @@
-import type { CaptureDevice } from '@usb-pd-sniffer/pd-device-types'
-import { createNativeHidDevice } from '@usb-pd-sniffer/pd-device-native-hid'
+import { createAtkC2Device } from '@usb-pd-sniffer/pd-device-atk-c2'
+import { createNativeCdcDevice } from '@usb-pd-sniffer/pd-device-native-cdc'
 import type {
   ActiveCCMode,
   CCMode,
@@ -7,8 +7,8 @@ import type {
   NativeHidDevice,
   PdTxSop,
 } from '@usb-pd-sniffer/pd-device-native-hid'
-import { createNativeCdcDevice } from '@usb-pd-sniffer/pd-device-native-cdc'
-import { createAtkC2Device } from '@usb-pd-sniffer/pd-device-atk-c2'
+import { createNativeHidDevice } from '@usb-pd-sniffer/pd-device-native-hid'
+import type { CaptureDevice } from '@usb-pd-sniffer/pd-device-types'
 
 export type DeviceKind = 'native' | 'native-cdc' | 'atk-c2'
 

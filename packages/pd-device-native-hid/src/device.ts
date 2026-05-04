@@ -6,17 +6,17 @@ import type {
 } from '@usb-pd-sniffer/pd-device-types'
 import { CAPTURE_EVENT } from '@usb-pd-sniffer/pd-device-types'
 import {
+  type CCModeConfig,
   encodeNativeHidTxCommandBody,
-  NATIVE_HID_TX_CMD,
+  NATIVE_HID_PAYLOAD_MAX_LEN,
   NATIVE_HID_REPORT_BODY_SIZE,
   NATIVE_HID_REPORT_ID,
   NATIVE_HID_REPORT_TYPE,
-  NATIVE_HID_PAYLOAD_MAX_LEN,
+  NATIVE_HID_TX_CMD,
+  type NativeHidEventReport,
+  type NativeHidTxCommand,
   nativeHidEventToCaptureEvent,
   parseNativeHidReportBody,
-  type CCModeConfig,
-  type NativeHidTxCommand,
-  type NativeHidEventReport,
 } from './nativeHidAdapter.js'
 
 const DEVICE_FILTER = { vendorId: 0x1a86, productId: 0x2333 } as const

@@ -1,15 +1,18 @@
-import type { ImportResult, ValidationError } from '@/types/import'
 import {
   CAPTURE_EVENT,
   type CaptureEventType,
   type CaptureRecord,
 } from '@usb-pd-sniffer/pd-device-types'
+import type { ImportResult, ValidationError } from '@/types/import'
 
 function readDoubleBE(view: DataView, offset: number): number {
   return view.getFloat64(offset, false)
 }
 
-function pushFileError(errors: ValidationError[], reason: string): ImportResult {
+function pushFileError(
+  errors: ValidationError[],
+  reason: string,
+): ImportResult {
   errors.push({
     row: 0,
     field: 'file',

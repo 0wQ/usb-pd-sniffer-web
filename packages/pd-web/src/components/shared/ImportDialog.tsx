@@ -58,7 +58,11 @@ const ImportDialog = ({ isOpen, recordCount, onClose, onConfirm }: Props) => {
         </p>
 
         <div className="flex flex-col gap-3">
-          <button className="btn btn-primary" onClick={handleReplace} type="button">
+          <button
+            className="btn btn-primary"
+            onClick={handleReplace}
+            type="button"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-5 w-5"
@@ -78,7 +82,11 @@ const ImportDialog = ({ isOpen, recordCount, onClose, onConfirm }: Props) => {
             <span className="text-xs opacity-70">(Clear existing records)</span>
           </button>
 
-          <button className="btn btn-secondary" onClick={handleAppend} type="button">
+          <button
+            className="btn btn-secondary"
+            onClick={handleAppend}
+            type="button"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-5 w-5"

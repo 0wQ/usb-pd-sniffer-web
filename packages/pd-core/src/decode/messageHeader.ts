@@ -1,14 +1,14 @@
-import { extractBits, readUint16Le } from '../utils/bits.js'
 import { lookupMessageTypeName } from '../registry/messageTypes.js'
 import type {
   BitField,
   DecodeIssue,
   MessageCategory,
-  MessageHeader,
   MessageFrame,
+  MessageHeader,
   Section,
   SpecificationRevision,
 } from '../types.js'
+import { extractBits, readUint16Le } from '../utils/bits.js'
 
 function classifyCategory(
   extended: boolean,

@@ -1,11 +1,11 @@
 import {
-  decodePacket,
   type DecodedPacket,
+  decodePacket,
   type MessagePacket,
 } from '@usb-pd-sniffer/pd-core'
 import type { PdFrame } from '@usb-pd-sniffer/pd-device-native-hid'
-import { CAPTURE_EVENT } from '@usb-pd-sniffer/pd-device-types'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
+import { CAPTURE_EVENT } from '@usb-pd-sniffer/pd-device-types'
 
 export function recordToMessagePacket(record: CaptureRecord) {
   const rawPayload = Uint8Array.from(record.data.slice(0, record.data_len))

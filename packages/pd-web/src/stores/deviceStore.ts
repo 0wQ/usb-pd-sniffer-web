@@ -1,12 +1,12 @@
+import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { createBatchedQueue } from '@/lib/batching/batchedQueue'
 import {
-  createCaptureBuffer,
   type CaptureBuffer,
+  createCaptureBuffer,
 } from '@/lib/buffers/captureBuffer'
 import type { DeviceKind } from '@/lib/devices/deviceDrivers'
-import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
 import { downloadCsv, exportToCsv, generateFilename } from '@/utils/csvHelper'
 
 type LastDeviceFingerprints = Partial<Record<DeviceKind, string>>

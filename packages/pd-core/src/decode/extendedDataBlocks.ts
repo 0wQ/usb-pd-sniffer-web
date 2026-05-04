@@ -1,4 +1,3 @@
-import { explainDataObjects } from './dataObjects.js'
 import type {
   BitField,
   DecodeIssue,
@@ -7,6 +6,7 @@ import type {
   Section,
   StartOfPacket,
 } from '../types.js'
+import { explainDataObjects } from './dataObjects.js'
 
 type BuiltSection = {
   section: Section

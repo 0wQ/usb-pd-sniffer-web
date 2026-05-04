@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { describe, expect, test } from 'vitest'
-import { decodeMessage, decodePacket } from './message.js'
 import { calculatePdCrc32 } from '../utils/pdCrc32.js'
+import { decodeMessage, decodePacket } from './message.js'
 
 describe('decodePacket', () => {
   test('splits CRC32 from the packet tail instead of truncating by header-derived length', () => {

@@ -1,11 +1,11 @@
 import {
-  decodeMessage,
   type DecodedMessage,
+  decodeMessage,
   type MessageFrame,
 } from '@usb-pd-sniffer/pd-core'
 import {
-  parsePdHexPayload,
   type PdTxSop,
+  parsePdHexPayload,
 } from '@usb-pd-sniffer/pd-device-native-hid'
 
 export { parsePdHexPayload } from '@usb-pd-sniffer/pd-device-native-hid'

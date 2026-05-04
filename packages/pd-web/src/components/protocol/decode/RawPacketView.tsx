@@ -1,6 +1,6 @@
+import type { Section } from '@usb-pd-sniffer/pd-core'
 import clsx from 'clsx'
 import { Fragment } from 'react'
-import type { Section } from '@usb-pd-sniffer/pd-core'
 
 const RAW_PACKET_SECTION_TONES = [
   'text-[#3B82F6]',
@@ -94,12 +94,7 @@ const RawPacketView = ({
   const chunks = buildRawPacketChunks(bytes, sections, ungroupedToneClassName)
 
   return (
-    <div
-      className={clsx(
-        'font-mono text-xs leading-5',
-        className,
-      )}
-    >
+    <div className={clsx('font-mono text-xs leading-5', className)}>
       {chunks.map((chunk, index) => (
         <Fragment key={chunk.key}>
           <span className={clsx('font-medium', chunk.toneClassName)}>

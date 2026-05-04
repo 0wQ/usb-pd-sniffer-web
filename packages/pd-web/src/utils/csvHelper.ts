@@ -1,10 +1,10 @@
-import Papa from 'papaparse'
-import type { ValidationError, ImportResult } from '@/types/import'
 import {
   CAPTURE_EVENT,
   type CaptureEventType,
   type CaptureRecord,
 } from '@usb-pd-sniffer/pd-device-types'
+import Papa from 'papaparse'
+import type { ImportResult, ValidationError } from '@/types/import'
 
 const CSV_HEADERS = [
   'timestamp_us',

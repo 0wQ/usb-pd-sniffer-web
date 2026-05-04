@@ -1,20 +1,21 @@
-import ProtocolTableCard from '@/components/protocol/ProtocolTableCard'
-import ProtocolDecodeCard from '@/components/protocol/ProtocolDecodeCard'
-import SendPdDialog from '@/components/protocol/SendPdDialog'
-import { useDeviceWorkspaceContext } from '@/components/app/DeviceWorkspaceContext'
-import useAppStore from '@/stores/appStore'
+import clsx from 'clsx'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Group,
   Panel,
+  type PanelSize,
   Separator,
   useDefaultLayout,
   usePanelCallbackRef,
-  type PanelSize,
 } from 'react-resizable-panels'
+import { useDeviceWorkspaceContext } from '@/components/app/DeviceWorkspaceContext'
+import ProtocolDecodeCard from '@/components/protocol/ProtocolDecodeCard'
+import ProtocolTableCard from '@/components/protocol/ProtocolTableCard'
+import SendPdDialog from '@/components/protocol/SendPdDialog'
 import { decodeSingleRecord } from '@/lib/analyzer/decode'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import clsx from 'clsx'
 import type { DecodeLayoutMode } from '@/stores/appStore'
+import useAppStore from '@/stores/appStore'
+
 const DEFAULT_TABLE_SIZE = {
   vertical: 88,
   horizontal: 75,
@@ -115,10 +116,13 @@ const ProtocolPage = () => {
     return () => window.clearTimeout(timeoutId)
   }, [decodeHandleHighlighted])
 
-  const handleDecodeResize = useCallback((panelSize: PanelSize) => {
-    if (!hasSelectedRecord) return
-    setDecodeCollapsed(panelSize.asPercentage <= 0.001)
-  }, [hasSelectedRecord, setDecodeCollapsed])
+  const handleDecodeResize = useCallback(
+    (panelSize: PanelSize) => {
+      if (!hasSelectedRecord) return
+      setDecodeCollapsed(panelSize.asPercentage <= 0.001)
+    },
+    [hasSelectedRecord, setDecodeCollapsed],
+  )
 
   const handleDecodeSeparatorDoubleClick = useCallback(() => {
     if (!hasSelectedRecord) return

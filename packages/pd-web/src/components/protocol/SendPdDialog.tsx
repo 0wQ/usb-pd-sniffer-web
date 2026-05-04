@@ -1,15 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
 import type { BitField, MessageFrame, Section } from '@usb-pd-sniffer/pd-core'
 import clsx from 'clsx'
-import { toast } from 'sonner'
 import { X } from 'lucide-react'
-import useAppStore, { type SendMode } from '@/stores/appStore'
-import type {
-  ActiveCCMode,
-  CCMode,
-  CCModeConfig,
-  PdTxSop,
-} from '@/lib/devices/deviceDrivers'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
+import {
+  hexBytes,
+  IssueList,
+  SectionView,
+} from '@/components/protocol/decode/DecodedSectionsView'
+import RawPacketView from '@/components/protocol/decode/RawPacketView'
 import { applyFieldRawValue, formatEditedBytes } from '@/lib/analyzer/fieldEdit'
 import {
   hasPdTxPayloadNewline,
@@ -17,12 +16,13 @@ import {
   previewPdTxFrame,
   splitPdTxPayloadLines,
 } from '@/lib/analyzer/txPreview'
-import {
-  hexBytes,
-  IssueList,
-  SectionView,
-} from '@/components/protocol/decode/DecodedSectionsView'
-import RawPacketView from '@/components/protocol/decode/RawPacketView'
+import type {
+  ActiveCCMode,
+  CCMode,
+  CCModeConfig,
+  PdTxSop,
+} from '@/lib/devices/deviceDrivers'
+import useAppStore, { type SendMode } from '@/stores/appStore'
 
 const MULTILINE_TX_INTERVAL_MS = 50
 

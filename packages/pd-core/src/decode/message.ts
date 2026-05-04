@@ -1,17 +1,4 @@
-import {
-  decodeExtendedMessageHeader,
-  explainExtendedMessageHeader,
-} from './extendedMessageHeader.js'
-import {
-  explainDataObjects,
-  type RdoKind,
-  classifyRdoKindFromPdo,
-} from './dataObjects.js'
-import { explainExtendedDataBlocks } from './extendedDataBlocks.js'
-import { decodeMessageHeader, explainMessageHeader } from './messageHeader.js'
 import { lookupMessageTypeName } from '../registry/messageTypes.js'
-import { extractBits, readUint32Le } from '../utils/bits.js'
-import { calculatePdCrc32 } from '../utils/pdCrc32.js'
 import type {
   DecodeContext,
   DecodeContextMessage,
@@ -27,6 +14,19 @@ import type {
   PacketLayout,
   Section,
 } from '../types.js'
+import { extractBits, readUint32Le } from '../utils/bits.js'
+import { calculatePdCrc32 } from '../utils/pdCrc32.js'
+import {
+  classifyRdoKindFromPdo,
+  explainDataObjects,
+  type RdoKind,
+} from './dataObjects.js'
+import { explainExtendedDataBlocks } from './extendedDataBlocks.js'
+import {
+  decodeExtendedMessageHeader,
+  explainExtendedMessageHeader,
+} from './extendedMessageHeader.js'
+import { decodeMessageHeader, explainMessageHeader } from './messageHeader.js'
 
 type SplitPacketResult = {
   message: MessageFrame

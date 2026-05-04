@@ -1,15 +1,4 @@
-import { useEffect, useState, useMemo, memo, useCallback, useRef } from 'react'
-import { List, useListCallbackRef, type RowComponentProps } from 'react-window'
-import { toast } from 'sonner'
-import { useDeviceWorkspaceContext } from '@/components/app/DeviceWorkspaceContext'
-import useAppStore, { APP_THEMES } from '@/stores/appStore'
-import useDeviceStore from '@/stores/deviceStore'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
-import type { ImportMode } from '@/types/import'
-import { exportToCsv, generateFilename, downloadCsv } from '@/utils/csvHelper'
-import { importCaptureFile } from '@/lib/capture-io/import'
-import ImportDialog from '@/components/shared/ImportDialog'
-import ViewTabs from '@/components/app/ViewTabs'
 import clsx from 'clsx'
 import {
   Check,
@@ -25,17 +14,28 @@ import {
   Settings,
   Upload,
 } from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { List, type RowComponentProps, useListCallbackRef } from 'react-window'
+import { toast } from 'sonner'
+import { useDeviceWorkspaceContext } from '@/components/app/DeviceWorkspaceContext'
+import ViewTabs from '@/components/app/ViewTabs'
+import ImportDialog from '@/components/shared/ImportDialog'
 import { decodeSingleRecord } from '@/lib/analyzer/decode'
+import { importCaptureFile } from '@/lib/capture-io/import'
+import type { DeviceKind } from '@/lib/devices/deviceDrivers'
+import {
+  formatCompactPowerRoleOrCable,
+  formatCompactSop,
+} from '@/lib/display/pdTableFields'
 import {
   decodeUfcsRecordType,
   formatUfcsSignal,
   formatUfcsTypeSummary,
 } from '@/lib/ufcs/ufcsType'
-import {
-  formatCompactPowerRoleOrCable,
-  formatCompactSop,
-} from '@/lib/display/pdTableFields'
-import type { DeviceKind } from '@/lib/devices/deviceDrivers'
+import useAppStore, { APP_THEMES } from '@/stores/appStore'
+import useDeviceStore from '@/stores/deviceStore'
+import type { ImportMode } from '@/types/import'
+import { downloadCsv, exportToCsv, generateFilename } from '@/utils/csvHelper'
 
 const ROW_HEIGHT = 30
 const TOOLBAR_ICON_BUTTON_CLASS = 'btn btn-sm btn-square btn-ghost'
@@ -235,7 +235,8 @@ const RowComponentInner = ({
     const record = captureBuffer.get(recordIndex)
     if (!record) return null
 
-    const previousRecord = recordIndex > 0 ? captureBuffer.get(recordIndex - 1) ?? null : null
+    const previousRecord =
+      recordIndex > 0 ? (captureBuffer.get(recordIndex - 1) ?? null) : null
     const deltaTime = previousRecord
       ? record.timestamp_us - previousRecord.timestamp_us
       : null
@@ -707,7 +708,9 @@ const ProtocolTableCard = memo(
     const AutoScrollIcon = autoScroll ? CirclePause : CirclePlay
 
     return (
-      <section className={clsx('@container flex min-w-0 flex-col min-h-0', className)}>
+      <section
+        className={clsx('@container flex min-w-0 flex-col min-h-0', className)}
+      >
         <div className="relative z-20 shrink-0 overflow-visible p-5">
           <div className="flex flex-col gap-3 @min-[720px]:flex-row @min-[720px]:items-center @min-[720px]:justify-between">
             <div className="hidden min-w-max shrink-0 flex-nowrap items-center gap-2.5 @min-[960px]:flex">
@@ -715,12 +718,18 @@ const ProtocolTableCard = memo(
                 <span className="text-primary">PD & UFCS Sniffer</span>
               </h2>
               <div className="hidden @min-[960px]:block">
-                <ViewTabs currentView={currentView} onViewChange={onViewChange} />
+                <ViewTabs
+                  currentView={currentView}
+                  onViewChange={onViewChange}
+                />
               </div>
             </div>
             <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
               <div className="@min-[960px]:hidden">
-                <ViewTabs currentView={currentView} onViewChange={onViewChange} />
+                <ViewTabs
+                  currentView={currentView}
+                  onViewChange={onViewChange}
+                />
               </div>
               <div className="flex min-w-max shrink-0 flex-nowrap items-center justify-end gap-2">
                 {isDeviceSupported && (
@@ -799,7 +808,9 @@ const ProtocolTableCard = memo(
                               className="select select-bordered select-sm w-40"
                               value={selectedDeviceKind}
                               onChange={(event) =>
-                                selectDeviceKind(event.target.value as DeviceKind)
+                                selectDeviceKind(
+                                  event.target.value as DeviceKind,
+                                )
                               }
                               disabled={isConnecting}
                               aria-label="Device"
@@ -859,53 +870,55 @@ const ProtocolTableCard = memo(
                       <Palette className={TOOLBAR_ICON_CLASS} />
                     </button>
                   </ToolbarTooltip>
-                    <ul
-                      tabIndex={-1}
-                      className="dropdown-content z-20 mt-2 grid w-[26rem] grid-cols-3 gap-1 rounded-box bg-base-200 p-2 border-[length:var(--border)] border-white/5 shadow-md outline-[length:var(--border)] outline-black/5 pointer-events-none group-focus-within:pointer-events-auto"
-                    >
-                      {APP_THEMES.map((option) => (
-                        <li key={option} className="list-none">
-                          <button
-                            className={clsx(
-                              'btn btn-ghost h-auto min-h-0 w-full grid-cols-[auto_minmax(0,1fr)_auto] justify-start gap-1.5 rounded-btn px-1.5 py-1.5 text-left text-sm leading-5 font-normal capitalize transition-colors',
-                              {
-                                'bg-base-300/70 text-base-content shadow-none pointer-events-none cursor-default':
-                                  theme === option,
-                                'cursor-pointer hover:bg-base-300/70 hover:text-base-content':
-                                  theme !== option,
-                              },
-                            )}
-                            aria-current={theme === option ? 'true' : undefined}
-                            onClick={
-                              theme === option
-                                ? undefined
-                                : () => setTheme(option)
-                            }
-                            type="button"
+                  <ul
+                    tabIndex={-1}
+                    className="dropdown-content z-20 mt-2 grid w-[26rem] grid-cols-3 gap-1 rounded-box bg-base-200 p-2 border-[length:var(--border)] border-white/5 shadow-md outline-[length:var(--border)] outline-black/5 pointer-events-none group-focus-within:pointer-events-auto"
+                  >
+                    {APP_THEMES.map((option) => (
+                      <li key={option} className="list-none">
+                        <button
+                          className={clsx(
+                            'btn btn-ghost h-auto min-h-0 w-full grid-cols-[auto_minmax(0,1fr)_auto] justify-start gap-1.5 rounded-btn px-1.5 py-1.5 text-left text-sm leading-5 font-normal capitalize transition-colors',
+                            {
+                              'bg-base-300/70 text-base-content shadow-none pointer-events-none cursor-default':
+                                theme === option,
+                              'cursor-pointer hover:bg-base-300/70 hover:text-base-content':
+                                theme !== option,
+                            },
+                          )}
+                          aria-current={theme === option ? 'true' : undefined}
+                          onClick={
+                            theme === option
+                              ? undefined
+                              : () => setTheme(option)
+                          }
+                          type="button"
+                        >
+                          <div
+                            data-theme={option}
+                            className="bg-base-100 grid shrink-0 grid-cols-2 gap-0.5 rounded-md p-[3px]"
                           >
-                            <div
-                              data-theme={option}
-                              className="bg-base-100 grid shrink-0 grid-cols-2 gap-0.5 rounded-md p-[3px]"
-                            >
-                              <div className="bg-base-content size-1 rounded-full" />
-                              <div className="bg-primary size-1 rounded-full" />
-                              <div className="bg-secondary size-1 rounded-full" />
-                              <div className="bg-accent size-1 rounded-full" />
-                            </div>
-                            <span className="block min-w-0 truncate">
-                              {option}
-                            </span>
-                            <Check
-                              className={clsx('h-2.5 w-2.5 shrink-0', {
-                                invisible: theme !== option,
-                              })}
-                            />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
+                            <div className="bg-base-content size-1 rounded-full" />
+                            <div className="bg-primary size-1 rounded-full" />
+                            <div className="bg-secondary size-1 rounded-full" />
+                            <div className="bg-accent size-1 rounded-full" />
+                          </div>
+                          <span className="block min-w-0 truncate">
+                            {option}
+                          </span>
+                          <Check
+                            className={clsx('h-2.5 w-2.5 shrink-0', {
+                              invisible: theme !== option,
+                            })}
+                          />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <ToolbarTooltip tip={autoScroll ? 'Pause auto scroll' : 'Auto Scroll'}>
+                <ToolbarTooltip
+                  tip={autoScroll ? 'Pause auto scroll' : 'Auto Scroll'}
+                >
                   <button
                     className={TOOLBAR_ICON_BUTTON_CLASS}
                     onClick={() => setAutoScroll((current) => !current)}

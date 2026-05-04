@@ -1,11 +1,11 @@
 import { useCallback, useMemo, useState } from 'react'
-import ProtocolPage from '@/components/pages/ProtocolPage'
-import PowerPage from '@/components/pages/PowerPage'
-import type { AppView } from '@/components/app/ViewTabs'
 import { DeviceWorkspaceProvider } from '@/components/app/DeviceWorkspaceContext'
+import type { AppView } from '@/components/app/ViewTabs'
+import PowerPage from '@/components/pages/PowerPage'
+import ProtocolPage from '@/components/pages/ProtocolPage'
 import { useCaptureDevice } from '@/hooks/useCaptureDevice'
-import useDeviceStore from '@/stores/deviceStore'
 import type { CCModeConfig, PdTxSop } from '@/lib/devices/deviceDrivers'
+import useDeviceStore from '@/stores/deviceStore'
 
 type Props = {
   currentView: AppView

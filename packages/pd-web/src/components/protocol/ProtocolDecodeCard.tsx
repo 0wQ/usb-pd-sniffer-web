@@ -1,18 +1,18 @@
+import type { DecodedPacket } from '@usb-pd-sniffer/pd-core'
 import clsx from 'clsx'
 import { useMemo } from 'react'
-import type { DecodedPacket } from '@usb-pd-sniffer/pd-core'
-import useDeviceStore from '@/stores/deviceStore'
+import {
+  IssueList,
+  SectionView,
+} from '@/components/protocol/decode/DecodedSectionsView'
+import RawPacketView from '@/components/protocol/decode/RawPacketView'
 import { decodeRecordAtIndex, decodeSingleRecord } from '@/lib/analyzer/decode'
 import {
   decodeUfcsRecordType,
   formatUfcsTypeSummary,
   type UfcsTypeDecode,
 } from '@/lib/ufcs/ufcsType'
-import {
-  IssueList,
-  SectionView,
-} from '@/components/protocol/decode/DecodedSectionsView'
-import RawPacketView from '@/components/protocol/decode/RawPacketView'
+import useDeviceStore from '@/stores/deviceStore'
 
 const DETAIL_CONTEXT_BACKTRACK_RECORDS = 10_000
 
@@ -126,7 +126,9 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
 
   const selectedRecord = useMemo(() => {
     void captureVersion
-    return selectedIndex === null ? null : (captureBuffer.get(selectedIndex) ?? null)
+    return selectedIndex === null
+      ? null
+      : (captureBuffer.get(selectedIndex) ?? null)
   }, [captureBuffer, captureVersion, selectedIndex])
 
   const previousRecord = useMemo(() => {

@@ -1,10 +1,10 @@
-import type { ImportResult, ValidationError } from '@/types/import'
 import {
   AtkC2BmcDecoder,
-  mapAtkC2DecodedEventToCaptureEvent,
   type AtkC2DecodedEvent,
+  mapAtkC2DecodedEventToCaptureEvent,
 } from '@usb-pd-sniffer/pd-device-atk-c2'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
+import type { ImportResult, ValidationError } from '@/types/import'
 import { unzipEntries } from './zip'
 
 type BusSnapshot = {
@@ -13,7 +13,10 @@ type BusSnapshot = {
   ibusMa: number
 }
 
-function pushFileError(errors: ValidationError[], reason: string): ImportResult {
+function pushFileError(
+  errors: ValidationError[],
+  reason: string,
+): ImportResult {
   errors.push({
     row: 0,
     field: 'file',
@@ -109,7 +112,10 @@ function sortChunkPath(left: string, right: string): number {
   return leftChunk - rightChunk
 }
 
-function concatBytes(chunks: readonly Uint8Array[], totalLength: number): Uint8Array {
+function concatBytes(
+  chunks: readonly Uint8Array[],
+  totalLength: number,
+): Uint8Array {
   const merged = new Uint8Array(totalLength)
   let offset = 0
 
@@ -196,18 +202,25 @@ function decodedEventToRecord(
   }
 }
 
-export async function importFromAtkcc(buffer: ArrayBuffer): Promise<ImportResult> {
+export async function importFromAtkcc(
+  buffer: ArrayBuffer,
+): Promise<ImportResult> {
   const errors: ValidationError[] = []
 
   try {
     const entries = await unzipEntries(buffer)
-    const entryMap = new Map(entries.map((entry) => [entry.filename, entry.data]))
+    const entryMap = new Map(
+      entries.map((entry) => [entry.filename, entry.data]),
+    )
     const entryPaths = entries.map((entry) => entry.filename)
     const rootChannelIni = entryMap.get('channel.ini')
     const busIni = entryMap.get('bus.ini')
 
     if (!rootChannelIni || !busIni) {
-      return pushFileError(errors, 'atkcc archive is missing root metadata files')
+      return pushFileError(
+        errors,
+        'atkcc archive is missing root metadata files',
+      )
     }
 
     const sampleRateHz = parseSampleRateHz(decodeText(rootChannelIni))
@@ -238,10 +251,15 @@ export async function importFromAtkcc(buffer: ArrayBuffer): Promise<ImportResult
       .sort(sortChunkPath)
 
     if (chunkPaths.length === 0) {
-      return pushFileError(errors, 'atkcc archive does not contain waveform chunks')
+      return pushFileError(
+        errors,
+        'atkcc archive does not contain waveform chunks',
+      )
     }
 
-    const chunks = chunkPaths.map((path) => entryMap.get(path) ?? new Uint8Array(0))
+    const chunks = chunkPaths.map(
+      (path) => entryMap.get(path) ?? new Uint8Array(0),
+    )
     const waveBytes = trimWaveBytes(
       concatBytes(
         chunks,

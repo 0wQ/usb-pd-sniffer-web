@@ -1,4 +1,3 @@
-import { extractBits, readUint32Le } from '../utils/bits.js'
 import type {
   BitField,
   DecodeIssue,
@@ -6,6 +5,7 @@ import type {
   Section,
   StartOfPacket,
 } from '../types.js'
+import { extractBits, readUint32Le } from '../utils/bits.js'
 
 type PowerRole = 'source' | 'sink'
 

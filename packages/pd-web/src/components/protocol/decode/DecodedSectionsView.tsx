@@ -1,12 +1,12 @@
+import type { BitField, DecodeIssue, Section } from '@usb-pd-sniffer/pd-core'
 import clsx from 'clsx'
 import { useEffect, useState } from 'react'
-import type { BitField, DecodeIssue, Section } from '@usb-pd-sniffer/pd-core'
+import RawPacketView from '@/components/protocol/decode/RawPacketView'
 import {
+  type FieldEditMode,
   formatFieldEditValue,
   parseFieldEditValue,
-  type FieldEditMode,
 } from '@/lib/analyzer/fieldEdit'
-import RawPacketView from '@/components/protocol/decode/RawPacketView'
 
 export function hexBytes(bytes: readonly number[] | Uint8Array): string {
   return Array.from(bytes, (byte) =>

@@ -1,6 +1,6 @@
 import clsx from 'clsx'
-import ViewTabs from '@/components/app/ViewTabs'
 import { useDeviceWorkspaceContext } from '@/components/app/DeviceWorkspaceContext'
+import ViewTabs from '@/components/app/ViewTabs'
 
 const PowerPage = () => {
   const {

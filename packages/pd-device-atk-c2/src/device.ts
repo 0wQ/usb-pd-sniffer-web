@@ -1,14 +1,14 @@
+import type {
+  CaptureDevice,
+  CaptureDeviceState,
+  CaptureRecord,
+} from '@usb-pd-sniffer/pd-device-types'
 import {
   ATK_C2_CMD,
   ATK_C2_USB,
   AtkC2ProtocolDecoder,
   buildAtkC2SwitchCommand,
 } from './protocol.js'
-import type {
-  CaptureDevice,
-  CaptureDeviceState,
-  CaptureRecord,
-} from '@usb-pd-sniffer/pd-device-types'
 
 type UsbTransferStatus = 'ok' | 'stall' | 'babble'
 

@@ -1,13 +1,13 @@
-import { createContext, useContext, useMemo, type ReactNode } from 'react'
-import type { CaptureBuffer } from '@/lib/buffers/captureBuffer'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
+import { createContext, type ReactNode, useContext, useMemo } from 'react'
+import type { AppView } from '@/components/app/ViewTabs'
+import type { CaptureBuffer } from '@/lib/buffers/captureBuffer'
 import type {
   CCModeConfig,
   DeviceDriver,
   DeviceKind,
   PdTxSop,
 } from '@/lib/devices/deviceDrivers'
-import type { AppView } from '@/components/app/ViewTabs'
 import type { ImportMode } from '@/types/import'
 
 export type DeviceWorkspaceContextValue = {
