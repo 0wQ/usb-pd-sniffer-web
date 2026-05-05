@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Group,
   Panel,
@@ -52,8 +52,12 @@ const ProtocolPage = () => {
   const decodeCollapsed = useAppStore((state) => state.decodeCollapsed)
   const setDecodeCollapsed = useAppStore((state) => state.setDecodeCollapsed)
   const [decodeHandleHighlighted, setDecodeHandleHighlighted] = useState(false)
+  const [decodeAutoHidden, setDecodeAutoHidden] = useState(
+    selectedIndex === null,
+  )
   const [decodePanel, setDecodePanel] = usePanelCallbackRef()
-  const hasSelectedRecord = selectedIndex !== null
+  const previousSelectedIndexRef = useRef<number | null>(selectedIndex)
+  const isDecodeCollapsed = decodeCollapsed || decodeAutoHidden
   const layoutId = `pd-web-main-layout-${decodeLayoutMode}`
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
     id: layoutId,
@@ -65,7 +69,7 @@ const ProtocolPage = () => {
   })
   const decodePanelClassName = clsx(
     'min-h-0 min-w-0',
-    !decodeCollapsed && 'pr-5 pb-5',
+    !isDecodeCollapsed && 'pr-5 pb-5',
   )
   const groupClassName = clsx('flex h-full min-h-0 gap-0', {
     'flex-col': decodeLayoutMode === 'vertical',
@@ -89,7 +93,7 @@ const ProtocolPage = () => {
   useEffect(() => {
     if (decodePanel === null) return
     try {
-      if (!hasSelectedRecord || decodeCollapsed) {
+      if (isDecodeCollapsed) {
         decodePanel.collapse()
       } else if (decodePanel.isCollapsed()) {
         decodePanel.expand()
@@ -97,7 +101,22 @@ const ProtocolPage = () => {
     } catch {
       // Ignore stale panel handles from layout updates.
     }
-  }, [decodeCollapsed, decodePanel, hasSelectedRecord])
+  }, [decodePanel, isDecodeCollapsed])
+
+  useEffect(() => {
+    const previousSelectedIndex = previousSelectedIndexRef.current
+    previousSelectedIndexRef.current = selectedIndex
+
+    if (selectedIndex === null) {
+      setDecodeAutoHidden(true)
+      return
+    }
+
+    if (selectedIndex !== previousSelectedIndex) {
+      setDecodeAutoHidden(false)
+      setDecodeCollapsed(false)
+    }
+  }, [selectedIndex, setDecodeCollapsed])
 
   const toggleDecodeLayoutMode = useCallback(() => {
     setDecodeLayoutMode((current) =>
@@ -118,16 +137,21 @@ const ProtocolPage = () => {
 
   const handleDecodeResize = useCallback(
     (panelSize: PanelSize) => {
-      if (!hasSelectedRecord) return
+      if (decodeAutoHidden) return
       setDecodeCollapsed(panelSize.asPercentage <= 0.001)
     },
-    [hasSelectedRecord, setDecodeCollapsed],
+    [decodeAutoHidden, setDecodeCollapsed],
   )
 
   const handleDecodeSeparatorDoubleClick = useCallback(() => {
-    if (!hasSelectedRecord) return
-    setDecodeCollapsed((current) => !current)
-  }, [hasSelectedRecord, setDecodeCollapsed])
+    if (isDecodeCollapsed) {
+      setDecodeAutoHidden(false)
+      setDecodeCollapsed(false)
+      return
+    }
+
+    setDecodeCollapsed(true)
+  }, [isDecodeCollapsed, setDecodeCollapsed])
 
   const defaultLayoutForMode = useMemo(() => defaultLayout, [defaultLayout])
   const selectedRecord =
