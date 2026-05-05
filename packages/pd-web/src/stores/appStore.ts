@@ -53,15 +53,6 @@ interface AppState {
   setTxDialogDraft: (draft: StateUpdater<TxDialogDraft>) => void
 }
 
-type AppPersistedState = Pick<
-  AppState,
-  | 'currentView'
-  | 'decodeLayoutMode'
-  | 'decodeCollapsed'
-  | 'theme'
-  | 'txDialogDraft'
->
-
 const APP_STORE_STORAGE_KEY = 'usb-pd-app-store'
 
 const DEFAULT_TX_DIALOG_DRAFT: TxDialogDraft = {
@@ -70,7 +61,14 @@ const DEFAULT_TX_DIALOG_DRAFT: TxDialogDraft = {
   hexPayload: 'A7 00',
 }
 
-const DEFAULT_APP_PERSISTED_STATE: AppPersistedState = {
+const DEFAULT_APP_STATE: Pick<
+  AppState,
+  | 'currentView'
+  | 'decodeLayoutMode'
+  | 'decodeCollapsed'
+  | 'theme'
+  | 'txDialogDraft'
+> = {
   currentView: 'protocol',
   decodeLayoutMode: 'horizontal',
   decodeCollapsed: false,
@@ -89,12 +87,12 @@ function resolveUpdater<T>(updater: StateUpdater<T>, current: T): T {
     : updater
 }
 
-applyTheme(DEFAULT_APP_PERSISTED_STATE.theme)
+applyTheme(DEFAULT_APP_STATE.theme)
 
 const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
-      ...DEFAULT_APP_PERSISTED_STATE,
+      ...DEFAULT_APP_STATE,
 
       setCurrentView: (currentView) => {
         set({ currentView: resolveUpdater(currentView, get().currentView) })

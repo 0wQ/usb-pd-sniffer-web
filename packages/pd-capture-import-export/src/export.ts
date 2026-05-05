@@ -1,5 +1,6 @@
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
 import { exportCsv } from './formats/csv.js'
+import { exportPdStream } from './formats/pdStream.js'
 import type {
   CaptureExportFormatDefinition,
   CaptureExportFormatId,
@@ -13,6 +14,13 @@ export const CAPTURE_EXPORT_FORMATS = {
     extension: 'csv',
     mime: 'text/csv;charset=utf-8;',
     outputKind: 'text',
+  },
+  pdStream: {
+    id: 'pdStream',
+    label: 'pdStream',
+    extension: 'pdStream',
+    mime: 'application/octet-stream',
+    outputKind: 'bytes',
   },
 } as const satisfies Record<
   CaptureExportFormatId,
@@ -30,6 +38,13 @@ export function exportCapture(
         extension: CAPTURE_EXPORT_FORMATS.csv.extension,
         mime: CAPTURE_EXPORT_FORMATS.csv.mime,
         text: exportCsv(records),
+      }
+    case 'pdStream':
+      return {
+        format,
+        extension: CAPTURE_EXPORT_FORMATS.pdStream.extension,
+        mime: CAPTURE_EXPORT_FORMATS.pdStream.mime,
+        bytes: exportPdStream(records),
       }
   }
 }

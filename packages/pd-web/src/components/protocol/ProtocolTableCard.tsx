@@ -1,4 +1,8 @@
-import { exportCapture } from '@usb-pd-sniffer/pd-capture-import-export'
+import {
+  CAPTURE_EXPORT_FORMATS,
+  type CaptureExportFormatId,
+  exportCapture,
+} from '@usb-pd-sniffer/pd-capture-import-export'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
 import clsx from 'clsx'
 import {
@@ -608,24 +612,34 @@ const ProtocolTableCard = memo(
       setScrollRequest((prev) => prev + 1)
     }, [selectedIndex])
 
-    const handleExportCsv = useCallback(() => {
-      try {
-        setIsProcessing(true)
-        const records = captureBuffer.getAll()
-        const exportResult = exportCapture('csv', records)
-        const filename = generateCaptureFilename(exportResult.extension)
-        downloadCaptureExport(exportResult, filename)
-        toast.success(
-          `Exported ${records.length.toLocaleString()} records to ${filename}`,
-        )
-      } catch (error) {
-        toast.error(
-          `Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        )
-      } finally {
-        setIsProcessing(false)
-      }
-    }, [captureBuffer])
+    const handleExportCapture = useCallback(
+      (format: CaptureExportFormatId) => {
+        try {
+          setIsProcessing(true)
+          const records = captureBuffer.getAll()
+          const exportResult = exportCapture(format, records)
+          const filename = generateCaptureFilename(exportResult.extension)
+          downloadCaptureExport(exportResult, filename)
+          toast.success(
+            `Exported ${records.length.toLocaleString()} records to ${filename}`,
+          )
+        } catch (error) {
+          toast.error(
+            `Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          )
+        } finally {
+          setIsProcessing(false)
+        }
+      },
+      [captureBuffer],
+    )
+
+    const handleExportFormatSelect = useCallback(
+      (format: CaptureExportFormatId) => {
+        handleExportCapture(format)
+      },
+      [handleExportCapture],
+    )
 
     const handleImportCapture = useCallback(() => {
       fileInputRef.current?.click()
@@ -943,23 +957,41 @@ const ProtocolTableCard = memo(
                     <MapPin className={TOOLBAR_ICON_CLASS} />
                   </button>
                 </ToolbarTooltip>
-                <ToolbarTooltip tip="Export to CSV">
-                  <button
-                    className={TOOLBAR_ICON_BUTTON_CLASS}
-                    onClick={handleExportCsv}
-                    disabled={captureCount === 0 || isProcessing}
-                    aria-label="Export to CSV"
-                    type="button"
-                  >
-                    <Download className={TOOLBAR_ICON_CLASS} />
-                  </button>
-                </ToolbarTooltip>
-                <ToolbarTooltip tip="Import capture file">
+                <div className="group dropdown dropdown-end">
+                  <ToolbarTooltip tip="Export">
+                    <button
+                      className={TOOLBAR_ICON_BUTTON_CLASS}
+                      disabled={captureCount === 0 || isProcessing}
+                      aria-label="Export"
+                      type="button"
+                    >
+                      <Download className={TOOLBAR_ICON_CLASS} />
+                    </button>
+                  </ToolbarTooltip>
+                  <ul className="dropdown-content menu z-30 mt-2 w-40 rounded-box border border-base-300 bg-base-100 p-1 shadow-sm pointer-events-none group-focus-within:pointer-events-auto">
+                    {(
+                      Object.keys(
+                        CAPTURE_EXPORT_FORMATS,
+                      ) as CaptureExportFormatId[]
+                    ).map((formatId) => (
+                      <li key={formatId} className="list-none">
+                        <button
+                          type="button"
+                          className="btn btn-ghost h-auto min-h-0 w-full justify-start rounded-btn px-3 py-2 text-left text-sm font-normal hover:bg-base-300/70 hover:text-base-content"
+                          onClick={() => handleExportFormatSelect(formatId)}
+                        >
+                          <span>{CAPTURE_EXPORT_FORMATS[formatId].label}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <ToolbarTooltip tip="Import">
                   <button
                     className={TOOLBAR_ICON_BUTTON_CLASS}
                     onClick={handleImportCapture}
                     disabled={isProcessing}
-                    aria-label="Import capture file"
+                    aria-label="Import"
                     type="button"
                   >
                     <Upload className={TOOLBAR_ICON_CLASS} />

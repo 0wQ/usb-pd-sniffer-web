@@ -13,7 +13,7 @@ export interface CaptureImportResult {
 }
 
 export type CaptureImportFormatId = 'csv' | 'pdStream' | 'atkcc'
-export type CaptureExportFormatId = 'csv'
+export type CaptureExportFormatId = 'csv' | 'pdStream'
 
 export type CaptureImportFormatDefinition = {
   id: CaptureImportFormatId
