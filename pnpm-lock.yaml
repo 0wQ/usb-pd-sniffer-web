@@ -26,6 +26,9 @@ importers:
 
   packages/pd-capture-import-export:
     dependencies:
+      '@sqlite.org/sqlite-wasm':
+        specifier: 3.53.0-build1
+        version: 3.53.0-build1
       '@usb-pd-sniffer/pd-core':
         specifier: workspace:*
         version: link:../pd-core
@@ -526,6 +529,10 @@ packages:
 
   '@rolldown/pluginutils@1.0.0-rc.3':
     resolution: {integrity: sha512-eybk3TjzzzV97Dlj5c+XrBFW57eTNhzod66y9HrBlzJ6NsCrWCp/2kaPS3K9wJmurBC0Tdw4yPjXKZqlznim3Q==}
+
+  '@sqlite.org/sqlite-wasm@3.53.0-build1':
+    resolution: {integrity: sha512-PfWPWN2n+/37doa8oh2/oUXk4OOsRYZsxc1W1sDXIGb/Pu5Yrb+f2eyYpgQMGITVX7HVgxhs9P18Rc6I97ym/g==}
+    engines: {node: '>=22'}
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
@@ -1518,6 +1525,8 @@ snapshots:
   '@rolldown/pluginutils@1.0.0-rc.17': {}
 
   '@rolldown/pluginutils@1.0.0-rc.3': {}
+
+  '@sqlite.org/sqlite-wasm@3.53.0-build1': {}
 
   '@standard-schema/spec@1.1.0': {}
 

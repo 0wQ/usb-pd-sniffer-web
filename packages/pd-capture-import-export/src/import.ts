@@ -26,6 +26,12 @@ export const CAPTURE_IMPORT_FORMATS = {
     extensions: ['atkcc'],
     inputKind: 'bytes',
   },
+  sqlite: {
+    id: 'sqlite',
+    label: 'SQLite',
+    extensions: ['sqlite'],
+    inputKind: 'bytes',
+  },
 } as const satisfies Record<
   CaptureImportFormatId,
   CaptureImportFormatDefinition
@@ -51,5 +57,10 @@ export async function importCapture(
         throw new Error('atkcc import expects binary input')
       }
       return importAtkcc(input)
+    case 'sqlite':
+      if (typeof input === 'string') {
+        throw new Error('sqlite import expects binary input')
+      }
+      return (await import('./formats/sqlite.js')).importSqlite(input)
   }
 }

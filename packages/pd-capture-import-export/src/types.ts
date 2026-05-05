@@ -12,7 +12,7 @@ export interface CaptureImportResult {
   errors: ValidationError[]
 }
 
-export type CaptureImportFormatId = 'csv' | 'pdStream' | 'atkcc'
+export type CaptureImportFormatId = 'csv' | 'pdStream' | 'atkcc' | 'sqlite'
 export type CaptureExportFormatId = 'csv' | 'pdStream'
 
 export type CaptureImportFormatDefinition = {

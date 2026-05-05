@@ -4,10 +4,11 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "composite": true,
-    "types": ["node"]
+    "lib": ["ES2022", "DOM", "DOM.Iterable", "WebWorker"]
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "src/**/*.d.ts"
   ],
   "references": [
     {

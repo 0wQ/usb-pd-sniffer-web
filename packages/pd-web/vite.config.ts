@@ -5,6 +5,9 @@ import tsconfigPaths from 'vite-tsconfig-paths'
 
 // https://vite.dev/config/
 export default defineConfig({
+  optimizeDeps: {
+    exclude: ['@sqlite.org/sqlite-wasm'],
+  },
   plugins: [
     react({
       babel: {

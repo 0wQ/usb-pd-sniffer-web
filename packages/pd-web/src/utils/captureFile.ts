@@ -46,7 +46,7 @@ export async function importCaptureFile(file: File): Promise<ImportFileResult> {
   const format = findImportFormatForExtension(getFileExtension(file.name))
   if (format === null) {
     throw new Error(
-      'Unsupported file type. Please select a CSV, pdStream, or atkcc file',
+      'Unsupported file type. Please select a CSV, pdStream, sqlite, or atkcc file',
     )
   }
 

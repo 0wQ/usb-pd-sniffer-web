@@ -1,5 +1,6 @@
 import {
   CAPTURE_EXPORT_FORMATS,
+  CAPTURE_IMPORT_FORMATS,
   type CaptureExportFormatId,
   canExportPdStreamRecord,
   exportCapture,
@@ -50,6 +51,9 @@ const ROW_HEIGHT = 30
 const TOOLBAR_ICON_BUTTON_CLASS = 'btn btn-sm btn-square btn-ghost'
 const TOOLBAR_ICON_CLASS = 'h-5 w-5'
 const SMOOTH_FOLLOW_MAX_RECORD_DELTA = 10
+const IMPORT_FILE_ACCEPT = Object.values(CAPTURE_IMPORT_FORMATS)
+  .flatMap((format) => format.extensions.map((extension) => `.${extension}`))
+  .join(',')
 type DecodeLayoutMode = 'vertical' | 'horizontal'
 
 type ToolbarTooltipProps = {
@@ -1045,7 +1049,7 @@ const ProtocolTableCard = memo(
         <input
           ref={fileInputRef}
           type="file"
-          accept=".csv,.pdstream,.pdStream,.atkcc"
+          accept={IMPORT_FILE_ACCEPT}
           onChange={handleFileChange}
           style={{ display: 'none' }}
         />

@@ -1,7 +1,7 @@
 {
   "name": "@usb-pd-sniffer/pd-capture-import-export",
   "version": "0.1.0",
-  "description": "Capture file import/export helpers for USB PD sniffer records.",
+  "description": "Browser-side capture file import/export helpers for USB PD sniffer records.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -21,10 +21,11 @@
     "typecheck": "pnpm exec tsc -p tsconfig.json --pretty false"
   },
   "dependencies": {
-    "fflate": "^0.8.2",
+    "@sqlite.org/sqlite-wasm": "3.53.0-build1",
     "@usb-pd-sniffer/pd-core": "workspace:*",
     "@usb-pd-sniffer/pd-device-atk-c2": "workspace:*",
     "@usb-pd-sniffer/pd-device-types": "workspace:*",
+    "fflate": "^0.8.2",
     "papaparse": "^5.5.3"
   },
   "devDependencies": {
