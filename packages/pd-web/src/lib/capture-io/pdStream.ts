@@ -3,6 +3,7 @@ import {
   type CaptureEventType,
   type CaptureRecord,
 } from '@usb-pd-sniffer/pd-device-types'
+import { calculatePdCrc32 } from '@usb-pd-sniffer/pd-core'
 import type { ImportResult, ValidationError } from '@/types/import'
 
 function readDoubleBE(view: DataView, offset: number): number {
@@ -36,6 +37,18 @@ function mapPdStreamEventType(
   if (eventType === 0x01) return CAPTURE_EVENT.PD_SOP1
   if (eventType === 0x02) return CAPTURE_EVENT.PD_SOP2
   return null
+}
+
+function withPdCrc32(payload: Uint8Array): number[] {
+  const crc32 = calculatePdCrc32(payload)
+
+  return [
+    ...payload,
+    crc32 & 0xff,
+    (crc32 >>> 8) & 0xff,
+    (crc32 >>> 16) & 0xff,
+    (crc32 >>> 24) & 0xff,
+  ]
 }
 
 export function importFromPdStream(buffer: ArrayBuffer): ImportResult {
@@ -89,7 +102,8 @@ export function importFromPdStream(buffer: ArrayBuffer): ImportResult {
       continue
     }
 
-    const data = Array.from(payload)
+    const data =
+      payloadLength > 0 ? withPdCrc32(payload) : Array.from(payload)
     records.push({
       timestamp_us: Math.max(
         0,
