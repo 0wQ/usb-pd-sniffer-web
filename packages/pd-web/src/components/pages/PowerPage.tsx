@@ -78,7 +78,7 @@ const PowerPage = () => {
                     Status
                   </div>
                   <div className="mt-1 text-sm text-base-content">
-                    Power view paused for adapter refactor.
+                    Power telemetry is temporarily unavailable.
                   </div>
                 </div>
               </div>
@@ -89,8 +89,7 @@ const PowerPage = () => {
                 Power Curves
               </div>
               <div className="mt-3 rounded-xl border border-dashed border-base-300 bg-base-100/50 p-6 text-sm text-base-content/55">
-                Chart temporarily removed. This page is kept as a layout
-                placeholder for the later refactor.
+                Power chart is not available in the current build.
               </div>
             </div>
           </div>
