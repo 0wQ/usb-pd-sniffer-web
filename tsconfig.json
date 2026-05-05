@@ -17,6 +17,9 @@
       "path": "./packages/pd-device-atk-c2"
     },
     {
+      "path": "./packages/pd-capture-import-export"
+    },
+    {
       "path": "./packages/pd-web"
     }
   ]

@@ -4,8 +4,8 @@ import {
   mapAtkC2DecodedEventToCaptureEvent,
 } from '@usb-pd-sniffer/pd-device-atk-c2'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
-import type { ImportResult, ValidationError } from '@/types/import'
-import { unzipEntries } from './zip'
+import { unzipEntries } from '../archive/zip.js'
+import type { CaptureImportResult, ValidationError } from '../types.js'
 
 type BusSnapshot = {
   timeMs: number
@@ -16,7 +16,7 @@ type BusSnapshot = {
 function pushFileError(
   errors: ValidationError[],
   reason: string,
-): ImportResult {
+): CaptureImportResult {
   errors.push({
     row: 0,
     field: 'file',
@@ -172,7 +172,7 @@ function findSnapshotAtTime(
     (snapshots[indexRef.value + 1]?.timeMs ?? Number.POSITIVE_INFINITY) <=
       timeMs
   ) {
-    indexRef.value++
+    indexRef.value += 1
   }
 
   return snapshots[indexRef.value] ?? null
@@ -202,13 +202,13 @@ function decodedEventToRecord(
   }
 }
 
-export async function importFromAtkcc(
-  buffer: ArrayBuffer,
-): Promise<ImportResult> {
+export async function importAtkcc(
+  bytes: Uint8Array,
+): Promise<CaptureImportResult> {
   const errors: ValidationError[] = []
 
   try {
-    const entries = await unzipEntries(buffer)
+    const entries = await unzipEntries(bytes)
     const entryMap = new Map(
       entries.map((entry) => [entry.filename, entry.data]),
     )

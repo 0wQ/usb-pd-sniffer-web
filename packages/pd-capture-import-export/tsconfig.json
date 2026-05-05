@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "composite": true,
+    "types": ["node"]
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "references": [
+    {
+      "path": "../pd-core"
+    },
+    {
+      "path": "../pd-device-types"
+    },
+    {
+      "path": "../pd-device-atk-c2"
+    }
+  ]
+}

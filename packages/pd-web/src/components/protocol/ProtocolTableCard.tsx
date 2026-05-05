@@ -1,3 +1,4 @@
+import { exportCapture } from '@usb-pd-sniffer/pd-capture-import-export'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
 import clsx from 'clsx'
 import {
@@ -21,7 +22,6 @@ import { useDeviceWorkspaceContext } from '@/components/app/DeviceWorkspaceConte
 import ViewTabs from '@/components/app/ViewTabs'
 import ImportDialog from '@/components/shared/ImportDialog'
 import { decodeSingleRecord } from '@/lib/analyzer/decode'
-import { importCaptureFile } from '@/lib/capture-io/import'
 import type { DeviceKind } from '@/lib/devices/deviceDrivers'
 import {
   formatCompactPowerRoleOrCable,
@@ -35,7 +35,11 @@ import {
 import useAppStore, { APP_THEMES } from '@/stores/appStore'
 import useDeviceStore from '@/stores/deviceStore'
 import type { ImportMode } from '@/types/import'
-import { downloadCsv, exportToCsv, generateFilename } from '@/utils/csvHelper'
+import {
+  downloadCaptureExport,
+  generateCaptureFilename,
+  importCaptureFile,
+} from '@/utils/captureFile'
 
 const ROW_HEIGHT = 30
 const TOOLBAR_ICON_BUTTON_CLASS = 'btn btn-sm btn-square btn-ghost'
@@ -608,9 +612,9 @@ const ProtocolTableCard = memo(
       try {
         setIsProcessing(true)
         const records = captureBuffer.getAll()
-        const csvContent = exportToCsv(records)
-        const filename = generateFilename()
-        downloadCsv(csvContent, filename)
+        const exportResult = exportCapture('csv', records)
+        const filename = generateCaptureFilename(exportResult.extension)
+        downloadCaptureExport(exportResult, filename)
         toast.success(
           `Exported ${records.length.toLocaleString()} records to ${filename}`,
         )

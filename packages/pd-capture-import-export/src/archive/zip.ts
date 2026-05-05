@@ -1,3 +1,5 @@
+import { inflateSync } from 'fflate'
+
 const EOCD_SIGNATURE = 0x06054b50
 const CENTRAL_DIRECTORY_SIGNATURE = 0x02014b50
 const LOCAL_FILE_HEADER_SIGNATURE = 0x04034b50
@@ -38,7 +40,7 @@ function findEndOfCentralDirectory(view: DataView): number {
   for (
     let offset = view.byteLength - ZIP_EOCD_MIN_SIZE;
     offset >= minOffset;
-    offset--
+    offset -= 1
   ) {
     if (readUint32(view, offset) === EOCD_SIGNATURE) {
       return offset
@@ -48,30 +50,17 @@ function findEndOfCentralDirectory(view: DataView): number {
   throw new Error('Invalid ZIP file: end of central directory not found')
 }
 
-async function inflateRaw(data: Uint8Array): Promise<Uint8Array> {
-  if (typeof DecompressionStream === 'undefined') {
-    throw new Error(
-      'Current browser does not support ZIP deflate decompression',
-    )
-  }
-
-  const copied = new Uint8Array(data.byteLength)
-  copied.set(data)
-
-  const stream = new Blob([copied])
-    .stream()
-    .pipeThrough(new DecompressionStream('deflate-raw'))
-  const buffer = await new Response(stream).arrayBuffer()
-  return new Uint8Array(buffer)
+function inflateRaw(data: Uint8Array): Uint8Array {
+  return inflateSync(data)
 }
 
-async function readEntryData(
+function readEntryData(
   bytes: Uint8Array,
   view: DataView,
   localHeaderOffset: number,
   compressionMethod: number,
   compressedSize: number,
-): Promise<Uint8Array> {
+): Uint8Array {
   if (readUint32(view, localHeaderOffset) !== LOCAL_FILE_HEADER_SIGNATURE) {
     throw new Error('Invalid ZIP file: local file header not found')
   }
@@ -93,9 +82,8 @@ async function readEntryData(
   throw new Error(`Unsupported ZIP compression method: ${compressionMethod}`)
 }
 
-export async function unzipEntries(buffer: ArrayBuffer): Promise<ZipEntry[]> {
-  const bytes = new Uint8Array(buffer)
-  const view = new DataView(buffer)
+export async function unzipEntries(bytes: Uint8Array): Promise<ZipEntry[]> {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
   const eocdOffset = findEndOfCentralDirectory(view)
   const entryCount = readUint16(view, eocdOffset + 10)
   const centralDirectorySize = readUint32(view, eocdOffset + 12)
@@ -105,7 +93,7 @@ export async function unzipEntries(buffer: ArrayBuffer): Promise<ZipEntry[]> {
   let offset = centralDirectoryOffset
   const entries: ZipEntry[] = []
 
-  for (let index = 0; index < entryCount; index++) {
+  for (let index = 0; index < entryCount; index += 1) {
     if (offset + 46 > centralDirectoryEnd) {
       throw new Error('Invalid ZIP file: central directory truncated')
     }
@@ -132,7 +120,7 @@ export async function unzipEntries(buffer: ArrayBuffer): Promise<ZipEntry[]> {
       continue
     }
 
-    const data = await readEntryData(
+    const data = readEntryData(
       bytes,
       view,
       localHeaderOffset,

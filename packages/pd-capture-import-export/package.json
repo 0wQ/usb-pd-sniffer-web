@@ -1,0 +1,36 @@
+{
+  "name": "@usb-pd-sniffer/pd-capture-import-export",
+  "version": "0.1.0",
+  "description": "Capture file import/export helpers for USB PD sniffer records.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "rm -rf dist *.tsbuildinfo && pnpm exec tsc -p tsconfig.json",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "typecheck": "pnpm exec tsc -p tsconfig.json --pretty false"
+  },
+  "dependencies": {
+    "fflate": "^0.8.2",
+    "@usb-pd-sniffer/pd-core": "workspace:*",
+    "@usb-pd-sniffer/pd-device-atk-c2": "workspace:*",
+    "@usb-pd-sniffer/pd-device-types": "workspace:*",
+    "papaparse": "^5.5.3"
+  },
+  "devDependencies": {
+    "@types/papaparse": "^5.5.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

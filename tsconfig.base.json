@@ -17,6 +17,9 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
+      "@usb-pd-sniffer/pd-capture-import-export": [
+        "./packages/pd-capture-import-export/src/index.ts"
+      ],
       "@usb-pd-sniffer/pd-core": [
         "./packages/pd-core/src/index.ts"
       ],

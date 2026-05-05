@@ -3,8 +3,8 @@ import {
   type CaptureEventType,
   type CaptureRecord,
 } from '@usb-pd-sniffer/pd-device-types'
-import Papa from 'papaparse'
-import type { ImportResult, ValidationError } from '@/types/import'
+import Papa, { type ParseError } from 'papaparse'
+import type { CaptureImportResult, ValidationError } from '../types.js'
 
 const CSV_HEADERS = [
   'timestamp_us',
@@ -64,13 +64,13 @@ const UNSIGNED_NUMERIC_FIELDS = new Set<CaptureCsvHeader>([
   'active_cc',
 ])
 
-export const serializeData = (bytes: number[]): string => {
+export function serializeData(bytes: number[]): string {
   return bytes
     .map((byte) => byte.toString(16).padStart(2, '0').toUpperCase())
     .join('')
 }
 
-export const deserializeData = (value: string): number[] => {
+export function deserializeData(value: string): number[] {
   const compact = value.replace(/\s+/g, '').trim()
   if (compact === '') return []
 
@@ -84,8 +84,8 @@ export const deserializeData = (value: string): number[] => {
   }
 
   const result: number[] = []
-  for (let i = 0; i < compact.length; i += 2) {
-    result.push(parseInt(compact.slice(i, i + 2), 16))
+  for (let index = 0; index < compact.length; index += 2) {
+    result.push(Number.parseInt(compact.slice(index, index + 2), 16))
   }
   return result
 }
@@ -95,6 +95,7 @@ function parseCaptureEventName(value: string): CaptureEventType {
   if (!CAPTURE_EVENT_NAMES.has(name)) {
     throw new Error(`Unsupported capture event_type "${value}"`)
   }
+
   return CAPTURE_EVENT_BY_NAME[name as keyof typeof CAPTURE_EVENT_BY_NAME]
 }
 
@@ -200,7 +201,7 @@ function validateRow(
   return errors
 }
 
-export const exportToCsv = (records: CaptureRecord[]): string => {
+export function exportCsv(records: CaptureRecord[]): string {
   const data = records.map((record) => ({
     timestamp_us: record.timestamp_us,
     seq: record.seq,
@@ -224,7 +225,7 @@ export const exportToCsv = (records: CaptureRecord[]): string => {
   })
 }
 
-export const importFromCsv = (content: string): ImportResult => {
+export function importCsv(content: string): CaptureImportResult {
   const errors: ValidationError[] = []
   const records: CaptureRecord[] = []
 
@@ -239,7 +240,7 @@ export const importFromCsv = (content: string): ImportResult => {
   )
 
   if (parseResult.errors.length > 0) {
-    parseResult.errors.forEach((error) => {
+    parseResult.errors.forEach((error: ParseError) => {
       errors.push({
         row: error.row ?? -1,
         field: 'parsing',
@@ -263,7 +264,7 @@ export const importFromCsv = (content: string): ImportResult => {
     return { records: [], errors }
   }
 
-  parseResult.data.forEach((row, index) => {
+  parseResult.data.forEach((row: Record<string, string>, index: number) => {
     const rowErrors = validateRow(row, index + 2)
     if (rowErrors.length > 0) {
       errors.push(...rowErrors)
@@ -298,27 +299,4 @@ export const importFromCsv = (content: string): ImportResult => {
   })
 
   return { records, errors }
-}
-
-export const generateFilename = (): string => {
-  const now = new Date()
-  const date = now.toISOString().split('T')[0]
-  const time = now.toTimeString().split(' ')[0].replace(/:/g, '')
-  return `capture_record_${date}_${time}.csv`
-}
-
-export const downloadCsv = (content: string, filename: string): void => {
-  const BOM = '\uFEFF'
-  const blob = new Blob([BOM + content], { type: 'text/csv;charset=utf-8;' })
-  const link = document.createElement('a')
-  const url = URL.createObjectURL(blob)
-
-  link.setAttribute('href', url)
-  link.setAttribute('download', filename)
-  link.style.visibility = 'hidden'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-
-  setTimeout(() => URL.revokeObjectURL(url), 100)
 }

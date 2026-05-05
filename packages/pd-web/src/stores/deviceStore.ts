@@ -1,3 +1,4 @@
+import { exportCapture } from '@usb-pd-sniffer/pd-capture-import-export'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
@@ -7,7 +8,10 @@ import {
   createCaptureBuffer,
 } from '@/lib/buffers/captureBuffer'
 import type { DeviceKind } from '@/lib/devices/deviceDrivers'
-import { downloadCsv, exportToCsv, generateFilename } from '@/utils/csvHelper'
+import {
+  downloadCaptureExport,
+  generateCaptureFilename,
+} from '@/utils/captureFile'
 
 type LastDeviceFingerprints = Partial<Record<DeviceKind, string>>
 
@@ -112,8 +116,9 @@ function autoExportAndClearCaptureBuffer(
   if (records.length === 0) return false
 
   try {
-    const filename = generateFilename()
-    downloadCsv(exportToCsv(records), filename)
+    const exportResult = exportCapture('csv', records)
+    const filename = generateCaptureFilename(exportResult.extension)
+    downloadCaptureExport(exportResult, filename)
   } catch (error) {
     console.error('Auto export failed:', error)
   }

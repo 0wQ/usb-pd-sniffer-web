@@ -1,8 +1,7 @@
-import path from 'node:path'
-import { fileURLToPath, URL } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
+import tsconfigPaths from 'vite-tsconfig-paths'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -13,25 +12,6 @@ export default defineConfig({
       },
     }),
     tailwindcss(),
+    tsconfigPaths(),
   ],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@usb-pd-sniffer/pd-core': fileURLToPath(
-        new URL('../pd-core/src/index.ts', import.meta.url),
-      ),
-      '@usb-pd-sniffer/pd-device-types': fileURLToPath(
-        new URL('../pd-device-types/src/index.ts', import.meta.url),
-      ),
-      '@usb-pd-sniffer/pd-device-native-hid': fileURLToPath(
-        new URL('../pd-device-native-hid/src/index.ts', import.meta.url),
-      ),
-      '@usb-pd-sniffer/pd-device-native-cdc': fileURLToPath(
-        new URL('../pd-device-native-cdc/src/index.ts', import.meta.url),
-      ),
-      '@usb-pd-sniffer/pd-device-atk-c2': fileURLToPath(
-        new URL('../pd-device-atk-c2/src/index.ts', import.meta.url),
-      ),
-    },
-  },
 })

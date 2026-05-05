@@ -1,10 +1,10 @@
+import { calculatePdCrc32 } from '@usb-pd-sniffer/pd-core'
 import {
   CAPTURE_EVENT,
   type CaptureEventType,
   type CaptureRecord,
 } from '@usb-pd-sniffer/pd-device-types'
-import { calculatePdCrc32 } from '@usb-pd-sniffer/pd-core'
-import type { ImportResult, ValidationError } from '@/types/import'
+import type { CaptureImportResult, ValidationError } from '../types.js'
 
 function readDoubleBE(view: DataView, offset: number): number {
   return view.getFloat64(offset, false)
@@ -13,7 +13,7 @@ function readDoubleBE(view: DataView, offset: number): number {
 function pushFileError(
   errors: ValidationError[],
   reason: string,
-): ImportResult {
+): CaptureImportResult {
   errors.push({
     row: 0,
     field: 'file',
@@ -51,10 +51,10 @@ function withPdCrc32(payload: Uint8Array): number[] {
   ]
 }
 
-export function importFromPdStream(buffer: ArrayBuffer): ImportResult {
+export function importPdStream(bytes: Uint8Array): CaptureImportResult {
   const errors: ValidationError[] = []
   const records: CaptureRecord[] = []
-  const view = new DataView(buffer)
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
 
   let offset = 0
   let seq = 1
@@ -87,7 +87,7 @@ export function importFromPdStream(buffer: ArrayBuffer): ImportResult {
 
     const eventType = view.getUint8(offset + 9)
     const payloadOffset = offset + 10
-    const payload = new Uint8Array(buffer, payloadOffset, payloadLength)
+    const payload = bytes.subarray(payloadOffset, payloadOffset + payloadLength)
     const metricsOffset = payloadOffset + payloadLength
     const mappedEventType = mapPdStreamEventType(eventType, payloadLength)
 
@@ -102,8 +102,7 @@ export function importFromPdStream(buffer: ArrayBuffer): ImportResult {
       continue
     }
 
-    const data =
-      payloadLength > 0 ? withPdCrc32(payload) : Array.from(payload)
+    const data = payloadLength > 0 ? withPdCrc32(payload) : Array.from(payload)
     records.push({
       timestamp_us: Math.max(
         0,
@@ -125,7 +124,7 @@ export function importFromPdStream(buffer: ArrayBuffer): ImportResult {
       data,
     })
 
-    seq++
+    seq += 1
     offset += recordLength
   }
 
