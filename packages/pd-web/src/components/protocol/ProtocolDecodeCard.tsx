@@ -43,6 +43,20 @@ function formatDeltaUs(deltaUs: number | null): string {
   return `${deltaUs >= 0 ? '+' : ''}${deltaUs.toLocaleString()} us`
 }
 
+function formatActiveCc(activeCc: number): string {
+  if (activeCc === 1) return 'CC1'
+  if (activeCc === 2) return 'CC2'
+  return '-'
+}
+
+function formatMillivolts(millivolts: number): string {
+  return `${(millivolts / 1000).toFixed(3)} V`
+}
+
+function formatMilliamps(milliamps: number): string {
+  return `${milliamps.toFixed(3)} mA`
+}
+
 function contextDiffSummary(
   withContext: DecodedPacket,
   withoutContext: DecodedPacket,
@@ -193,7 +207,7 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
         ) : (
           <>
             <div className="rounded-xl border border-base-300 bg-base-100/80 p-3">
-              <div className="grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-2">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(7rem,1fr))] gap-2">
                 <div>
                   <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">
                     Time
@@ -212,10 +226,42 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
                 </div>
                 <div>
                   <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">
-                    Event
+                    Active CC
                   </div>
                   <div className="mt-1 font-mono text-xs">
-                    {selectedRecord.event_type}
+                    {formatActiveCc(selectedRecord.active_cc)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">
+                    CC1
+                  </div>
+                  <div className="mt-1 font-mono text-xs">
+                    {formatMillivolts(selectedRecord.cc1_mv)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">
+                    CC2
+                  </div>
+                  <div className="mt-1 font-mono text-xs">
+                    {formatMillivolts(selectedRecord.cc2_mv)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">
+                    VBUS
+                  </div>
+                  <div className="mt-1 font-mono text-xs">
+                    {formatMillivolts(selectedRecord.vbus_mv)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">
+                    IBUS
+                  </div>
+                  <div className="mt-1 font-mono text-xs">
+                    {formatMilliamps(selectedRecord.ibus_ma)}
                   </div>
                 </div>
                 <div>
@@ -232,6 +278,14 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
                   </div>
                   <div className="mt-1 font-mono text-xs">
                     {decodedFrame?.sections.length ?? 0}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">
+                    Event
+                  </div>
+                  <div className="mt-1 font-mono text-xs">
+                    {selectedRecord.event_type}
                   </div>
                 </div>
                 <div>
