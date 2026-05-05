@@ -6,6 +6,18 @@ import {
 } from '@usb-pd-sniffer/pd-device-types'
 import type { CaptureImportResult, ValidationError } from '../types.js'
 
+const PDSTREAM_EXPORTABLE_EVENTS = new Set<CaptureEventType>([
+  CAPTURE_EVENT.CC2_CONNECT,
+  CAPTURE_EVENT.DISCONNECT,
+  CAPTURE_EVENT.PD_HARD_RESET,
+  CAPTURE_EVENT.PD_CABLE_RESET,
+  CAPTURE_EVENT.PD_SOP0,
+  CAPTURE_EVENT.PD_SOP1,
+  CAPTURE_EVENT.PD_SOP2,
+  CAPTURE_EVENT.PD_SOP1_DEBUG,
+  CAPTURE_EVENT.PD_SOP2_DEBUG,
+])
+
 function readDoubleBE(view: DataView, offset: number): number {
   return view.getFloat64(offset, false)
 }
@@ -29,37 +41,40 @@ type ImportedPdStreamEvent = {
 }
 
 function mapPdStreamEvent(
-  eventAux0: number,
   eventType: number,
   payloadLength: number,
 ): ImportedPdStreamEvent | null {
   if (payloadLength === 0) {
-    if (eventType === 0x21) {
-      return eventAux0 === 0x01
-        ? { eventType: CAPTURE_EVENT.CC2_CONNECT, activeCC: 2 }
-        : { eventType: CAPTURE_EVENT.CC1_CONNECT, activeCC: 1 }
+    switch (eventType) {
+      case 0x21:
+        return { eventType: CAPTURE_EVENT.CC2_CONNECT, activeCC: 2 }
+      case 0x22:
+        return { eventType: CAPTURE_EVENT.DISCONNECT, activeCC: 0 }
+      case 0x24:
+      case 0x2c:
+        return { eventType: CAPTURE_EVENT.PD_HARD_RESET, activeCC: 0 }
+      case 0x25:
+      case 0x2d:
+        return { eventType: CAPTURE_EVENT.PD_CABLE_RESET, activeCC: 0 }
+      default:
+        return null
     }
-
-    if (eventType === 0x22) {
-      return { eventType: CAPTURE_EVENT.DISCONNECT, activeCC: 0 }
-    }
-
-    return null
   }
 
-  if (eventType === 0x00) {
-    return { eventType: CAPTURE_EVENT.PD_SOP0, activeCC: 0 }
+  switch (eventType) {
+    case 0x00:
+      return { eventType: CAPTURE_EVENT.PD_SOP0, activeCC: 0 }
+    case 0x01:
+      return { eventType: CAPTURE_EVENT.PD_SOP1, activeCC: 0 }
+    case 0x02:
+      return { eventType: CAPTURE_EVENT.PD_SOP2, activeCC: 0 }
+    case 0x23:
+      return { eventType: CAPTURE_EVENT.PD_SOP1_DEBUG, activeCC: 0 }
+    case 0x24:
+      return { eventType: CAPTURE_EVENT.PD_SOP2_DEBUG, activeCC: 0 }
+    default:
+      return null
   }
-
-  if (eventType === 0x01) {
-    return { eventType: CAPTURE_EVENT.PD_SOP1, activeCC: 0 }
-  }
-
-  if (eventType === 0x02) {
-    return { eventType: CAPTURE_EVENT.PD_SOP2, activeCC: 0 }
-  }
-
-  return null
 }
 
 function withPdCrc32(payload: Uint8Array): number[] {
@@ -81,6 +96,7 @@ export function importPdStream(bytes: Uint8Array): CaptureImportResult {
 
   let offset = 0
   let seq = 1
+  let inferredActiveCC = 0
 
   while (offset < view.byteLength) {
     if (offset + 34 > view.byteLength) {
@@ -108,12 +124,20 @@ export function importPdStream(bytes: Uint8Array): CaptureImportResult {
       })
     }
 
-    const eventAux0 = view.getUint8(offset + 7)
     const eventType = view.getUint8(offset + 9)
     const payloadOffset = offset + 10
     const payload = bytes.subarray(payloadOffset, payloadOffset + payloadLength)
     const metricsOffset = payloadOffset + payloadLength
-    const mappedEvent = mapPdStreamEvent(eventAux0, eventType, payloadLength)
+    const mappedEvent = mapPdStreamEvent(eventType, payloadLength)
+    let nextInferredActiveCC = inferredActiveCC
+
+    if (payloadLength === 0) {
+      if (eventType === 0x21 || eventType === 0x29) {
+        nextInferredActiveCC = eventType === 0x21 ? 2 : 0
+      } else if (eventType === 0x22 || eventType === 0x2a) {
+        nextInferredActiveCC = 0
+      }
+    }
 
     if (mappedEvent === null) {
       errors.push({
@@ -127,6 +151,13 @@ export function importPdStream(bytes: Uint8Array): CaptureImportResult {
     }
 
     const data = payloadLength > 0 ? withPdCrc32(payload) : Array.from(payload)
+    const activeCC =
+      mappedEvent.eventType === CAPTURE_EVENT.DISCONNECT
+        ? 0
+        : mappedEvent.activeCC === 0
+          ? inferredActiveCC
+          : mappedEvent.activeCC
+
     records.push({
       timestamp_us: Math.max(
         0,
@@ -143,10 +174,18 @@ export function importPdStream(bytes: Uint8Array): CaptureImportResult {
       dp_mv: 0,
       dm_mv: 0,
       event_type: mappedEvent.eventType,
-      active_cc: mappedEvent.activeCC,
+      active_cc: activeCC,
       data_len: data.length,
       data,
     })
+
+    if (mappedEvent.eventType === CAPTURE_EVENT.CC2_CONNECT) {
+      inferredActiveCC = 2
+    } else if (mappedEvent.eventType === CAPTURE_EVENT.DISCONNECT) {
+      inferredActiveCC = 0
+    } else {
+      inferredActiveCC = nextInferredActiveCC
+    }
 
     seq += 1
     offset += recordLength
@@ -155,11 +194,11 @@ export function importPdStream(bytes: Uint8Array): CaptureImportResult {
   return { records, errors }
 }
 
-type PdStreamEventTuple = readonly [
-  eventAux0: number,
-  eventAux1: number,
-  eventType: number,
-]
+type PdStreamEventType = number
+
+export function canExportPdStreamRecord(record: CaptureRecord): boolean {
+  return PDSTREAM_EXPORTABLE_EVENTS.has(record.event_type)
+}
 
 function hasEmbeddedPdCrc32(packet: readonly number[]): boolean {
   if (packet.length < 6) {
@@ -187,26 +226,36 @@ function normalizePdStreamPayload(record: CaptureRecord): Uint8Array {
   return Uint8Array.from(packet)
 }
 
-function mapCaptureRecordToPdStreamEventTuple(
+function mapCaptureRecordToPdStreamEventType(
   record: CaptureRecord,
-): PdStreamEventTuple {
+): PdStreamEventType {
+  if (!canExportPdStreamRecord(record)) {
+    throw new Error(
+      `pdStream export does not support event ${record.event_type}`,
+    )
+  }
+
   switch (record.event_type) {
     case CAPTURE_EVENT.PD_SOP0:
-      return [0x00, 0x00, 0x00]
+      return 0x00
     case CAPTURE_EVENT.PD_SOP1:
-      return [0x00, 0x00, 0x01]
+      return 0x01
     case CAPTURE_EVENT.PD_SOP2:
-      return [0x00, 0x00, 0x02]
-    case CAPTURE_EVENT.CC1_CONNECT:
-      return [0x00, 0x00, 0x21]
+      return 0x02
     case CAPTURE_EVENT.CC2_CONNECT:
-      return [0x01, 0x00, 0x21]
+      return 0x21
     case CAPTURE_EVENT.DISCONNECT:
-      return [record.active_cc === 2 ? 0x01 : 0x00, 0x00, 0x22]
+      return 0x22
+    case CAPTURE_EVENT.PD_HARD_RESET:
+      return 0x24
+    case CAPTURE_EVENT.PD_SOP1_DEBUG:
+      return 0x23
+    case CAPTURE_EVENT.PD_SOP2_DEBUG:
+      return 0x24
+    case CAPTURE_EVENT.PD_CABLE_RESET:
+      return 0x25
     default:
-      throw new Error(
-        `pdStream export does not support event ${record.event_type}`,
-      )
+      throw new Error(`Unhandled pdStream export event ${record.event_type}`)
   }
 }
 
@@ -238,11 +287,12 @@ function writeFloat64BE(
 }
 
 function encodePdStreamRecord(record: CaptureRecord): Uint8Array {
-  const eventTuple = mapCaptureRecordToPdStreamEventTuple(record)
+  const eventType = mapCaptureRecordToPdStreamEventType(record)
   const payload =
-    record.event_type === CAPTURE_EVENT.CC1_CONNECT ||
     record.event_type === CAPTURE_EVENT.CC2_CONNECT ||
-    record.event_type === CAPTURE_EVENT.DISCONNECT
+    record.event_type === CAPTURE_EVENT.DISCONNECT ||
+    record.event_type === CAPTURE_EVENT.PD_HARD_RESET ||
+    record.event_type === CAPTURE_EVENT.PD_CABLE_RESET
       ? new Uint8Array(0)
       : normalizePdStreamPayload(record)
 
@@ -255,17 +305,19 @@ function encodePdStreamRecord(record: CaptureRecord): Uint8Array {
 
   const recordLength = n + 28
   const encoded = new Uint8Array(recordLength)
-  const elapsedMsLo =
-    Math.floor(Math.max(0, record.timestamp_us) / 1000) & 0xffff
+  const elapsedMs = Math.floor(Math.max(0, record.timestamp_us) / 1000)
+  const elapsedMsLo = elapsedMs & 0xffff
+  const elapsedMsHi = (elapsedMs >>> 16) & 0xff
+  const elapsedMsHigher = (elapsedMs >>> 24) & 0xff
   const tag = (payload.length === 0 ? 0x40 : 0x80) | ((n - 1) & 0x3f)
   const metricsOffset = 10 + payload.length
 
   writeUint32BE(encoded, 0, n)
   encoded[4] = tag
   writeUint16LE(encoded, 5, elapsedMsLo)
-  encoded[7] = eventTuple[0]
-  encoded[8] = eventTuple[1]
-  encoded[9] = eventTuple[2]
+  encoded[7] = elapsedMsHi
+  encoded[8] = elapsedMsHigher
+  encoded[9] = eventType
   encoded.set(payload, 10)
   writeFloat64BE(
     encoded,

@@ -1,6 +1,7 @@
 import {
   CAPTURE_EXPORT_FORMATS,
   type CaptureExportFormatId,
+  canExportPdStreamRecord,
   exportCapture,
 } from '@usb-pd-sniffer/pd-capture-import-export'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
@@ -616,12 +617,28 @@ const ProtocolTableCard = memo(
       (format: CaptureExportFormatId) => {
         try {
           setIsProcessing(true)
-          const records = captureBuffer.getAll()
+          const allRecords = captureBuffer.getAll()
+          const records =
+            format === 'pdStream'
+              ? allRecords.filter(canExportPdStreamRecord)
+              : allRecords
+          const skippedCount = allRecords.length - records.length
+
+          if (records.length === 0) {
+            throw new Error(
+              format === 'pdStream'
+                ? 'No pdStream-exportable records in current capture'
+                : 'No records to export',
+            )
+          }
+
           const exportResult = exportCapture(format, records)
           const filename = generateCaptureFilename(exportResult.extension)
           downloadCaptureExport(exportResult, filename)
           toast.success(
-            `Exported ${records.length.toLocaleString()} records to ${filename}`,
+            skippedCount > 0
+              ? `Exported ${records.length.toLocaleString()} records to ${filename} (${skippedCount.toLocaleString()} skipped)`
+              : `Exported ${records.length.toLocaleString()} records to ${filename}`,
           )
         } catch (error) {
           toast.error(
