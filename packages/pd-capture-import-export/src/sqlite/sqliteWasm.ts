@@ -66,3 +66,15 @@ export async function openReadonlySqliteDatabase(
     throw error
   }
 }
+
+export async function createWritableSqliteDatabase(): Promise<Database> {
+  const sqlite3 = await getSqlite3()
+  return new sqlite3.oo1.DB(':memory:')
+}
+
+export async function exportSqliteDatabaseBytes(
+  db: Database,
+): Promise<Uint8Array> {
+  const sqlite3 = await getSqlite3()
+  return sqlite3.capi.sqlite3_js_db_export(db)
+}

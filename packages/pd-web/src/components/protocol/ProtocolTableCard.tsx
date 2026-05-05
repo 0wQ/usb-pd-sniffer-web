@@ -3,7 +3,9 @@ import {
   CAPTURE_IMPORT_FORMATS,
   type CaptureExportFormatId,
   canExportPdStreamRecord,
+  canExportSqliteRecord,
   exportCapture,
+  exportCaptureAsync,
 } from '@usb-pd-sniffer/pd-capture-import-export'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
 import clsx from 'clsx'
@@ -618,25 +620,32 @@ const ProtocolTableCard = memo(
     }, [selectedIndex])
 
     const handleExportCapture = useCallback(
-      (format: CaptureExportFormatId) => {
+      async (format: CaptureExportFormatId) => {
         try {
           setIsProcessing(true)
           const allRecords = captureBuffer.getAll()
           const records =
             format === 'pdStream'
               ? allRecords.filter(canExportPdStreamRecord)
-              : allRecords
+              : format === 'sqlite'
+                ? allRecords.filter(canExportSqliteRecord)
+                : allRecords
           const skippedCount = allRecords.length - records.length
 
           if (records.length === 0) {
             throw new Error(
               format === 'pdStream'
                 ? 'No pdStream-exportable records in current capture'
-                : 'No records to export',
+                : format === 'sqlite'
+                  ? 'No sqlite-exportable records in current capture'
+                  : 'No records to export',
             )
           }
 
-          const exportResult = exportCapture(format, records)
+          const exportResult =
+            format === 'sqlite'
+              ? await exportCaptureAsync(format, records)
+              : exportCapture(format, records)
           const filename = generateCaptureFilename(exportResult.extension)
           downloadCaptureExport(exportResult, filename)
           toast.success(
@@ -657,7 +666,7 @@ const ProtocolTableCard = memo(
 
     const handleExportFormatSelect = useCallback(
       (format: CaptureExportFormatId) => {
-        handleExportCapture(format)
+        void handleExportCapture(format)
       },
       [handleExportCapture],
     )
