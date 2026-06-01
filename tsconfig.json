@@ -14,6 +14,9 @@
       "path": "./packages/pd-device-native-cdc"
     },
     {
+      "path": "./packages/pd-device-witrn-k2-hid"
+    },
+    {
       "path": "./packages/pd-device-atk-c2"
     },
     {

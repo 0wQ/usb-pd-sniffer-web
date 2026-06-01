@@ -1,0 +1,29 @@
+{
+  "name": "@usb-pd-sniffer/pd-device-witrn-k2-hid",
+  "version": "0.1.0",
+  "description": "WITRN K2 WebHID device backend for USB PD capture.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "rm -rf dist *.tsbuildinfo && pnpm exec tsc -p tsconfig.json",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "typecheck": "pnpm exec tsc -p tsconfig.json --pretty false"
+  },
+  "dependencies": {
+    "@usb-pd-sniffer/pd-device-types": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

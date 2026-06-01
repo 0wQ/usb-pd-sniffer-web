@@ -22,6 +22,9 @@
       "@usb-pd-sniffer/pd-device-native-cdc": [
         "../pd-device-native-cdc/src/index.ts"
       ],
+      "@usb-pd-sniffer/pd-device-witrn-k2-hid": [
+        "../pd-device-witrn-k2-hid/src/index.ts"
+      ],
       "@usb-pd-sniffer/pd-device-atk-c2": [
         "../pd-device-atk-c2/src/index.ts"
       ]

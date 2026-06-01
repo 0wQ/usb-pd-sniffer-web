@@ -8,9 +8,10 @@ import type {
   PdTxSop,
 } from '@usb-pd-sniffer/pd-device-native-hid'
 import { createNativeHidDevice } from '@usb-pd-sniffer/pd-device-native-hid'
+import { createWitrnK2HidDevice } from '@usb-pd-sniffer/pd-device-witrn-k2-hid'
 import type { CaptureDevice } from '@usb-pd-sniffer/pd-device-types'
 
-export type DeviceKind = 'native' | 'native-cdc' | 'atk-c2'
+export type DeviceKind = 'native' | 'native-cdc' | 'witrn-k2-hid' | 'atk-c2'
 
 export type { ActiveCCMode, CCMode, CCModeConfig, PdTxSop }
 
@@ -41,6 +42,13 @@ export const DEVICE_DRIVERS: Record<DeviceKind, DeviceDriver> = {
     apiName: 'Web Serial',
     createDevice: createNativeCdcDevice,
   },
+  'witrn-k2-hid': {
+    kind: 'witrn-k2-hid',
+    label: 'WITRN K2',
+    shortLabel: 'K2',
+    apiName: 'WebHID',
+    createDevice: createWitrnK2HidDevice,
+  },
   'atk-c2': {
     kind: 'atk-c2',
     label: 'ATK C2',
@@ -50,7 +58,7 @@ export const DEVICE_DRIVERS: Record<DeviceKind, DeviceDriver> = {
   },
 }
 
-const SELECTABLE_DEVICE_KINDS = ['native', 'atk-c2'] as const
+const SELECTABLE_DEVICE_KINDS = ['native', 'witrn-k2-hid', 'atk-c2'] as const
 
 export const DEVICE_OPTIONS = SELECTABLE_DEVICE_KINDS.map(
   (kind) => DEVICE_DRIVERS[kind],
@@ -61,7 +69,12 @@ export function getDeviceDriver(kind: DeviceKind): DeviceDriver {
 }
 
 export function isDeviceKind(value: string): value is DeviceKind {
-  return value === 'native' || value === 'native-cdc' || value === 'atk-c2'
+  return (
+    value === 'native' ||
+    value === 'native-cdc' ||
+    value === 'witrn-k2-hid' ||
+    value === 'atk-c2'
+  )
 }
 
 export function isSelectableDeviceKind(kind: DeviceKind): boolean {
