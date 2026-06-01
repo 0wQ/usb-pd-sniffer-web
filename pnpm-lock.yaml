@@ -71,6 +71,12 @@ importers:
 
   packages/pd-device-types: {}
 
+  packages/pd-device-witrn-k2-hid:
+    dependencies:
+      '@usb-pd-sniffer/pd-device-types':
+        specifier: workspace:*
+        version: link:../pd-device-types
+
   packages/pd-web:
     dependencies:
       '@tailwindcss/vite':
@@ -94,6 +100,9 @@ importers:
       '@usb-pd-sniffer/pd-device-types':
         specifier: workspace:*
         version: link:../pd-device-types
+      '@usb-pd-sniffer/pd-device-witrn-k2-hid':
+        specifier: workspace:*
+        version: link:../pd-device-witrn-k2-hid
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
