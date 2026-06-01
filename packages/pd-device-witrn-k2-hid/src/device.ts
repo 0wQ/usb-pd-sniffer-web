@@ -4,6 +4,7 @@ import type {
   CaptureRecord,
 } from '@usb-pd-sniffer/pd-device-types'
 import {
+  appendWitrnK2PdCrc32,
   encodeWitrnK2ForceGeneralReportBody,
   inferWitrnK2ActiveCc,
   parseWitrnK2InputReport,
@@ -225,6 +226,8 @@ export function createWitrnK2HidDevice(): CaptureDevice {
         return
       }
 
+      const packetPayload = appendWitrnK2PdCrc32(report.payload)
+
       recordSeq += 1
       emitRecord({
         timestamp_us: nowMicros(),
@@ -237,8 +240,8 @@ export function createWitrnK2HidDevice(): CaptureDevice {
         dm_mv: 0,
         event_type: report.eventType,
         active_cc: latestActiveCc,
-        data_len: report.payload.length,
-        data: Array.from(report.payload),
+        data_len: packetPayload.length,
+        data: Array.from(packetPayload),
       })
     } catch (caught) {
       error =

@@ -42,6 +42,9 @@ export type WitrnK2GeneralReport = {
 
 export type WitrnK2InputReport = WitrnK2PdReport | WitrnK2GeneralReport
 
+const PD_CRC32_INITIAL = 0xffffffff
+const PD_CRC32_POLY = 0x04c11db6
+
 function getU16LE(bytes: Uint8Array, offset: number): number {
   return bytes[offset] | (bytes[offset + 1] << 8)
 }
@@ -54,6 +57,23 @@ function getU32LE(bytes: Uint8Array, offset: number): number {
       (bytes[offset + 3] << 24)) >>>
     0
   )
+}
+
+function putU32LE(bytes: Uint8Array, offset: number, value: number): void {
+  bytes[offset] = value & 0xff
+  bytes[offset + 1] = (value >>> 8) & 0xff
+  bytes[offset + 2] = (value >>> 16) & 0xff
+  bytes[offset + 3] = (value >>> 24) & 0xff
+}
+
+function reverse32(value: number): number {
+  let result = 0
+
+  for (let index = 0; index < 32; index += 1) {
+    result = (result | (((value >>> index) & 1) << (31 - index))) >>> 0
+  }
+
+  return result >>> 0
 }
 
 function getF32LE(bytes: Uint8Array, offset: number): number {
@@ -80,6 +100,33 @@ function sumBytes(bytes: Uint8Array, start: number, end: number): number {
     sum = (sum + (bytes[index] ?? 0)) & 0xff
   }
   return sum
+}
+
+export function calculateWitrnK2PdCrc32(
+  messageBytes: readonly number[] | Uint8Array,
+): number {
+  let crc = PD_CRC32_INITIAL
+
+  for (const byte of messageBytes) {
+    for (let bitIndex = 0; bitIndex < 8; bitIndex += 1) {
+      const newBit = (((crc >>> 31) ^ ((byte >>> bitIndex) & 1)) & 1) >>> 0
+      const shifted = (((crc << 1) >>> 0) | newBit) >>> 0
+      crc = (shifted ^ (newBit === 1 ? PD_CRC32_POLY : 0)) >>> 0
+    }
+  }
+
+  return reverse32(~crc >>> 0)
+}
+
+export function appendWitrnK2PdCrc32(messageBytes: Uint8Array): Uint8Array {
+  const packetBytes = new Uint8Array(messageBytes.length + 4)
+  packetBytes.set(messageBytes, 0)
+  putU32LE(
+    packetBytes,
+    messageBytes.length,
+    calculateWitrnK2PdCrc32(messageBytes),
+  )
+  return packetBytes
 }
 
 function k2SopToCaptureEvent(sop: number): CaptureEventType {
