@@ -571,11 +571,13 @@ const ProtocolTableCard = memo(
     const [autoScroll, setAutoScroll] = useState(true)
     const [scrollRequest, setScrollRequest] = useState(0)
     const [importDialogOpen, setImportDialogOpen] = useState(false)
+    const [deviceSettingsOpen, setDeviceSettingsOpen] = useState(false)
     const [pendingImportData, setPendingImportData] = useState<
       CaptureRecord[] | null
     >(null)
     const [isProcessing, setIsProcessing] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const deviceSettingsRef = useRef<HTMLDivElement>(null)
 
     const {
       currentView,
@@ -747,6 +749,31 @@ const ProtocolTableCard = memo(
       setPendingImportData(null)
     }, [])
 
+    useEffect(() => {
+      if (!deviceSettingsOpen) return
+
+      const handlePointerDown = (event: PointerEvent) => {
+        const target = event.target
+        if (!(target instanceof Node)) return
+        if (deviceSettingsRef.current?.contains(target)) return
+        setDeviceSettingsOpen(false)
+      }
+
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+          setDeviceSettingsOpen(false)
+        }
+      }
+
+      window.addEventListener('pointerdown', handlePointerDown)
+      window.addEventListener('keydown', handleKeyDown)
+
+      return () => {
+        window.removeEventListener('pointerdown', handlePointerDown)
+        window.removeEventListener('keydown', handleKeyDown)
+      }
+    }, [deviceSettingsOpen])
+
     const decodeLayoutButtonLabel =
       decodeLayoutMode === 'vertical'
         ? 'Decode panel right'
@@ -809,72 +836,87 @@ const ProtocolTableCard = memo(
               </div>
 
               <div className="flex min-w-max shrink-0 flex-nowrap items-center justify-end gap-1">
-                <ToolbarTooltip tip="Device Settings">
-                  <div className="group dropdown dropdown-end">
+                <div
+                  ref={deviceSettingsRef}
+                  className={clsx('dropdown dropdown-end', {
+                    'dropdown-open': deviceSettingsOpen,
+                  })}
+                >
+                  <ToolbarTooltip tip="Device Settings">
                     <button
                       className={TOOLBAR_ICON_BUTTON_CLASS}
                       aria-label="Device Settings"
+                      aria-expanded={deviceSettingsOpen}
+                      onClick={() =>
+                        setDeviceSettingsOpen((current) => !current)
+                      }
                       type="button"
                     >
                       <Settings className={TOOLBAR_ICON_CLASS} />
                     </button>
-                    <div className="dropdown-content z-20 mt-2 w-72 rounded-box bg-base-200 p-3 border-[length:var(--border)] border-white/5 shadow-md outline-[length:var(--border)] outline-black/5 pointer-events-none group-focus-within:pointer-events-auto">
-                      {isDeviceSupported && (
-                        <>
-                          <div className="px-1 pb-2 text-xs font-semibold text-base-content/60 select-none">
-                            Device Settings
-                          </div>
-                          <label className="flex items-center justify-between gap-3 px-1 py-2">
-                            <span className="text-sm select-none">
-                              Auto connect on load
-                            </span>
-                            <input
-                              type="checkbox"
-                              className="toggle toggle-sm"
-                              checked={autoConnectOnLoad}
-                              onChange={(e) =>
-                                setAutoConnectOnLoad(e.target.checked)
-                              }
-                            />
-                          </label>
-                          <label className="flex items-center justify-between gap-3 px-1 py-2">
-                            <span className="text-sm select-none">
-                              Auto reconnect on plug-in
-                            </span>
-                            <input
-                              type="checkbox"
-                              className="toggle toggle-sm"
-                              checked={autoReconnectOnHotplug}
-                              onChange={(e) =>
-                                setAutoReconnectOnHotplug(e.target.checked)
-                              }
-                            />
-                          </label>
-                          <label className="flex items-center justify-between gap-3 px-1 py-2">
-                            <span className="text-sm select-none">Device</span>
-                            <select
-                              className="select select-bordered select-sm w-40"
-                              value={selectedDeviceKind}
-                              onChange={(event) =>
-                                selectDeviceKind(
-                                  event.target.value as DeviceKind,
-                                )
-                              }
-                              disabled={isConnecting}
-                              aria-label="Device"
-                            >
-                              {deviceOptions.map((device) => (
-                                <option key={device.kind} value={device.kind}>
-                                  {device.label}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                        </>
-                      )}
-                    </div>
+                  </ToolbarTooltip>
+                  <div
+                    tabIndex={-1}
+                    className={clsx(
+                      'dropdown-content z-20 mt-2 w-72 rounded-box bg-base-200 p-3 border-[length:var(--border)] border-white/5 shadow-md outline-[length:var(--border)] outline-black/5',
+                      deviceSettingsOpen
+                        ? 'pointer-events-auto'
+                        : 'pointer-events-none',
+                    )}
+                  >
+                    {isDeviceSupported && (
+                      <>
+                        <div className="px-1 pb-2 text-xs font-semibold text-base-content/60 select-none">
+                          Device Settings
+                        </div>
+                        <label className="flex items-center justify-between gap-3 px-1 py-2">
+                          <span className="text-sm select-none">
+                            Auto connect on load
+                          </span>
+                          <input
+                            type="checkbox"
+                            className="toggle toggle-sm"
+                            checked={autoConnectOnLoad}
+                            onChange={(e) =>
+                              setAutoConnectOnLoad(e.target.checked)
+                            }
+                          />
+                        </label>
+                        <label className="flex items-center justify-between gap-3 px-1 py-2">
+                          <span className="text-sm select-none">
+                            Auto reconnect on plug-in
+                          </span>
+                          <input
+                            type="checkbox"
+                            className="toggle toggle-sm"
+                            checked={autoReconnectOnHotplug}
+                            onChange={(e) =>
+                              setAutoReconnectOnHotplug(e.target.checked)
+                            }
+                          />
+                        </label>
+                        <label className="flex items-center justify-between gap-3 px-1 py-2">
+                          <span className="text-sm select-none">Device</span>
+                          <select
+                            className="select select-bordered select-sm w-40"
+                            value={selectedDeviceKind}
+                            onChange={(event) =>
+                              selectDeviceKind(event.target.value as DeviceKind)
+                            }
+                            disabled={isConnecting}
+                            aria-label="Device"
+                          >
+                            {deviceOptions.map((device) => (
+                              <option key={device.kind} value={device.kind}>
+                                {device.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </>
+                    )}
                   </div>
-                </ToolbarTooltip>
+                </div>
                 <ToolbarTooltip
                   tip={
                     supportsTx
