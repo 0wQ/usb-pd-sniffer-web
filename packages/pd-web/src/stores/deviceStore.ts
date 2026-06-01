@@ -7,7 +7,10 @@ import {
   type CaptureBuffer,
   createCaptureBuffer,
 } from '@/lib/buffers/captureBuffer'
-import type { DeviceKind } from '@/lib/devices/deviceDrivers'
+import {
+  type DeviceKind,
+  normalizeSelectableDeviceKind,
+} from '@/lib/devices/deviceDrivers'
 import {
   downloadCaptureExport,
   generateCaptureFilename,
@@ -92,7 +95,7 @@ function mergePersistedDeviceState(
         : currentState.autoReconnectOnHotplug,
     selectedDeviceKind:
       typeof state.selectedDeviceKind === 'string'
-        ? state.selectedDeviceKind
+        ? normalizeSelectableDeviceKind(state.selectedDeviceKind as DeviceKind)
         : currentState.selectedDeviceKind,
     lastDeviceFingerprints:
       state.lastDeviceFingerprints &&

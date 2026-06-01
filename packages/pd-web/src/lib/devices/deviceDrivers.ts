@@ -29,8 +29,8 @@ export const DEFAULT_DEVICE_KIND: DeviceKind = 'native'
 export const DEVICE_DRIVERS: Record<DeviceKind, DeviceDriver> = {
   native: {
     kind: 'native',
-    label: 'Native HID',
-    shortLabel: 'Native',
+    label: 'Sniffer-V5-HID',
+    shortLabel: 'V5 HID',
     apiName: 'WebHID',
     createDevice: createNativeHidDevice,
   },
@@ -50,7 +50,11 @@ export const DEVICE_DRIVERS: Record<DeviceKind, DeviceDriver> = {
   },
 }
 
-export const DEVICE_OPTIONS = Object.values(DEVICE_DRIVERS)
+const SELECTABLE_DEVICE_KINDS = ['native', 'atk-c2'] as const
+
+export const DEVICE_OPTIONS = SELECTABLE_DEVICE_KINDS.map(
+  (kind) => DEVICE_DRIVERS[kind],
+)
 
 export function getDeviceDriver(kind: DeviceKind): DeviceDriver {
   return DEVICE_DRIVERS[kind] ?? DEVICE_DRIVERS[DEFAULT_DEVICE_KIND]
@@ -58,6 +62,16 @@ export function getDeviceDriver(kind: DeviceKind): DeviceDriver {
 
 export function isDeviceKind(value: string): value is DeviceKind {
   return value === 'native' || value === 'native-cdc' || value === 'atk-c2'
+}
+
+export function isSelectableDeviceKind(kind: DeviceKind): boolean {
+  return SELECTABLE_DEVICE_KINDS.includes(
+    kind as (typeof SELECTABLE_DEVICE_KINDS)[number],
+  )
+}
+
+export function normalizeSelectableDeviceKind(kind: DeviceKind): DeviceKind {
+  return isSelectableDeviceKind(kind) ? kind : DEFAULT_DEVICE_KIND
 }
 
 export function isNativeHidDevice(
