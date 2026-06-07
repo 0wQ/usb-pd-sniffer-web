@@ -4,6 +4,7 @@ import type { AppView } from '@/components/app/ViewTabs'
 import type { PdTxSop } from '@/lib/devices/deviceDrivers'
 
 export type DecodeLayoutMode = 'vertical' | 'horizontal'
+export type DecodeEngine = 'typescript' | 'python'
 export const APP_THEMES = [
   'light',
   'dark',
@@ -43,11 +44,13 @@ type StateUpdater<T> = T | ((current: T) => T)
 interface AppState {
   currentView: AppView
   decodeLayoutMode: DecodeLayoutMode
+  decodeEngine: DecodeEngine
   decodeCollapsed: boolean
   theme: AppTheme
   txDialogDraft: TxDialogDraft
   setCurrentView: (view: StateUpdater<AppView>) => void
   setDecodeLayoutMode: (mode: StateUpdater<DecodeLayoutMode>) => void
+  setDecodeEngine: (engine: StateUpdater<DecodeEngine>) => void
   setDecodeCollapsed: (collapsed: StateUpdater<boolean>) => void
   setTheme: (theme: StateUpdater<AppTheme>) => void
   setTxDialogDraft: (draft: StateUpdater<TxDialogDraft>) => void
@@ -65,12 +68,14 @@ const DEFAULT_APP_STATE: Pick<
   AppState,
   | 'currentView'
   | 'decodeLayoutMode'
+  | 'decodeEngine'
   | 'decodeCollapsed'
   | 'theme'
   | 'txDialogDraft'
 > = {
   currentView: 'protocol',
   decodeLayoutMode: 'horizontal',
+  decodeEngine: 'typescript',
   decodeCollapsed: false,
   theme: 'nord',
   txDialogDraft: DEFAULT_TX_DIALOG_DRAFT,
@@ -107,6 +112,12 @@ const useAppStore = create<AppState>()(
         })
       },
 
+      setDecodeEngine: (decodeEngine) => {
+        set({
+          decodeEngine: resolveUpdater(decodeEngine, get().decodeEngine),
+        })
+      },
+
       setDecodeCollapsed: (decodeCollapsed) => {
         set({
           decodeCollapsed: resolveUpdater(
@@ -134,6 +145,7 @@ const useAppStore = create<AppState>()(
       partialize: (state) => ({
         currentView: state.currentView,
         decodeLayoutMode: state.decodeLayoutMode,
+        decodeEngine: state.decodeEngine,
         decodeCollapsed: state.decodeCollapsed,
         theme: state.theme,
         txDialogDraft: state.txDialogDraft,
