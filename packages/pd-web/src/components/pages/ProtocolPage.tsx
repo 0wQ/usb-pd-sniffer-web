@@ -176,6 +176,7 @@ const ProtocolPage = () => {
         orientation={decodeLayoutMode}
         defaultLayout={defaultLayoutForMode}
         onLayoutChanged={onLayoutChanged}
+        disableCursor
         className={groupClassName}
       >
         <Panel
