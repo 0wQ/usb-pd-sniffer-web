@@ -33,6 +33,20 @@ const MAX_DECODE_SIZE = {
   horizontal: '50%',
 } satisfies Record<DecodeLayoutMode, string>
 
+function supportsResizablePanelsRuntime(): boolean {
+  if (typeof document === 'undefined') return true
+
+  try {
+    const sheets = document.adoptedStyleSheets
+    if (!Array.isArray(sheets)) return false
+    if (!Object.isExtensible(sheets)) return false
+    if (typeof CSSStyleSheet !== 'function') return false
+    return true
+  } catch {
+    return false
+  }
+}
+
 const ProtocolPage = () => {
   const {
     selectedIndex,
@@ -54,6 +68,9 @@ const ProtocolPage = () => {
   const [decodeHandleHighlighted, setDecodeHandleHighlighted] = useState(false)
   const [decodeAutoHidden, setDecodeAutoHidden] = useState(
     selectedIndex === null,
+  )
+  const [supportsResizablePanels] = useState(() =>
+    supportsResizablePanelsRuntime(),
   )
   const [decodePanel, setDecodePanel] = usePanelCallbackRef()
   const previousSelectedIndexRef = useRef<number | null>(selectedIndex)
@@ -162,6 +179,12 @@ const ProtocolPage = () => {
     return decodeSingleRecord(selectedRecord)?.frame ?? null
   }, [selectedRecord])
 
+  const staticLayoutClassName = clsx('grid min-h-0 flex-1 gap-5 pr-5', {
+    'grid-cols-1': decodeLayoutMode === 'vertical' || isDecodeCollapsed,
+    'grid-cols-[minmax(0,3fr)_minmax(0,1fr)]':
+      decodeLayoutMode === 'horizontal' && !isDecodeCollapsed,
+  })
+
   return (
     <main
       className="
@@ -171,56 +194,75 @@ const ProtocolPage = () => {
         overflow-visible
       "
     >
-      <Group
-        id={layoutId}
-        orientation={decodeLayoutMode}
-        defaultLayout={defaultLayoutForMode}
-        onLayoutChanged={onLayoutChanged}
-        disableCursor
-        className={groupClassName}
-      >
-        <Panel
-          id="table"
-          defaultSize={`${DEFAULT_TABLE_SIZE[decodeLayoutMode]}%`}
-          minSize={`${MIN_TABLE_SIZE[decodeLayoutMode]}%`}
-          className={tablePanelClassName}
+      {supportsResizablePanels ? (
+        <Group
+          id={layoutId}
+          orientation={decodeLayoutMode}
+          defaultLayout={defaultLayoutForMode}
+          onLayoutChanged={onLayoutChanged}
+          className={groupClassName}
         >
+          <Panel
+            id="table"
+            defaultSize={`${DEFAULT_TABLE_SIZE[decodeLayoutMode]}%`}
+            minSize={`${MIN_TABLE_SIZE[decodeLayoutMode]}%`}
+            className={tablePanelClassName}
+          >
+            <ProtocolTableCard
+              className="card bg-base-100 h-full min-h-0 min-w-0"
+              decodeLayoutMode={decodeLayoutMode}
+              onToggleDecodeLayoutMode={toggleDecodeLayoutMode}
+              onRowClick={setSelectedIndex}
+              selectedIndex={selectedIndex}
+              onOpenTxDialog={openTxDialog}
+            />
+          </Panel>
+
+          <Separator
+            className={separatorClassName}
+            disabled={isTxDialogOpen}
+            disableDoubleClick
+            onDoubleClick={handleDecodeSeparatorDoubleClick}
+          >
+            <span className={separatorTrackClassName} />
+          </Separator>
+
+          <Panel
+            id="decode"
+            panelRef={setDecodePanel}
+            collapsible
+            collapsedSize="0%"
+            defaultSize={`${100 - DEFAULT_TABLE_SIZE[decodeLayoutMode]}%`}
+            minSize={MIN_DECODE_SIZE[decodeLayoutMode]}
+            maxSize={MAX_DECODE_SIZE[decodeLayoutMode]}
+            className={decodePanelClassName}
+            onResize={handleDecodeResize}
+          >
+            <ProtocolDecodeCard
+              className="card bg-base-100 h-full min-h-0"
+              selectedIndex={selectedIndex}
+            />
+          </Panel>
+        </Group>
+      ) : (
+        <div className={staticLayoutClassName}>
           <ProtocolTableCard
-            className="card bg-base-100 h-full min-h-0 min-w-0"
+            className="card bg-base-100 min-h-0 min-w-0"
             decodeLayoutMode={decodeLayoutMode}
             onToggleDecodeLayoutMode={toggleDecodeLayoutMode}
             onRowClick={setSelectedIndex}
             selectedIndex={selectedIndex}
             onOpenTxDialog={openTxDialog}
           />
-        </Panel>
 
-        <Separator
-          className={separatorClassName}
-          disabled={isTxDialogOpen}
-          disableDoubleClick
-          onDoubleClick={handleDecodeSeparatorDoubleClick}
-        >
-          <span className={separatorTrackClassName} />
-        </Separator>
-
-        <Panel
-          id="decode"
-          panelRef={setDecodePanel}
-          collapsible
-          collapsedSize="0%"
-          defaultSize={`${100 - DEFAULT_TABLE_SIZE[decodeLayoutMode]}%`}
-          minSize={MIN_DECODE_SIZE[decodeLayoutMode]}
-          maxSize={MAX_DECODE_SIZE[decodeLayoutMode]}
-          className={decodePanelClassName}
-          onResize={handleDecodeResize}
-        >
-          <ProtocolDecodeCard
-            className="card bg-base-100 h-full min-h-0"
-            selectedIndex={selectedIndex}
-          />
-        </Panel>
-      </Group>
+          {!isDecodeCollapsed && (
+            <ProtocolDecodeCard
+              className="card bg-base-100 min-h-0"
+              selectedIndex={selectedIndex}
+            />
+          )}
+        </div>
+      )}
 
       <SendPdDialog
         isOpen={isTxDialogOpen}
