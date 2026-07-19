@@ -28,7 +28,10 @@ function isExternalSpecificationMessageName(
 ): messageTypeName is ExternalSpecificationMessageName {
   return (
     messageTypeName !== null &&
-    Object.hasOwn(EXTERNAL_SPECIFICATION_DATA_BLOCKS, messageTypeName)
+    Object.getOwnPropertyDescriptor(
+      EXTERNAL_SPECIFICATION_DATA_BLOCKS,
+      messageTypeName,
+    ) !== undefined
   )
 }
 
