@@ -50,6 +50,15 @@ function needsSourceCapabilitiesContext(decoded: DecodedPacket): boolean {
   return decoded.messageType.name === 'Request'
 }
 
+function isSoftResetForTargetSop(
+  decoded: DecodedPacket,
+  targetSop: MessagePacket['sop'],
+): boolean {
+  return (
+    decoded.messageType.name === 'Soft_Reset' && decoded.frame.sop === targetSop
+  )
+}
+
 function findPreviousChunkedExtendedPackets(
   records: readonly CaptureRecord[] | CaptureRecordSource,
   targetIndex: number,
@@ -92,6 +101,9 @@ function findPreviousChunkedExtendedPackets(
     }
 
     const decoded = decodePacket(packet)
+    if (isSoftResetForTargetSop(decoded, targetDecoded.frame.sop)) {
+      break
+    }
     const candidateExtendedHeader = decoded.extendedHeader
     if (
       decoded.frame.sop !== targetDecoded.frame.sop ||
@@ -126,6 +138,7 @@ function findNearestSourceCapabilitiesFrame(
   records: readonly CaptureRecord[] | CaptureRecordSource,
   targetIndex: number,
   startIndex: number,
+  targetSop: MessagePacket['sop'],
 ): ContextLookupResult<MessagePacket> {
   let scannedRecords = 0
 
@@ -150,6 +163,9 @@ function findNearestSourceCapabilitiesFrame(
     }
 
     const decoded = decodePacket(packet)
+    if (isSoftResetForTargetSop(decoded, targetSop)) {
+      break
+    }
     if (decoded.messageType.name === 'Source_Capabilities') {
       return { value: packet, scannedRecords }
     }
@@ -182,7 +198,12 @@ export function decodeRecordAtIndex(
   const startIndex =
     backtrackRecords === null ? 0 : Math.max(0, targetIndex - backtrackRecords)
   const sourceCapabilities = needsSourceCapabilitiesContext(singleFrameDecoded)
-    ? findNearestSourceCapabilitiesFrame(records, targetIndex, startIndex)
+    ? findNearestSourceCapabilitiesFrame(
+        records,
+        targetIndex,
+        startIndex,
+        singleFrameDecoded.frame.sop,
+      )
     : { value: undefined, scannedRecords: 0 }
   const previousChunkedExtendedPackets = findPreviousChunkedExtendedPackets(
     records,
