@@ -2,6 +2,50 @@ import { describe, expect, test } from 'vitest'
 import { decodeMessage, decodePacket } from '../src/index.js'
 
 describe('Power Data Objects', () => {
+  test('routes Source and Sink capabilities through their PDO layouts', () => {
+    const cases = [
+      { messageType: 0x01, name: 'Source_Capabilities' },
+      { messageType: 0x04, name: 'Sink_Capabilities' },
+    ] as const
+
+    for (const testCase of cases) {
+      const decoded = decodeMessage({
+        sop: 'SOP',
+        messageBytes: Uint8Array.from([
+          0x80 | testCase.messageType,
+          0x10,
+          0x2c,
+          0x91,
+          0x01,
+          0x00,
+        ]),
+      })
+
+      expect(decoded.messageType.name).toBe(testCase.name)
+      expect(
+        decoded.sections.some((section) =>
+          section.title.includes('PDO 1 - Fixed Supply'),
+        ),
+      ).toBe(true)
+    }
+  })
+
+  test('preserves a truncated PDO as trailing raw payload', () => {
+    const decoded = decodeMessage({
+      sop: 'SOP',
+      messageBytes: Uint8Array.from([0x81, 0x10, 0xaa, 0xbb, 0xcc]),
+    })
+
+    const trailing = decoded.sections.find(
+      (section) => section.title === 'Trailing Raw Payload',
+    )
+
+    expect(Array.from(trailing?.rawBytes ?? [])).toEqual([0xaa, 0xbb, 0xcc])
+    expect(trailing?.issues.map((issue) => issue.code)).toContain(
+      'PD_PAYLOAD_NOT_32BIT_ALIGNED',
+    )
+  })
+
   test('labels USB PD R3.2 v1.2 EPR AVS Sink PDO low byte as Maximum Power', () => {
     const decoded = decodePacket({
       sop: 'SOP',

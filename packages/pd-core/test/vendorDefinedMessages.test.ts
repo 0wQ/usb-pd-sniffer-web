@@ -2,6 +2,23 @@ import { describe, expect, test } from 'vitest'
 import { decodeMessage, decodePacket } from '../src/index.js'
 
 describe('Vendor Defined Messages', () => {
+  test('preserves unstructured VDM payload objects through the generic VDO path', () => {
+    const decoded = decodeMessage({
+      sop: 'SOP',
+      messageBytes: Uint8Array.from([
+        0x8f, 0x20, 0x00, 0x00, 0x34, 0x12, 0x78, 0x56, 0x34, 0x12,
+      ]),
+    })
+
+    expect(decoded.messageType.name).toBe('Vendor_Defined')
+    expect(decoded.sections.map((section) => section.title)).toEqual([
+      'Message Header',
+      'VDM Header',
+      'Vendor Data Object 2',
+    ])
+    expect(decoded.sections[2]?.semanticKind).toBe('vendor_data_object')
+  })
+
   test('accepts the USB PD R3.2 v1.2 Active Cable VDO1 Version 1.3', () => {
     const decoded = decodePacket({
       sop: 'SOP_PRIME',
