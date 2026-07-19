@@ -1,7 +1,25 @@
 import { describe, expect, test } from 'vitest'
 import { decodeMessage, decodePacket } from '../src/index.js'
+import { extendedMessageBytes } from './messageFixtures.js'
 
 describe('Extended Message framing', () => {
+  test('preserves reserved Extended Message types as generic raw data', () => {
+    const decoded = decodeMessage({
+      sop: 'SOP',
+      messageBytes: extendedMessageBytes(0x13, [0x11, 0x22, 0x33]),
+    })
+
+    expect(decoded.messageType.name).toBeNull()
+    expect(decoded.sections.map((section) => section.title)).toEqual([
+      'Message Header',
+      'Extended Message Header',
+      'Unknown Extended Data Block',
+    ])
+    expect(Array.from(decoded.sections[2]?.rawBytes ?? [])).toEqual([
+      0x11, 0x22, 0x33,
+    ])
+  })
+
   test('uses Data Size instead of NDO length for unchunked extended messages', () => {
     const decoded = decodePacket({
       sop: 'SOP',
