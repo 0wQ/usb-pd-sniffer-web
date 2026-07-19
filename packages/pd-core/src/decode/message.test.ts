@@ -148,6 +148,29 @@ describe('decodePacket', () => {
     expect(decoded.crc.checkStatus).toBe('valid')
   })
 
+  test('labels USB PD R3.2 v1.2 EPR AVS Sink PDO low byte as Maximum Power', () => {
+    const decoded = decodePacket({
+      sop: 'SOP',
+      bytes: Uint8Array.from([
+        0x84, 0x10, 0x8c, 0x96, 0xc0, 0xd3, 0x0e, 0xf9, 0x32, 0xde,
+      ]),
+    })
+
+    const eprAvs = decoded.sections.find(
+      (section) => section.title === 'PDO 1 - EPR AVS APDO',
+    )
+
+    expect(
+      eprAvs?.fields.find((field) => field.key === 'maximum_power'),
+    ).toMatchObject({
+      label: 'Maximum Power',
+      decodedValue: 140,
+      displayValue: '140 W',
+    })
+    expect(eprAvs?.fields.some((field) => field.key === 'pdp')).toBe(false)
+    expect(decoded.crc.checkStatus).toBe('valid')
+  })
+
   test('does not emit empty generic payload container sections for Extended_Control', () => {
     const decoded = decodePacket({
       sop: 'SOP',

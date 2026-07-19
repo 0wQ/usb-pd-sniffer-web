@@ -971,7 +971,7 @@ function buildEprAvsPowerObject(
             note: '100mV units',
           },
         ),
-        field('pdp', 'PDP', 0, 8, pdp, pdp, {
+        field('maximum_power', 'Maximum Power', 0, 8, pdp, pdp, {
           displayValue: `${pdp} W`,
           unit: 'W',
         }),
