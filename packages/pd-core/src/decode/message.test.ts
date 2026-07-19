@@ -122,6 +122,32 @@ describe('decodePacket', () => {
     expect(decoded.crc.checkStatus).toBe('valid')
   })
 
+  test('accepts USB PD R3.2 v1.2 Alert Extended Event Type 5', () => {
+    const decoded = decodePacket({
+      sop: 'SOP',
+      bytes: Uint8Array.from([
+        0x86, 0x10, 0x05, 0x00, 0x00, 0x80, 0xf6, 0xb2, 0xad, 0xc3,
+      ]),
+    })
+
+    const alert = decoded.sections.find(
+      (section) => section.title === 'Alert Data Object',
+    )
+
+    expect(
+      alert?.fields.find((field) => field.key === 'extended_alert_event_type'),
+    ).toMatchObject({
+      rawValue: 5,
+      displayValue: 'Source is about to reduce Source Capabilities',
+    })
+    expect(
+      alert?.issues.some(
+        (issue) => issue.code === 'PD_ALERT_EXTENDED_TYPE_RESERVED',
+      ),
+    ).toBe(false)
+    expect(decoded.crc.checkStatus).toBe('valid')
+  })
+
   test('does not emit empty generic payload container sections for Extended_Control', () => {
     const decoded = decodePacket({
       sop: 'SOP',

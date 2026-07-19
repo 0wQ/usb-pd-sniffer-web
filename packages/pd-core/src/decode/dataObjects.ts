@@ -4121,6 +4121,8 @@ function alertExtendedEventTypeDisplay(raw4: number): string {
       return 'Power Button Release'
     case 4:
       return 'Controller Initiated Wake'
+    case 5:
+      return 'Source is about to reduce Source Capabilities'
     default:
       return 'Reserved'
   }
@@ -4192,11 +4194,11 @@ function buildAlertDataObject(
     )
   }
 
-  if (extendedAlertEvent === 1 && extendedAlertEventType >= 5) {
+  if (extendedAlertEvent === 1 && extendedAlertEventType >= 6) {
     issues.push(
       createIssue(
         'PD_ALERT_EXTENDED_TYPE_RESERVED',
-        'Extended Alert Event Type values 0101b..1111b are reserved.',
+        'Extended Alert Event Type values 0110b..1111b are reserved.',
       ),
     )
   }
