@@ -83,6 +83,14 @@ describe('decodePacket', () => {
         (issue) => issue.code === 'PD_ACTIVE_CABLE_VDO1_VERSION_RESERVED',
       ),
     ).toBe(false)
+    expect(
+      decoded.sections
+        .find((section) => section.title === 'Active Cable VDO2')
+        ?.fields.find((field) => field.key === 'maximum_operating_temperature'),
+    ).toMatchObject({
+      displayValue: '0 °C',
+      unit: '°C',
+    })
     expect(decoded.crc.checkStatus).toBe('valid')
   })
 

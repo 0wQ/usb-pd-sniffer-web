@@ -3371,8 +3371,8 @@ function buildActiveCableVdo2(
           extractBits(raw32, 24, 8),
           extractBits(raw32, 24, 8),
           {
-            displayValue: `${extractBits(raw32, 24, 8)} C`,
-            unit: 'C',
+            displayValue: `${extractBits(raw32, 24, 8)} °C`,
+            unit: '°C',
           },
         ),
         field(
@@ -3383,8 +3383,8 @@ function buildActiveCableVdo2(
           extractBits(raw32, 16, 8),
           extractBits(raw32, 16, 8),
           {
-            displayValue: `${extractBits(raw32, 16, 8)} C`,
-            unit: 'C',
+            displayValue: `${extractBits(raw32, 16, 8)} °C`,
+            unit: '°C',
           },
         ),
         field('reserved_15', 'Reserved', 15, 1, reserved15, reserved15),
