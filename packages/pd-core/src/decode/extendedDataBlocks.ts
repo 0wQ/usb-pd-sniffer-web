@@ -7,87 +7,18 @@ import type {
   StartOfPacket,
 } from '../types.js'
 import { explainDataObjects } from './dataObjects/index.js'
-
-type BuiltSection = {
-  section: Section
-  extraSections?: Section[]
-}
+import { buildDeclaredDataSizeIssues } from './extendedDataBlocks/dataBlockValidation.js'
+import {
+  type BuiltSection,
+  boolDisplay,
+  buildPaddingSection,
+  createDataBlockSection,
+  createIssue,
+  field,
+  hex,
+} from './extendedDataBlocks/sectionBuilders.js'
 
 const MAX_EXTENDED_MESSAGE_CHUNK_LENGTH = 26
-
-function hex(value: number, width: number): string {
-  return `0x${value.toString(16).toUpperCase().padStart(width, '0')}`
-}
-
-function boolDisplay(
-  value: boolean,
-  whenTrue = 'Set',
-  whenFalse = 'Clear',
-): string {
-  return value ? whenTrue : whenFalse
-}
-
-function field(
-  key: string,
-  label: string,
-  bitStart: number,
-  bitLength: number,
-  rawValue: number,
-  decodedValue: BitField['decodedValue'],
-  options: {
-    displayValue?: string
-    note?: string
-    unit?: string
-  } = {},
-): BitField {
-  const displayValue =
-    options.displayValue ??
-    (options.unit !== undefined
-      ? `${String(decodedValue)} ${options.unit}`
-      : String(decodedValue))
-
-  return {
-    key,
-    label,
-    bitStart,
-    bitLength,
-    rawValue,
-    decodedValue,
-    displayValue,
-    note: options.note,
-    unit: options.unit,
-  }
-}
-
-function createIssue(code: string, message: string): DecodeIssue {
-  return {
-    severity: 'warning',
-    code,
-    message,
-  }
-}
-
-function createDataBlockSection(
-  key: string,
-  title: string,
-  semanticKind: string,
-  byteOffset: number,
-  rawBytes: Uint8Array,
-  fields: BitField[],
-  issues: DecodeIssue[],
-): Section {
-  return {
-    key,
-    kind: 'data_block',
-    title,
-    semanticKind,
-    byteOffset,
-    byteLength: rawBytes.length,
-    rawBytes,
-    fields,
-    issues,
-  }
-}
 
 function rawExtendedDataBlockInfo(messageTypeName: string | null): {
   title: string
@@ -144,53 +75,6 @@ function buildRawExtendedDataBlock(
       bytes,
       [],
       [],
-    ),
-  }
-}
-
-function buildPaddingSection(
-  bytes: Uint8Array,
-  parentSectionKey: string,
-  byteOffset: number,
-): BuiltSection {
-  const rawValue = bytes.reduce(
-    (value, byte, index) => value | (BigInt(byte) << BigInt(index * 8)),
-    0n,
-  )
-  const decodedValue =
-    rawValue <= BigInt(Number.MAX_SAFE_INTEGER)
-      ? Number(rawValue)
-      : rawValue.toString()
-  const issues: DecodeIssue[] = bytes.some((byte) => byte !== 0)
-    ? [
-        createIssue(
-          'PD_EXTENDED_MESSAGE_PADDING_NONZERO',
-          'Extended Message padding bytes shall be zero.',
-        ),
-      ]
-    : []
-
-  return {
-    section: createDataBlockSection(
-      `${parentSectionKey}:padding`,
-      'Padding',
-      'padding',
-      byteOffset,
-      bytes,
-      bytes.length > 0
-        ? [
-            {
-              key: 'padding',
-              label: 'Padding',
-              bitStart: 0,
-              bitLength: bytes.length * 8,
-              rawValue,
-              decodedValue,
-              displayValue: String(decodedValue),
-            },
-          ]
-        : [],
-      issues,
     ),
   }
 }
@@ -383,35 +267,6 @@ function batteryBitmapDisplay(value: number, baseIndex: number): string {
     }
   }
   return batteries.length === 0 ? 'None' : batteries.join(', ')
-}
-
-function buildDeclaredDataSizeIssues(
-  messageName: string,
-  expectedDataSize: number,
-  declaredDataSize: number,
-  availableLength: number,
-): DecodeIssue[] {
-  const issues: DecodeIssue[] = []
-
-  if (declaredDataSize !== expectedDataSize) {
-    issues.push(
-      createIssue(
-        `PD_${messageName.toUpperCase()}_DATA_SIZE_INVALID`,
-        `${messageName} declared Data Size ${declaredDataSize}, expected ${expectedDataSize}.`,
-      ),
-    )
-  }
-
-  if (availableLength < expectedDataSize) {
-    issues.push(
-      createIssue(
-        `PD_${messageName.toUpperCase()}_DATA_BLOCK_TRUNCATED`,
-        `${messageName} requires ${expectedDataSize} data byte(s), but only ${availableLength} are present in this frame.`,
-      ),
-    )
-  }
-
-  return issues
 }
 
 function buildStatusDataBlock(
