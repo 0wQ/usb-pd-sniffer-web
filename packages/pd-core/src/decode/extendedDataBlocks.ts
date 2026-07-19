@@ -19,6 +19,7 @@ import {
   buildCountryInfoDataBlock,
 } from './extendedDataBlocks/countryDataBlocks.js'
 import { buildExtendedControlDataBlock } from './extendedDataBlocks/extendedControlDataBlock.js'
+import { buildExternalSpecificationDataBlock } from './extendedDataBlocks/externalSpecificationDataBlocks.js'
 import {
   buildGetManufacturerInfoDataBlock,
   buildManufacturerInfoDataBlock,
@@ -38,26 +39,6 @@ function rawExtendedDataBlockInfo(messageTypeName: string | null): {
   semanticKind: string
 } {
   switch (messageTypeName) {
-    case 'Security_Request':
-      return {
-        title: 'Security Request Data Block (SRQDB)',
-        semanticKind: 'security_request_data_block_raw',
-      }
-    case 'Security_Response':
-      return {
-        title: 'Security Response Data Block (SRPDB)',
-        semanticKind: 'security_response_data_block_raw',
-      }
-    case 'Firmware_Update_Request':
-      return {
-        title: 'Firmware Update Request Data Block (FRQDB)',
-        semanticKind: 'firmware_update_request_data_block_raw',
-      }
-    case 'Firmware_Update_Response':
-      return {
-        title: 'Firmware Update Response Data Block (FRPDB)',
-        semanticKind: 'firmware_update_response_data_block_raw',
-      }
     case null:
       return {
         title: 'Unknown Extended Data Block',
@@ -77,6 +58,16 @@ function buildRawExtendedDataBlock(
   parentSectionKey: string,
   byteOffset: number,
 ): BuiltSection {
+  const externalSpecificationDataBlock = buildExternalSpecificationDataBlock(
+    bytes,
+    messageTypeName,
+    parentSectionKey,
+    byteOffset,
+  )
+  if (externalSpecificationDataBlock !== null) {
+    return externalSpecificationDataBlock
+  }
+
   const info = rawExtendedDataBlockInfo(messageTypeName)
 
   return {
