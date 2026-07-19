@@ -9,6 +9,20 @@ export function hex(value: number, width: number): string {
   return `0x${value.toString(16).toUpperCase().padStart(width, '0')}`
 }
 
+export function asciiBytesDisplay(bytes: Uint8Array): string {
+  let result = ''
+  for (const value of bytes) {
+    if (value === 0x00) {
+      result += '\\0'
+    } else if (value >= 0x20 && value <= 0x7e) {
+      result += String.fromCharCode(value)
+    } else {
+      result += `\\x${value.toString(16).toUpperCase().padStart(2, '0')}`
+    }
+  }
+  return result
+}
+
 export function boolDisplay(
   value: boolean,
   whenTrue = 'Set',
