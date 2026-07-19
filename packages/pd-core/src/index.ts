@@ -21,4 +21,4 @@ export type {
   SpecificationRevision,
   StartOfPacket,
 } from './types.js'
-export { calculatePdCrc32 } from './utils/pdCrc32.js'
+export { calculatePdCrc32 } from './utils/crc32.js'

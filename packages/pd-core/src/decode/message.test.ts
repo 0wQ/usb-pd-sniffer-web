@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, test } from 'vitest'
 import type { MessageFrame, MessagePacket } from '../types.js'
-import { calculatePdCrc32 } from '../utils/pdCrc32.js'
+import { calculatePdCrc32 } from '../utils/crc32.js'
 import { decodeMessage, decodePacket } from './message.js'
 
 describe('decodePacket', () => {

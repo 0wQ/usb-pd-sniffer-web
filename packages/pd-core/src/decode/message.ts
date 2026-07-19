@@ -15,7 +15,7 @@ import type {
   Section,
 } from '../types.js'
 import { extractBits, readUint32Le } from '../utils/bits.js'
-import { calculatePdCrc32 } from '../utils/pdCrc32.js'
+import { calculatePdCrc32 } from '../utils/crc32.js'
 import {
   classifyRdoKindFromPdo,
   explainDataObjects,
