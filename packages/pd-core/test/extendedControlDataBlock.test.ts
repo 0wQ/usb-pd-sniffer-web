@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { decodePacket } from '../src/index.js'
+import { decodeMessage, decodePacket } from '../src/index.js'
 
 describe('Extended Control Data Block', () => {
   test('does not emit empty generic payload container sections for Extended_Control', () => {
@@ -23,5 +23,20 @@ describe('Extended Control Data Block', () => {
           !Object.hasOwn(section, 'depth'),
       ),
     ).toBe(true)
+  })
+
+  test('diagnoses reserved type and nonzero data', () => {
+    const decoded = decodeMessage({
+      sop: 'SOP',
+      messageBytes: Uint8Array.from([0x90, 0x90, 0x02, 0x00, 0x00, 0x01]),
+    })
+    const control = decoded.sections.find(
+      (section) => section.title === 'Extended Control Data Block',
+    )
+
+    expect(control?.issues.map((issue) => issue.code)).toEqual([
+      'PD_EXTENDED_CONTROL_TYPE_RESERVED',
+      'PD_EXTENDED_CONTROL_DATA_NONZERO',
+    ])
   })
 })

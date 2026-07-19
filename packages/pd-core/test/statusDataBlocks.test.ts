@@ -56,4 +56,18 @@ describe('Status Data Blocks', () => {
       'PPS Status Data Block',
     )
   })
+
+  test('diagnoses reserved PPS Status real-time flag bits', () => {
+    const decoded = decodeMessage({
+      sop: 'SOP',
+      messageBytes: extendedMessageBytes(0x0c, [0, 0, 0, 0x11]),
+    })
+    const status = decoded.sections.find(
+      (section) => section.title === 'PPS Status Data Block',
+    )
+
+    expect(status?.issues.map((issue) => issue.code)).toContain(
+      'PD_PPS_STATUS_RESERVED_REAL_TIME_FLAGS_NONZERO',
+    )
+  })
 })

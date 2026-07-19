@@ -34,4 +34,18 @@ describe('Request Data Objects', () => {
       ),
     ).toBeDefined()
   })
+
+  test('diagnoses a reserved Request object position', () => {
+    const decoded = decodeMessage({
+      sop: 'SOP',
+      messageBytes: Uint8Array.from([0x82, 0x10, 0x00, 0x00, 0x00, 0x00]),
+    })
+    const request = decoded.sections.find(
+      (section) => section.title === 'RDO - Common',
+    )
+
+    expect(request?.issues.map((issue) => issue.code)).toContain(
+      'PD_RDO_RESERVED_OBJECT_POSITION',
+    )
+  })
 })
