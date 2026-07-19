@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
-import { lookupMessageTypeName } from './messageTypes.js'
+import { decodeMessage } from '../src/index.js'
 
-describe('lookupMessageTypeName', () => {
+describe('message type names', () => {
   test('covers all spec-defined control message names through Get_Revision', () => {
     const expectedControlTypes = new Map<number, string>([
       [0x01, 'GoodCRC'],
@@ -31,10 +31,25 @@ describe('lookupMessageTypeName', () => {
     ])
 
     for (const [code, expectedName] of expectedControlTypes) {
-      expect(lookupMessageTypeName('control', code)).toBe(expectedName)
+      expect(
+        decodeMessage({
+          sop: 'SOP',
+          messageBytes: Uint8Array.from([code, 0x00]),
+        }).messageType.name,
+      ).toBe(expectedName)
     }
 
-    expect(lookupMessageTypeName('control', 0x00)).toBeNull()
-    expect(lookupMessageTypeName('control', 0x19)).toBeNull()
+    expect(
+      decodeMessage({
+        sop: 'SOP',
+        messageBytes: Uint8Array.from([0x00, 0x00]),
+      }).messageType.name,
+    ).toBeNull()
+    expect(
+      decodeMessage({
+        sop: 'SOP',
+        messageBytes: Uint8Array.from([0x19, 0x00]),
+      }).messageType.name,
+    ).toBeNull()
   })
 })

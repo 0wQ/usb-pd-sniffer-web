@@ -1,7 +1,11 @@
 import { describe, expect, expectTypeOf, test } from 'vitest'
-import type { MessageFrame, MessagePacket } from '../types.js'
-import { calculatePdCrc32 } from '../utils/crc32.js'
-import { decodeMessage, decodePacket } from './message.js'
+import {
+  calculatePdCrc32,
+  decodeMessage,
+  decodePacket,
+  type MessageFrame,
+  type MessagePacket,
+} from '../src/index.js'
 
 describe('decodePacket', () => {
   test('keeps packet and CRC-free frame inputs structurally distinct', () => {
