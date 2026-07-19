@@ -3046,11 +3046,11 @@ function buildActiveCableVdo1(
   const usbHighestSpeed = extractBits(raw32, 0, 3)
   const issues: DecodeIssue[] = []
 
-  if (version !== 0) {
+  if (version !== 3) {
     issues.push(
       createIssue(
         'PD_ACTIVE_CABLE_VDO1_VERSION_RESERVED',
-        'Active Cable VDO1 Version values 001b..111b are reserved.',
+        'Active Cable VDO1 Version values 000b..010b and 100b..111b are reserved.',
       ),
     )
   }
@@ -3137,7 +3137,7 @@ function buildActiveCableVdo1(
           extractBits(raw32, 24, 4),
         ),
         field('vdo_version', 'VDO Version', 21, 3, version, version, {
-          displayValue: version === 0 ? 'Version 1.0' : 'Reserved',
+          displayValue: version === 3 ? 'Version 1.3' : 'Reserved',
         }),
         field('reserved_20', 'Reserved', 20, 1, reserved20, reserved20),
         field(

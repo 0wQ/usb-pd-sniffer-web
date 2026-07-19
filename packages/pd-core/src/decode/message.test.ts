@@ -58,6 +58,33 @@ describe('decodePacket', () => {
     ).toBe(true)
   })
 
+  test('accepts the USB PD R3.2 v1.2 Active Cable VDO1 Version 1.3', () => {
+    const decoded = decodePacket({
+      sop: 'SOP_PRIME',
+      bytes: Uint8Array.from([
+        0x8f, 0x61, 0x41, 0xa0, 0x00, 0xff, 0x34, 0x12, 0x60, 0x20, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30, 0x68, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0xe5, 0x53, 0x25, 0x70,
+      ]),
+    })
+
+    const activeCableVdo1 = decoded.sections.find(
+      (section) => section.title === 'Active Cable VDO1',
+    )
+
+    expect(activeCableVdo1?.fields.find((field) => field.key === 'vdo_version'))
+      .toMatchObject({
+        rawValue: 3,
+        displayValue: 'Version 1.3',
+      })
+    expect(
+      activeCableVdo1?.issues.some(
+        (issue) => issue.code === 'PD_ACTIVE_CABLE_VDO1_VERSION_RESERVED',
+      ),
+    ).toBe(false)
+    expect(decoded.crc.checkStatus).toBe('valid')
+  })
+
   test('does not emit empty generic payload container sections for Extended_Control', () => {
     const decoded = decodePacket({
       sop: 'SOP',
