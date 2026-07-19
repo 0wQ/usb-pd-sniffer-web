@@ -113,3 +113,26 @@ export function createSection(
     issues,
   }
 }
+
+export function createVendorDataObjectSection(
+  key: string,
+  title: string,
+  semanticKind: string,
+  byteOffset: number,
+  raw32: number,
+  fields: BitField[],
+  issues: DecodeIssue[],
+  index: number,
+): Section {
+  return createSection(
+    key,
+    'vendor_data_object',
+    title,
+    semanticKind,
+    byteOffset,
+    raw32,
+    fields,
+    issues,
+    index,
+  )
+}
