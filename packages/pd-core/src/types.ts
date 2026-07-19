@@ -149,8 +149,3 @@ export type DecodedPacket = DecodedMessage & {
   packetLayout: PacketLayout
   crc: PacketCrc
 }
-
-export type SequenceDecoder = {
-  push(packet: MessagePacket, context?: DecodeContext): DecodedPacket
-  reset(): void
-}
