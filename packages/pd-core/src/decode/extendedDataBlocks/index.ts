@@ -31,7 +31,6 @@ import {
   createDataBlockSection,
 } from './sectionBuilders.js'
 import { buildStatusDataBlock } from './statusDataBlock.js'
-import { buildVendorDefinedExtendedDataBlock } from './vendorDefinedExtendedDataBlock.js'
 
 const MAX_EXTENDED_MESSAGE_CHUNK_LENGTH = 26
 
@@ -67,16 +66,6 @@ function buildRawExtendedDataBlock(
   )
   if (externalSpecificationDataBlock !== null) {
     return externalSpecificationDataBlock
-  }
-
-  const vendorDefinedExtendedDataBlock = buildVendorDefinedExtendedDataBlock(
-    bytes,
-    messageTypeName,
-    parentSectionKey,
-    byteOffset,
-  )
-  if (vendorDefinedExtendedDataBlock !== null) {
-    return vendorDefinedExtendedDataBlock
   }
 
   const info = rawExtendedDataBlockInfo(messageTypeName)
