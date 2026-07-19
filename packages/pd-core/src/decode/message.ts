@@ -48,6 +48,7 @@ type ResolvedExtendedPayloadContext = {
   mode: ExplainMode
   notes: string[]
   payloadBytes: Uint8Array
+  payloadIsAssembled: boolean
   rawOnly: boolean
 }
 
@@ -419,6 +420,7 @@ function resolveChunkedExtendedPayloadContext(
       mode: 'single_frame',
       notes: [],
       payloadBytes: currentPayloadBytes,
+      payloadIsAssembled: false,
       rawOnly: false,
     }
   }
@@ -430,6 +432,7 @@ function resolveChunkedExtendedPayloadContext(
         `${messageTypeName ?? 'Chunked Extended Message'} Request Chunk frame requests chunk ${extendedHeader.chunkNumber}; Data Size is zero and the remaining payload bytes are padding.`,
       ],
       payloadBytes: currentPayloadBytes,
+      payloadIsAssembled: false,
       rawOnly: true,
     }
   }
@@ -442,6 +445,7 @@ function resolveChunkedExtendedPayloadContext(
           `${messageTypeName} remains raw-only until its complete assembled payload is available.`,
         ],
         payloadBytes: currentPayloadBytes,
+        payloadIsAssembled: false,
         rawOnly: true,
       }
     }
@@ -450,6 +454,7 @@ function resolveChunkedExtendedPayloadContext(
       mode: 'single_frame',
       notes: [],
       payloadBytes: currentPayloadBytes,
+      payloadIsAssembled: false,
       rawOnly: false,
     }
   }
@@ -462,6 +467,7 @@ function resolveChunkedExtendedPayloadContext(
         `${messageTypeName} chunk ${extendedHeader.chunkNumber} requires previous chunk context 0..${extendedHeader.chunkNumber - 1}; showing current chunk raw bytes only.`,
       ],
       payloadBytes: currentPayloadBytes,
+      payloadIsAssembled: false,
       rawOnly: true,
     }
   }
@@ -476,6 +482,7 @@ function resolveChunkedExtendedPayloadContext(
       mode: 'sequence',
       notes,
       payloadBytes: currentPayloadBytes,
+      payloadIsAssembled: false,
       rawOnly: true,
     }
   }
@@ -496,6 +503,7 @@ function resolveChunkedExtendedPayloadContext(
         mode: 'sequence',
         notes,
         payloadBytes: currentPayloadBytes,
+        payloadIsAssembled: false,
         rawOnly: true,
       }
     }
@@ -512,6 +520,7 @@ function resolveChunkedExtendedPayloadContext(
         mode: 'sequence',
         notes,
         payloadBytes: currentPayloadBytes,
+        payloadIsAssembled: false,
         rawOnly: true,
       }
     }
@@ -525,6 +534,7 @@ function resolveChunkedExtendedPayloadContext(
         mode: 'sequence',
         notes,
         payloadBytes: currentPayloadBytes,
+        payloadIsAssembled: false,
         rawOnly: true,
       }
     }
@@ -538,6 +548,7 @@ function resolveChunkedExtendedPayloadContext(
         mode: 'sequence',
         notes,
         payloadBytes: currentPayloadBytes,
+        payloadIsAssembled: false,
         rawOnly: true,
       }
     }
@@ -551,6 +562,7 @@ function resolveChunkedExtendedPayloadContext(
         mode: 'sequence',
         notes,
         payloadBytes: currentPayloadBytes,
+        payloadIsAssembled: false,
         rawOnly: true,
       }
     }
@@ -564,6 +576,7 @@ function resolveChunkedExtendedPayloadContext(
         mode: 'sequence',
         notes,
         payloadBytes: currentPayloadBytes,
+        payloadIsAssembled: false,
         rawOnly: true,
       }
     }
@@ -577,6 +590,7 @@ function resolveChunkedExtendedPayloadContext(
         mode: 'sequence',
         notes,
         payloadBytes: currentPayloadBytes,
+        payloadIsAssembled: false,
         rawOnly: true,
       }
     }
@@ -599,6 +613,7 @@ function resolveChunkedExtendedPayloadContext(
       mode: 'sequence',
       notes,
       payloadBytes: assembledPayloadBytes,
+      payloadIsAssembled: true,
       rawOnly: false,
     }
   }
@@ -617,6 +632,7 @@ function resolveChunkedExtendedPayloadContext(
     mode: 'sequence',
     notes,
     payloadBytes: assembledPayloadBytes,
+    payloadIsAssembled: true,
     rawOnly: true,
   }
 }
@@ -723,6 +739,7 @@ export function decodeMessage(
           4,
           {
             rawOnly: extendedPayloadContext.rawOnly,
+            payloadIsAssembled: extendedPayloadContext.payloadIsAssembled,
           },
         ),
       )

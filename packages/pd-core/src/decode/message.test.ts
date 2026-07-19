@@ -84,6 +84,19 @@ describe('decodePacket', () => {
       ),
     ).toBe(false)
     expect(
+      activeCableVdo1?.fields.find(
+        (field) => field.key === 'plug_to_plug_or_captive',
+      ),
+    ).toMatchObject({
+      rawValue: 2,
+      displayValue: 'USB Type-C',
+    })
+    expect(
+      activeCableVdo1?.issues.some(
+        (issue) => issue.code === 'PD_ACTIVE_CABLE_VDO1_PLUG_TYPE_DEPRECATED',
+      ),
+    ).toBe(false)
+    expect(
       decoded.sections
         .find((section) => section.title === 'Active Cable VDO2')
         ?.fields.find((field) => field.key === 'maximum_operating_temperature'),
@@ -92,6 +105,252 @@ describe('decodePacket', () => {
       unit: '°C',
     })
     expect(decoded.crc.checkStatus).toBe('valid')
+  })
+
+  test('classifies Discover Identity UFP and DFP VDO versions per R3.2 v1.2', () => {
+    const decoded = decodeMessage({
+      sop: 'SOP',
+      bytes: Uint8Array.from([
+        0x8f, 0x71, 0x41, 0xa0, 0x00, 0xff, 0x34, 0x12, 0x00, 0x11, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      ]),
+    })
+
+    const ufpVdo = decoded.sections.find(
+      (section) => section.title === 'UFP VDO',
+    )
+    const dfpVdo = decoded.sections.find(
+      (section) => section.title === 'DFP VDO',
+    )
+
+    expect(
+      ufpVdo?.fields.find((field) => field.key === 'ufp_vdo_version'),
+    ).toMatchObject({
+      rawValue: 1,
+      displayValue: 'Version 1.1 (Deprecated)',
+    })
+    expect(
+      ufpVdo?.issues.some(
+        (issue) => issue.code === 'PD_UFP_VDO_VERSION_DEPRECATED',
+      ),
+    ).toBe(true)
+    expect(
+      dfpVdo?.fields.find((field) => field.key === 'dfp_vdo_version'),
+    ).toMatchObject({
+      rawValue: 0,
+      displayValue: 'Invalid',
+    })
+    expect(
+      dfpVdo?.issues.some(
+        (issue) => issue.code === 'PD_DFP_VDO_VERSION_INVALID',
+      ),
+    ).toBe(true)
+  })
+
+  test('covers every affected Discover Identity VDO version encoding', () => {
+    const raw32Bytes = (raw32: number) =>
+      Array.from({ length: 4 }, (_, index) => (raw32 >>> (index * 8)) & 0xff)
+    const decodeSopVersions = (ufpVersion: number, dfpVersion: number) =>
+      decodeMessage({
+        sop: 'SOP',
+        bytes: Uint8Array.from([
+          0x8f,
+          0x71,
+          0x41,
+          0xa0,
+          0x00,
+          0xff,
+          0x34,
+          0x12,
+          0x00,
+          0x11,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          ...raw32Bytes(ufpVersion * 0x20000000),
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          ...raw32Bytes(dfpVersion * 0x20000000),
+        ]),
+      })
+    const ufpCases = [
+      ['Invalid', 'PD_UFP_VDO_VERSION_INVALID'],
+      ['Version 1.1 (Deprecated)', 'PD_UFP_VDO_VERSION_DEPRECATED'],
+      ['Version 1.2 (Deprecated)', 'PD_UFP_VDO_VERSION_DEPRECATED'],
+      ['Version 1.3', undefined],
+      ['Reserved', 'PD_UFP_VDO_VERSION_RESERVED'],
+      ['Reserved', 'PD_UFP_VDO_VERSION_RESERVED'],
+      ['Reserved', 'PD_UFP_VDO_VERSION_RESERVED'],
+      ['Reserved', 'PD_UFP_VDO_VERSION_RESERVED'],
+    ]
+    const dfpCases = [
+      ['Invalid', 'PD_DFP_VDO_VERSION_INVALID'],
+      ['Version 1.1 (Deprecated)', 'PD_DFP_VDO_VERSION_DEPRECATED'],
+      ['Version 1.2', undefined],
+      ['Reserved', 'PD_DFP_VDO_VERSION_RESERVED'],
+      ['Reserved', 'PD_DFP_VDO_VERSION_RESERVED'],
+      ['Reserved', 'PD_DFP_VDO_VERSION_RESERVED'],
+      ['Reserved', 'PD_DFP_VDO_VERSION_RESERVED'],
+      ['Reserved', 'PD_DFP_VDO_VERSION_RESERVED'],
+    ]
+
+    for (let version = 0; version < 8; version += 1) {
+      const ufpDecoded = decodeSopVersions(version, 2)
+      const dfpDecoded = decodeSopVersions(3, version)
+      const ufpVdo = ufpDecoded.sections.find(
+        (section) => section.title === 'UFP VDO',
+      )
+      const dfpVdo = dfpDecoded.sections.find(
+        (section) => section.title === 'DFP VDO',
+      )
+      const [ufpDisplay, ufpIssueCode] = ufpCases[version]
+      const [dfpDisplay, dfpIssueCode] = dfpCases[version]
+
+      expect(
+        ufpVdo?.fields.find((field) => field.key === 'ufp_vdo_version')
+          ?.displayValue,
+      ).toBe(ufpDisplay)
+      expect(ufpVdo?.issues.some((issue) => issue.code === ufpIssueCode)).toBe(
+        ufpIssueCode !== undefined,
+      )
+      expect(
+        dfpVdo?.fields.find((field) => field.key === 'dfp_vdo_version')
+          ?.displayValue,
+      ).toBe(dfpDisplay)
+      expect(dfpVdo?.issues.some((issue) => issue.code === dfpIssueCode)).toBe(
+        dfpIssueCode !== undefined,
+      )
+    }
+
+    const activeCableCases = [
+      ['Version 1.0 (Deprecated)', 'PD_ACTIVE_CABLE_VDO1_VERSION_DEPRECATED'],
+      ['Invalid', 'PD_ACTIVE_CABLE_VDO1_VERSION_INVALID'],
+      ['Version 1.2 (Deprecated)', 'PD_ACTIVE_CABLE_VDO1_VERSION_DEPRECATED'],
+      ['Version 1.3', undefined],
+      ['Reserved', 'PD_ACTIVE_CABLE_VDO1_VERSION_RESERVED'],
+      ['Reserved', 'PD_ACTIVE_CABLE_VDO1_VERSION_RESERVED'],
+      ['Reserved', 'PD_ACTIVE_CABLE_VDO1_VERSION_RESERVED'],
+      ['Reserved', 'PD_ACTIVE_CABLE_VDO1_VERSION_RESERVED'],
+    ]
+
+    for (let version = 0; version < 8; version += 1) {
+      const decoded = decodeMessage({
+        sop: 'SOP_PRIME',
+        bytes: Uint8Array.from([
+          0x8f,
+          0x61,
+          0x41,
+          0xa0,
+          0x00,
+          0xff,
+          0x34,
+          0x12,
+          0x00,
+          0x20,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          ...raw32Bytes(version * 0x200000 + 0x80000),
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+        ]),
+      })
+      const activeCableVdo = decoded.sections.find(
+        (section) => section.title === 'Active Cable VDO1',
+      )
+      const [display, issueCode] = activeCableCases[version]
+
+      expect(
+        activeCableVdo?.fields.find((field) => field.key === 'vdo_version')
+          ?.displayValue,
+      ).toBe(display)
+      expect(
+        activeCableVdo?.issues.some((issue) => issue.code === issueCode),
+      ).toBe(issueCode !== undefined)
+    }
+  })
+
+  test('classifies deprecated Discover Identity ID Header and passive cable values', () => {
+    const idHeader = decodeMessage({
+      sop: 'SOP',
+      bytes: Uint8Array.from([
+        0x8f, 0x41, 0x41, 0xa0, 0x00, 0xff, 0x34, 0x12, 0x00, 0x2a, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      ]),
+    }).sections.find((section) => section.title === 'ID Header VDO')
+    const passiveCable = decodeMessage({
+      sop: 'SOP_PRIME',
+      bytes: Uint8Array.from([
+        0x8f, 0x51, 0x41, 0xa0, 0x00, 0xff, 0x34, 0x12, 0x00, 0x18, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00,
+      ]),
+    }).sections.find((section) => section.title === 'Passive Cable VDO')
+    const activeCable = decodeMessage({
+      sop: 'SOP_PRIME',
+      bytes: Uint8Array.from([
+        0x8f, 0x61, 0x41, 0xa0, 0x00, 0xff, 0x34, 0x12, 0x00, 0x20, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x60, 0x00, 0x00, 0x00,
+        0x00, 0x00,
+      ]),
+    }).sections.find((section) => section.title === 'Active Cable VDO1')
+
+    expect(
+      idHeader?.fields.find(
+        (field) => field.key === 'product_type_ufp_or_cable',
+      ),
+    ).toMatchObject({
+      displayValue: 'Alternate Mode Adapter (AMA) (Deprecated)',
+    })
+    expect(
+      idHeader?.fields.find((field) => field.key === 'product_type_dfp'),
+    ).toMatchObject({
+      displayValue: 'Alternate Mode Controller (AMC) (Deprecated)',
+    })
+    expect(
+      idHeader?.fields.find((field) => field.key === 'connector_type'),
+    ).toMatchObject({ displayValue: 'Unknown (Deprecated)' })
+    expect(idHeader?.issues.map((issue) => issue.code)).toEqual(
+      expect.arrayContaining([
+        'PD_ID_HEADER_UFP_PRODUCT_TYPE_DEPRECATED',
+        'PD_ID_HEADER_DFP_PRODUCT_TYPE_DEPRECATED',
+        'PD_ID_HEADER_CONNECTOR_TYPE_DEPRECATED',
+      ]),
+    )
+    expect(
+      passiveCable?.fields.find(
+        (field) => field.key === 'plug_to_plug_or_captive',
+      ),
+    ).toMatchObject({ displayValue: 'USB Type-B (Deprecated)' })
+    expect(
+      passiveCable?.issues.some(
+        (issue) => issue.code === 'PD_PASSIVE_CABLE_VDO_PLUG_TYPE_DEPRECATED',
+      ),
+    ).toBe(true)
+    expect(
+      activeCable?.fields.find(
+        (field) => field.key === 'plug_to_plug_or_captive',
+      ),
+    ).toMatchObject({ displayValue: 'USB Type-A (Deprecated)' })
+    expect(
+      activeCable?.issues.some(
+        (issue) => issue.code === 'PD_ACTIVE_CABLE_VDO1_PLUG_TYPE_DEPRECATED',
+      ),
+    ).toBe(true)
   })
 
   test('decodes USB PD R3.2 v1.2 Source_Info SIDO1 and DPS SIDO2', () => {
@@ -275,7 +534,7 @@ describe('decodePacket', () => {
   test('shows chunked Security_Request follow-up chunks as SRQDB raw without previous chunk context', () => {
     const decoded = decodeMessage({
       sop: 'SOP',
-      bytes: Uint8Array.from([0xa8, 0x90, 0x07, 0x88, 0xaa, 0xbb, 0xcc]),
+      bytes: Uint8Array.from([0xa8, 0x90, 0x1d, 0x88, 0xaa, 0xbb, 0xcc]),
     })
 
     expect(decoded.messageType.name).toBe('Security_Request')
@@ -285,6 +544,100 @@ describe('decodePacket', () => {
       'Extended Message Header',
       'Security Request Data Block (SRQDB)',
     ])
+  })
+
+  test('separates final chunk padding from Security_Request raw data', () => {
+    const decoded = decodeMessage({
+      sop: 'SOP',
+      bytes: Uint8Array.from([
+        0x08, 0xa0, 0x1d, 0x88, 0x11, 0x22, 0x33, 0x00, 0x00, 0x00,
+      ]),
+    })
+
+    const dataBlock = decoded.sections.find(
+      (section) => section.title === 'Security Request Data Block (SRQDB)',
+    )
+    const padding = decoded.sections.find(
+      (section) => section.title === 'Padding',
+    )
+
+    expect(Array.from(dataBlock?.rawBytes ?? [])).toEqual([0x11, 0x22, 0x33])
+    expect(Array.from(padding?.rawBytes ?? [])).toEqual([0x00, 0x00, 0x00])
+    expect(padding?.byteOffset).toBe(7)
+    expect(padding?.issues).toEqual([])
+  })
+
+  test('preserves an assembled Vendor Defined Extended raw payload', () => {
+    const decoded = decodeMessage(
+      {
+        sop: 'SOP',
+        bytes: Uint8Array.from([
+          0x1e, 0xa0, 0x1d, 0x88, 0x1a, 0x1b, 0x1c, 0x00, 0x00, 0x00,
+        ]),
+      },
+      {
+        chunkedExtendedMessage: {
+          previousChunks: [
+            {
+              kind: 'frame',
+              frame: {
+                sop: 'SOP',
+                bytes: Uint8Array.from([
+                  0x1e, 0xf0, 0x1d, 0x80, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
+                  0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+                  0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19,
+                ]),
+              },
+            },
+          ],
+        },
+      },
+    )
+
+    const dataBlock = decoded.sections.find(
+      (section) => section.title === 'Vendor_Defined_Extended Data Block',
+    )
+
+    expect(dataBlock?.byteLength).toBe(29)
+    expect(Array.from(dataBlock?.rawBytes ?? [])).toEqual([
+      0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b,
+      0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+      0x18, 0x19, 0x1a, 0x1b, 0x1c,
+    ])
+    expect(
+      decoded.sections.some((section) => section.title === 'Padding'),
+    ).toBe(false)
+  })
+
+  test('diagnoses invalid Extended Message Header field combinations', () => {
+    const unchunked = decodeMessage({
+      sop: 'SOP',
+      bytes: Uint8Array.from([0x1e, 0x90, 0x04, 0x0c, 0xaa, 0xbb, 0xcc, 0xdd]),
+    })
+    const chunked = decodeMessage({
+      sop: 'SOP',
+      bytes: Uint8Array.from([0x1e, 0x90, 0x05, 0xd1, 0x00, 0x00]),
+    })
+    const unchunkedIssues = unchunked.sections.find(
+      (section) => section.title === 'Extended Message Header',
+    )?.issues
+    const chunkedIssues = chunked.sections.find(
+      (section) => section.title === 'Extended Message Header',
+    )?.issues
+
+    expect(unchunkedIssues?.map((issue) => issue.code)).toEqual(
+      expect.arrayContaining([
+        'PD_EXTENDED_HEADER_UNCHUNKED_CHUNK_NUMBER_NONZERO',
+        'PD_EXTENDED_HEADER_UNCHUNKED_REQUEST_CHUNK_SET',
+        'PD_EXTENDED_HEADER_REQUEST_CHUNK_DATA_SIZE_NONZERO',
+      ]),
+    )
+    expect(chunkedIssues?.map((issue) => issue.code)).toEqual(
+      expect.arrayContaining([
+        'PD_EXTENDED_HEADER_CHUNK_NUMBER_INVALID',
+        'PD_EXTENDED_HEADER_DATA_SIZE_TOO_LARGE',
+      ]),
+    )
   })
 
   test('shows Request Chunk payload bytes as padding', () => {

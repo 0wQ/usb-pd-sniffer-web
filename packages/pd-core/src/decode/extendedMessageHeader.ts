@@ -39,6 +39,52 @@ export function explainExtendedMessageHeader(
   bytes: Uint8Array,
 ): Section {
   const reserved = extractBits(header.raw16, 9, 1)
+  const issues = []
+
+  if (reserved !== 0) {
+    issues.push({
+      severity: 'warning' as const,
+      code: 'PD_EXTENDED_HEADER_RESERVED_NONZERO',
+      message: 'Extended Message Header reserved bit 9 is non-zero.',
+    })
+  }
+  if (!header.chunked && header.chunkNumber !== 0) {
+    issues.push({
+      severity: 'warning' as const,
+      code: 'PD_EXTENDED_HEADER_UNCHUNKED_CHUNK_NUMBER_NONZERO',
+      message: 'Unchunked Extended Messages shall use Chunk Number zero.',
+    })
+  }
+  if (!header.chunked && header.requestChunk) {
+    issues.push({
+      severity: 'warning' as const,
+      code: 'PD_EXTENDED_HEADER_UNCHUNKED_REQUEST_CHUNK_SET',
+      message: 'Unchunked Extended Messages shall clear Request Chunk.',
+    })
+  }
+  if (header.chunked && header.chunkNumber >= 10) {
+    issues.push({
+      severity: 'warning' as const,
+      code: 'PD_EXTENDED_HEADER_CHUNK_NUMBER_INVALID',
+      message:
+        'Chunked Extended Message Chunk Number values 10..15 are invalid.',
+    })
+  }
+  if (header.requestChunk && header.dataSize !== 0) {
+    issues.push({
+      severity: 'warning' as const,
+      code: 'PD_EXTENDED_HEADER_REQUEST_CHUNK_DATA_SIZE_NONZERO',
+      message:
+        'Extended Message Request Chunk frames shall use Data Size zero.',
+    })
+  }
+  if (header.dataSize > 260) {
+    issues.push({
+      severity: 'warning' as const,
+      code: 'PD_EXTENDED_HEADER_DATA_SIZE_TOO_LARGE',
+      message: 'Extended Message Data Size shall not exceed 260 bytes.',
+    })
+  }
 
   return {
     key: 'extended-message-header',
@@ -75,15 +121,6 @@ export function explainExtendedMessageHeader(
       field('reserved', 'Reserved', 9, 1, reserved, reserved),
       field('data_size', 'Data Size', 0, 9, header.dataSize, header.dataSize),
     ],
-    issues:
-      reserved === 0
-        ? []
-        : [
-            {
-              severity: 'warning',
-              code: 'PD_EXTENDED_HEADER_RESERVED_NONZERO',
-              message: 'Extended Message Header reserved bit 9 is non-zero.',
-            },
-          ],
+    issues,
   }
 }

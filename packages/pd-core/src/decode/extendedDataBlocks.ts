@@ -13,6 +13,8 @@ type BuiltSection = {
   extraSections?: Section[]
 }
 
+const MAX_EXTENDED_MESSAGE_CHUNK_LENGTH = 26
+
 function hex(value: number, width: number): string {
   return `0x${value.toString(16).toUpperCase().padStart(width, '0')}`
 }
@@ -2755,13 +2757,14 @@ export function explainExtendedDataBlocks(
   payloadByteOffset: number,
   options: {
     rawOnly?: boolean
+    payloadIsAssembled?: boolean
   } = {},
 ): Section[] {
   const declaredDataSize = extendedHeader.dataSize
   const decodeLength = Math.min(payloadBytes.length, declaredDataSize)
   const decodeBytes = payloadBytes.subarray(0, decodeLength)
 
-  if (options.rawOnly) {
+  const buildRawSections = (): Section[] => {
     if (extendedHeader.requestChunk) {
       return [
         buildPaddingSection(payloadBytes, payloadSectionKey, payloadByteOffset)
@@ -2769,14 +2772,52 @@ export function explainExtendedDataBlocks(
       ]
     }
 
-    return [
-      buildRawExtendedDataBlock(
-        decodeBytes,
-        messageType.name,
-        payloadSectionKey,
-        payloadByteOffset,
-      ).section,
-    ]
+    const rawDataLength =
+      extendedHeader.chunked && !options.payloadIsAssembled
+        ? Math.min(
+            payloadBytes.length,
+            Math.max(
+              0,
+              Math.min(
+                MAX_EXTENDED_MESSAGE_CHUNK_LENGTH,
+                declaredDataSize -
+                  extendedHeader.chunkNumber *
+                    MAX_EXTENDED_MESSAGE_CHUNK_LENGTH,
+              ),
+            ),
+          )
+        : decodeLength
+    const rawDataBytes = payloadBytes.subarray(0, rawDataLength)
+    const paddingBytes = extendedHeader.chunked
+      ? payloadBytes.subarray(rawDataLength)
+      : new Uint8Array(0)
+    const sections: Section[] = []
+
+    if (rawDataBytes.length > 0) {
+      sections.push(
+        buildRawExtendedDataBlock(
+          rawDataBytes,
+          messageType.name,
+          payloadSectionKey,
+          payloadByteOffset,
+        ).section,
+      )
+    }
+    if (paddingBytes.length > 0) {
+      sections.push(
+        buildPaddingSection(
+          paddingBytes,
+          payloadSectionKey,
+          payloadByteOffset + rawDataLength,
+        ).section,
+      )
+    }
+
+    return sections
+  }
+
+  if (options.rawOnly) {
+    return buildRawSections()
   }
 
   let built: BuiltSection | null = null
@@ -2889,14 +2930,7 @@ export function explainExtendedDataBlocks(
       )
       break
     default:
-      return [
-        buildRawExtendedDataBlock(
-          decodeBytes,
-          messageType.name,
-          payloadSectionKey,
-          payloadByteOffset,
-        ).section,
-      ]
+      return buildRawSections()
   }
 
   const sections = [built.section]

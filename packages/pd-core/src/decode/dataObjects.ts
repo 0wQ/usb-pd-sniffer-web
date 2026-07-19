@@ -1681,6 +1681,10 @@ function usbHighestSpeedDisplay(bits: number): string {
 
 function cablePlugDisplay(bits: number): string {
   switch (bits) {
+    case 0:
+      return 'USB Type-A (Deprecated)'
+    case 1:
+      return 'USB Type-B (Deprecated)'
     case 2:
       return 'USB Type-C'
     case 3:
@@ -1693,7 +1697,7 @@ function cablePlugDisplay(bits: number): string {
 function connectorTypeDisplay(bits: number): string {
   switch (bits) {
     case 0:
-      return 'Reserved'
+      return 'Unknown (Deprecated)'
     case 1:
       return 'Reserved'
     case 2:
@@ -1715,6 +1719,8 @@ function ufpProductTypeDisplay(bits: number): string {
       return 'PDUSB Peripheral'
     case 3:
       return 'PSD'
+    case 5:
+      return 'Alternate Mode Adapter (AMA) (Deprecated)'
     default:
       return 'Reserved'
   }
@@ -1745,6 +1751,8 @@ function dfpProductTypeDisplay(bits: number): string {
       return 'PDUSB Host'
     case 3:
       return 'Power Brick'
+    case 4:
+      return 'Alternate Mode Controller (AMC) (Deprecated)'
     default:
       return 'Reserved'
   }
@@ -1768,11 +1776,11 @@ function parseDiscoverIdentityIdHeader(
 function vdoVersionDisplay(bits: number): string {
   switch (bits) {
     case 0:
-      return 'Version 1.0'
+      return 'Invalid'
     case 1:
-      return 'Version 1.1'
+      return 'Version 1.1 (Deprecated)'
     case 2:
-      return 'Version 1.2'
+      return 'Version 1.2 (Deprecated)'
     case 3:
       return 'Version 1.3'
     default:
@@ -1783,9 +1791,9 @@ function vdoVersionDisplay(bits: number): string {
 function dfpVdoVersionDisplay(bits: number): string {
   switch (bits) {
     case 0:
-      return 'Version 1.0'
+      return 'Invalid'
     case 1:
-      return 'Version 1.1'
+      return 'Version 1.1 (Deprecated)'
     case 2:
       return 'Version 1.2'
     default:
@@ -2188,7 +2196,7 @@ function buildIdHeaderVdo(
   }
 
   if (sop === 'SOP') {
-    if (info.productTypeUfp >= 4) {
+    if ([4, 6, 7].includes(info.productTypeUfp)) {
       issues.push(
         createIssue(
           'PD_ID_HEADER_UFP_PRODUCT_TYPE_RESERVED',
@@ -2196,11 +2204,27 @@ function buildIdHeaderVdo(
         ),
       )
     }
-    if (info.productTypeDfp >= 4) {
+    if (info.productTypeUfp === 5) {
+      issues.push(
+        createIssue(
+          'PD_ID_HEADER_UFP_PRODUCT_TYPE_DEPRECATED',
+          'ID Header VDO SOP Product Type (UFP) Alternate Mode Adapter is deprecated.',
+        ),
+      )
+    }
+    if (info.productTypeDfp >= 5) {
       issues.push(
         createIssue(
           'PD_ID_HEADER_DFP_PRODUCT_TYPE_RESERVED',
           'ID Header VDO SOP Product Type (DFP) uses a reserved value.',
+        ),
+      )
+    }
+    if (info.productTypeDfp === 4) {
+      issues.push(
+        createIssue(
+          'PD_ID_HEADER_DFP_PRODUCT_TYPE_DEPRECATED',
+          'ID Header VDO SOP Product Type (DFP) Alternate Mode Controller is deprecated.',
         ),
       )
     }
@@ -2228,6 +2252,14 @@ function buildIdHeaderVdo(
       createIssue(
         'PD_ID_HEADER_CONNECTOR_TYPE_RESERVED',
         'ID Header VDO Connector Type value 01b is reserved.',
+      ),
+    )
+  }
+  if (info.connectorType === 0) {
+    issues.push(
+      createIssue(
+        'PD_ID_HEADER_CONNECTOR_TYPE_DEPRECATED',
+        'ID Header VDO Connector Type Unknown is deprecated.',
       ),
     )
   }
@@ -2421,7 +2453,21 @@ function buildUfpVdo(
   const usbHighestSpeed = extractBits(raw32, 0, 3)
   const issues: DecodeIssue[] = []
 
-  if (version >= 4) {
+  if (version === 0) {
+    issues.push(
+      createIssue(
+        'PD_UFP_VDO_VERSION_INVALID',
+        'UFP VDO Version value 000b is invalid.',
+      ),
+    )
+  } else if (version === 1 || version === 2) {
+    issues.push(
+      createIssue(
+        'PD_UFP_VDO_VERSION_DEPRECATED',
+        'UFP VDO Version values 001b and 010b are deprecated.',
+      ),
+    )
+  } else if (version >= 4) {
     issues.push(
       createIssue(
         'PD_UFP_VDO_VERSION_RESERVED',
@@ -2693,7 +2739,21 @@ function buildDfpVdo(
   const portNumber = extractBits(raw32, 0, 5)
   const issues: DecodeIssue[] = []
 
-  if (version >= 3) {
+  if (version === 0) {
+    issues.push(
+      createIssue(
+        'PD_DFP_VDO_VERSION_INVALID',
+        'DFP VDO Version value 000b is invalid.',
+      ),
+    )
+  } else if (version === 1) {
+    issues.push(
+      createIssue(
+        'PD_DFP_VDO_VERSION_DEPRECATED',
+        'DFP VDO Version value 001b is deprecated.',
+      ),
+    )
+  } else if (version >= 3) {
     issues.push(
       createIssue(
         'PD_DFP_VDO_VERSION_RESERVED',
@@ -2853,8 +2913,8 @@ function buildPassiveCableVdo(
   if (plug < 2) {
     issues.push(
       createIssue(
-        'PD_PASSIVE_CABLE_VDO_PLUG_TYPE_RESERVED',
-        'Passive Cable VDO plug type values 00b and 01b are reserved.',
+        'PD_PASSIVE_CABLE_VDO_PLUG_TYPE_DEPRECATED',
+        'Passive Cable VDO USB Type-A and USB Type-B plug types are deprecated.',
       ),
     )
   }
@@ -3046,11 +3106,25 @@ function buildActiveCableVdo1(
   const usbHighestSpeed = extractBits(raw32, 0, 3)
   const issues: DecodeIssue[] = []
 
-  if (version !== 3) {
+  if (version === 0 || version === 2) {
+    issues.push(
+      createIssue(
+        'PD_ACTIVE_CABLE_VDO1_VERSION_DEPRECATED',
+        'Active Cable VDO1 Version values 000b and 010b are deprecated.',
+      ),
+    )
+  } else if (version === 1) {
+    issues.push(
+      createIssue(
+        'PD_ACTIVE_CABLE_VDO1_VERSION_INVALID',
+        'Active Cable VDO1 Version value 001b is invalid.',
+      ),
+    )
+  } else if (version >= 4) {
     issues.push(
       createIssue(
         'PD_ACTIVE_CABLE_VDO1_VERSION_RESERVED',
-        'Active Cable VDO1 Version values 000b..010b and 100b..111b are reserved.',
+        'Active Cable VDO1 Version values 100b..111b are reserved.',
       ),
     )
   }
@@ -3065,8 +3139,8 @@ function buildActiveCableVdo1(
   if (plug < 2) {
     issues.push(
       createIssue(
-        'PD_ACTIVE_CABLE_VDO1_PLUG_TYPE_RESERVED',
-        'Active Cable VDO1 plug type values 00b and 01b are reserved.',
+        'PD_ACTIVE_CABLE_VDO1_PLUG_TYPE_DEPRECATED',
+        'Active Cable VDO1 USB Type-A and USB Type-B plug types are deprecated.',
       ),
     )
   }
@@ -3137,7 +3211,16 @@ function buildActiveCableVdo1(
           extractBits(raw32, 24, 4),
         ),
         field('vdo_version', 'VDO Version', 21, 3, version, version, {
-          displayValue: version === 3 ? 'Version 1.3' : 'Reserved',
+          displayValue:
+            version === 0
+              ? 'Version 1.0 (Deprecated)'
+              : version === 1
+                ? 'Invalid'
+                : version === 2
+                  ? 'Version 1.2 (Deprecated)'
+                  : version === 3
+                    ? 'Version 1.3'
+                    : 'Reserved',
         }),
         field('reserved_20', 'Reserved', 20, 1, reserved20, reserved20),
         field(
