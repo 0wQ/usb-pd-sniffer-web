@@ -1,4 +1,5 @@
 import type { BitField, DecodeIssue, Section } from '../../types.js'
+import { readUint32Le } from '../../utils/bits.js'
 
 export type BuiltSection = {
   section: Section
@@ -135,4 +136,30 @@ export function createVendorDataObjectSection(
     issues,
     index,
   )
+}
+
+export function appendGenericVendorDataObjects(
+  sections: Section[],
+  payloadBytes: Uint8Array,
+  startIndex: number,
+  parentSectionKey: string,
+  payloadByteOffset: number,
+): void {
+  const count = Math.floor(payloadBytes.length / 4)
+
+  for (let index = startIndex; index < count; index += 1) {
+    const raw32 = readUint32Le(payloadBytes, index * 4)
+    sections.push(
+      createVendorDataObjectSection(
+        `${parentSectionKey}:object-${index}:vendor_data_object`,
+        `Vendor Data Object ${index + 1}`,
+        'vendor_data_object',
+        payloadByteOffset + index * 4,
+        raw32,
+        [field('raw32', 'Raw 32-bit Value', 0, 32, raw32, hex(raw32, 8))],
+        [],
+        index,
+      ),
+    )
+  }
 }
