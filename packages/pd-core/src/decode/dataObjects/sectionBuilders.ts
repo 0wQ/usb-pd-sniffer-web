@@ -163,3 +163,27 @@ export function appendGenericVendorDataObjects(
     )
   }
 }
+
+export function buildGenericDataObject(
+  raw32: number,
+  index: number,
+  parentSectionKey: string,
+  byteOffset: number,
+  kind: Section['kind'] = 'data_object',
+  title = `Data Object ${index + 1}`,
+  semanticKind = 'raw_data_object',
+): BuiltSection {
+  return {
+    section: createSection(
+      `${parentSectionKey}:object-${index}:${semanticKind}`,
+      kind,
+      title,
+      semanticKind,
+      byteOffset,
+      raw32,
+      [field('raw32', 'Raw 32-bit Value', 0, 32, raw32, hex(raw32, 8))],
+      [],
+      index,
+    ),
+  }
+}

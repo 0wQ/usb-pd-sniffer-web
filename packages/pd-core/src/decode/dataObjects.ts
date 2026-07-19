@@ -5,6 +5,9 @@ import type {
   StartOfPacket,
 } from '../types.js'
 import { extractBits, readUint32Le } from '../utils/bits.js'
+import { explainAlertDataObjects } from './dataObjects/alertDataObject.js'
+import { explainBatteryStatusDataObjects } from './dataObjects/batteryStatusDataObject.js'
+import { explainBistDataObjects } from './dataObjects/bistDataObject.js'
 import { explainPowerDataObjects } from './dataObjects/powerDataObjects.js'
 import {
   explainRequestDataObjects,
@@ -14,421 +17,15 @@ import {
   asciiByteDisplay,
   type BuiltSection,
   boolDisplay,
+  buildGenericDataObject,
   createIssue,
   createSection,
   field,
-  hex,
 } from './dataObjects/sectionBuilders.js'
 import { explainVendorDefinedMessage } from './dataObjects/vendorDefinedMessages/index.js'
 
 export type { RdoKind } from './dataObjects/requestDataObjects.js'
 export { classifyRdoKindFromPdo } from './dataObjects/requestDataObjects.js'
-
-function alertBatteryBitmapDisplay(raw4: number, offset: number): string {
-  if (raw4 === 0) {
-    return 'None'
-  }
-
-  const batteries: string[] = []
-  for (let bit = 0; bit < 4; bit += 1) {
-    if ((raw4 & (1 << bit)) !== 0) {
-      batteries.push(`Battery ${offset + bit}`)
-    }
-  }
-  return batteries.join(', ')
-}
-
-function alertExtendedEventTypeDisplay(raw4: number): string {
-  switch (raw4) {
-    case 0:
-      return 'Reserved'
-    case 1:
-      return 'Power State Change'
-    case 2:
-      return 'Power Button Press'
-    case 3:
-      return 'Power Button Release'
-    case 4:
-      return 'Controller Initiated Wake'
-    case 5:
-      return 'Source is about to reduce Source Capabilities'
-    default:
-      return 'Reserved'
-  }
-}
-
-function buildAlertDataObject(
-  raw32: number,
-  index: number,
-  parentSectionKey: string,
-  byteOffset: number,
-  objectCount: number,
-): BuiltSection {
-  const extendedAlertEvent = extractBits(raw32, 31, 1)
-  const ovpEvent = extractBits(raw32, 30, 1)
-  const sourceInputChangeEvent = extractBits(raw32, 29, 1)
-  const operatingConditionChange = extractBits(raw32, 28, 1)
-  const otpEvent = extractBits(raw32, 27, 1)
-  const ocpEvent = extractBits(raw32, 26, 1)
-  const batteryStatusChangeEvent = extractBits(raw32, 25, 1)
-  const reservedTypeBit = extractBits(raw32, 24, 1)
-  const fixedBatteries = extractBits(raw32, 20, 4)
-  const hotSwappableBatteries = extractBits(raw32, 16, 4)
-  const reserved = extractBits(raw32, 4, 12)
-  const extendedAlertEventType = extractBits(raw32, 0, 4)
-  const issues: DecodeIssue[] = []
-
-  if (objectCount !== 1) {
-    issues.push(
-      createIssue(
-        'PD_ALERT_OBJECT_COUNT_INVALID',
-        `Alert Message shall contain exactly one Alert Data Object; found ${objectCount}.`,
-      ),
-    )
-  }
-
-  if (reservedTypeBit !== 0) {
-    issues.push(
-      createIssue(
-        'PD_ALERT_TYPE_RESERVED_BIT_NONZERO',
-        'Alert Data Object Type of Alert reserved bit 0 (B24) is non-zero.',
-      ),
-    )
-  }
-
-  if (reserved !== 0) {
-    issues.push(
-      createIssue(
-        'PD_ALERT_RESERVED_BITS_NONZERO',
-        'Alert Data Object reserved bits 15..4 are non-zero.',
-      ),
-    )
-  }
-
-  if (extendedAlertEvent === 0 && extendedAlertEventType !== 0) {
-    issues.push(
-      createIssue(
-        'PD_ALERT_EXTENDED_TYPE_WITHOUT_FLAG',
-        'Extended Alert Event Type shall be zero when Extended Alert Event is not set.',
-      ),
-    )
-  }
-
-  if (extendedAlertEvent === 1 && extendedAlertEventType === 0) {
-    issues.push(
-      createIssue(
-        'PD_ALERT_EXTENDED_TYPE_RESERVED',
-        'Extended Alert Event Type 0000b is reserved when Extended Alert Event is set.',
-      ),
-    )
-  }
-
-  if (extendedAlertEvent === 1 && extendedAlertEventType >= 6) {
-    issues.push(
-      createIssue(
-        'PD_ALERT_EXTENDED_TYPE_RESERVED',
-        'Extended Alert Event Type values 0110b..1111b are reserved.',
-      ),
-    )
-  }
-
-  if (
-    batteryStatusChangeEvent === 0 &&
-    (fixedBatteries !== 0 || hotSwappableBatteries !== 0)
-  ) {
-    issues.push(
-      createIssue(
-        'PD_ALERT_BATTERY_BITMAP_WITHOUT_EVENT',
-        'Battery bitmaps should be zero when Battery Status Change Event is not set.',
-      ),
-    )
-  }
-
-  return {
-    section: createSection(
-      `${parentSectionKey}:object-${index}:alert_data_object`,
-      'data_object',
-      'Alert Data Object',
-      'alert_data_object',
-      byteOffset,
-      raw32,
-      [
-        field(
-          'extended_alert_event',
-          'Extended Alert Event',
-          31,
-          1,
-          extendedAlertEvent,
-          extendedAlertEvent === 1,
-          {
-            displayValue: boolDisplay(extendedAlertEvent === 1, 'Set', 'Clear'),
-          },
-        ),
-        field('ovp_event', 'OVP Event', 30, 1, ovpEvent, ovpEvent === 1, {
-          displayValue: boolDisplay(ovpEvent === 1, 'Set', 'Clear'),
-        }),
-        field(
-          'source_input_change_event',
-          'Source Input Change Event',
-          29,
-          1,
-          sourceInputChangeEvent,
-          sourceInputChangeEvent === 1,
-          {
-            displayValue: boolDisplay(
-              sourceInputChangeEvent === 1,
-              'Set',
-              'Clear',
-            ),
-          },
-        ),
-        field(
-          'operating_condition_change',
-          'Operating Condition Change',
-          28,
-          1,
-          operatingConditionChange,
-          operatingConditionChange === 1,
-          {
-            displayValue: boolDisplay(
-              operatingConditionChange === 1,
-              'Set',
-              'Clear',
-            ),
-          },
-        ),
-        field('otp_event', 'OTP Event', 27, 1, otpEvent, otpEvent === 1, {
-          displayValue: boolDisplay(otpEvent === 1, 'Set', 'Clear'),
-        }),
-        field('ocp_event', 'OCP Event', 26, 1, ocpEvent, ocpEvent === 1, {
-          displayValue: boolDisplay(ocpEvent === 1, 'Set', 'Clear'),
-          note: 'Reserved for Sink-originated Alert Messages.',
-        }),
-        field(
-          'battery_status_change_event',
-          'Battery Status Change Event',
-          25,
-          1,
-          batteryStatusChangeEvent,
-          batteryStatusChangeEvent === 1,
-          {
-            displayValue: boolDisplay(
-              batteryStatusChangeEvent === 1,
-              'Set',
-              'Clear',
-            ),
-          },
-        ),
-        field(
-          'reserved_type_bit',
-          'Reserved',
-          24,
-          1,
-          reservedTypeBit,
-          reservedTypeBit,
-        ),
-        field(
-          'fixed_batteries',
-          'Fixed Batteries',
-          20,
-          4,
-          fixedBatteries,
-          fixedBatteries,
-          {
-            displayValue: alertBatteryBitmapDisplay(fixedBatteries, 0),
-          },
-        ),
-        field(
-          'hot_swappable_batteries',
-          'Hot Swappable Batteries',
-          16,
-          4,
-          hotSwappableBatteries,
-          hotSwappableBatteries,
-          {
-            displayValue: alertBatteryBitmapDisplay(hotSwappableBatteries, 4),
-          },
-        ),
-        field('reserved', 'Reserved', 4, 12, reserved, reserved),
-        field(
-          'extended_alert_event_type',
-          'Extended Alert Event Type',
-          0,
-          4,
-          extendedAlertEventType,
-          extendedAlertEventType,
-          {
-            displayValue: alertExtendedEventTypeDisplay(extendedAlertEventType),
-          },
-        ),
-      ],
-      issues,
-      index,
-    ),
-  }
-}
-
-function batteryChargingStatusDisplay(
-  raw2: number,
-  batteryPresent: number,
-): string {
-  if (batteryPresent === 0) {
-    return 'Reserved'
-  }
-
-  switch (raw2) {
-    case 0:
-      return 'Charging'
-    case 1:
-      return 'Discharging'
-    case 2:
-      return 'Idle'
-    default:
-      return 'Reserved'
-  }
-}
-
-function buildBatteryStatusDataObject(
-  raw32: number,
-  index: number,
-  parentSectionKey: string,
-  byteOffset: number,
-  objectCount: number,
-): BuiltSection {
-  const batteryPresentCapacity = extractBits(raw32, 16, 16)
-  const reservedHigh = extractBits(raw32, 12, 4)
-  const batteryChargingStatus = extractBits(raw32, 10, 2)
-  const batteryPresent = extractBits(raw32, 9, 1)
-  const invalidBatteryReference = extractBits(raw32, 8, 1)
-  const reservedLow = extractBits(raw32, 0, 8)
-  const issues: DecodeIssue[] = []
-
-  if (objectCount !== 1) {
-    issues.push(
-      createIssue(
-        'PD_BATTERY_STATUS_OBJECT_COUNT_INVALID',
-        `Battery_Status Message shall contain exactly one Battery Status Data Object; found ${objectCount}.`,
-      ),
-    )
-  }
-
-  if (reservedHigh !== 0) {
-    issues.push(
-      createIssue(
-        'PD_BATTERY_STATUS_RESERVED_HIGH_NONZERO',
-        'Battery Status Data Object reserved bits 15..12 are non-zero.',
-      ),
-    )
-  }
-
-  if (reservedLow !== 0) {
-    issues.push(
-      createIssue(
-        'PD_BATTERY_STATUS_RESERVED_LOW_NONZERO',
-        'Battery Status Data Object reserved bits 7..0 are non-zero.',
-      ),
-    )
-  }
-
-  if (batteryPresent === 0 && batteryChargingStatus !== 0) {
-    issues.push(
-      createIssue(
-        'PD_BATTERY_STATUS_CHARGING_STATUS_WITHOUT_BATTERY',
-        'Battery Charging Status shall be zero when Battery Present is zero.',
-      ),
-    )
-  }
-
-  if (batteryPresent === 1 && batteryChargingStatus === 0b11) {
-    issues.push(
-      createIssue(
-        'PD_BATTERY_STATUS_CHARGING_STATUS_RESERVED',
-        'Battery Charging Status value 11b is reserved when Battery Present is set.',
-      ),
-    )
-  }
-
-  const capacityDisplay =
-    batteryPresentCapacity === 0xffff
-      ? 'Unknown'
-      : `${(batteryPresentCapacity / 10).toFixed(1)} Wh`
-
-  return {
-    section: createSection(
-      `${parentSectionKey}:object-${index}:battery_status_data_object`,
-      'data_object',
-      'Battery Status Data Object',
-      'battery_status_data_object',
-      byteOffset,
-      raw32,
-      [
-        field(
-          'battery_present_capacity',
-          'Battery Present Capacity',
-          16,
-          16,
-          batteryPresentCapacity,
-          batteryPresentCapacity,
-          {
-            displayValue: capacityDisplay,
-            note:
-              batteryPresentCapacity === 0xffff
-                ? '0xFFFF indicates Battery SoC unknown.'
-                : 'State of Charge in 0.1 Wh increments.',
-          },
-        ),
-        field('reserved_high', 'Reserved', 12, 4, reservedHigh, reservedHigh),
-        field(
-          'battery_charging_status',
-          'Battery Charging Status',
-          10,
-          2,
-          batteryChargingStatus,
-          batteryChargingStatus,
-          {
-            displayValue: batteryChargingStatusDisplay(
-              batteryChargingStatus,
-              batteryPresent,
-            ),
-          },
-        ),
-        field(
-          'battery_present',
-          'Battery Present',
-          9,
-          1,
-          batteryPresent,
-          batteryPresent === 1,
-          {
-            displayValue: boolDisplay(
-              batteryPresent === 1,
-              'Present',
-              'Not Present',
-            ),
-          },
-        ),
-        field(
-          'invalid_battery_reference',
-          'Invalid Battery Reference',
-          8,
-          1,
-          invalidBatteryReference,
-          invalidBatteryReference === 1,
-          {
-            displayValue: boolDisplay(
-              invalidBatteryReference === 1,
-              'Invalid',
-              'Valid',
-            ),
-          },
-        ),
-        field('reserved_low', 'Reserved', 0, 8, reservedLow, reservedLow),
-      ],
-      issues,
-      index,
-    ),
-  }
-}
 
 function enterUsbModeDisplay(raw3: number): string {
   switch (raw3) {
@@ -1115,112 +712,6 @@ function buildEprModeDataObject(
   }
 }
 
-function bistModeDisplay(raw4: number): string {
-  switch (raw4) {
-    case 0b0101:
-      return 'BIST Carrier Mode'
-    case 0b1000:
-      return 'BIST Test Data'
-    case 0b1001:
-      return 'BIST Shared Test Mode Entry'
-    case 0b1010:
-      return 'BIST Shared Test Mode Exit'
-    default:
-      return 'Reserved'
-  }
-}
-
-function buildBistDataObject(
-  raw32: number,
-  index: number,
-  parentSectionKey: string,
-  byteOffset: number,
-  objectCount: number,
-): BuiltSection {
-  const bistMode = extractBits(raw32, 28, 4)
-  const reserved = extractBits(raw32, 0, 28)
-  const issues: DecodeIssue[] = []
-
-  if (![0b0101, 0b1000, 0b1001, 0b1010].includes(bistMode)) {
-    issues.push(
-      createIssue(
-        'PD_BIST_MODE_RESERVED',
-        'BIST Data Object mode uses a reserved value.',
-      ),
-    )
-  }
-
-  if (reserved !== 0) {
-    issues.push(
-      createIssue(
-        'PD_BIST_RESERVED_BITS_NONZERO',
-        'BIST Data Object reserved bits 27..0 are non-zero.',
-      ),
-    )
-  }
-
-  if (bistMode === 0b1000) {
-    if (objectCount !== 7) {
-      issues.push(
-        createIssue(
-          'PD_BIST_TEST_DATA_OBJECT_COUNT_INVALID',
-          `BIST Test Data mode shall use 7 Data Objects total; found ${objectCount}.`,
-        ),
-      )
-    }
-  } else if (objectCount !== 1) {
-    issues.push(
-      createIssue(
-        'PD_BIST_OBJECT_COUNT_INVALID',
-        `BIST mode ${bistModeDisplay(bistMode)} shall use exactly 1 Data Object; found ${objectCount}.`,
-      ),
-    )
-  }
-
-  return {
-    section: createSection(
-      `${parentSectionKey}:object-${index}:bist_data_object`,
-      'data_object',
-      'BIST Data Object',
-      'bist_data_object',
-      byteOffset,
-      raw32,
-      [
-        field('bist_mode', 'BIST Mode', 28, 4, bistMode, bistMode, {
-          displayValue: bistModeDisplay(bistMode),
-        }),
-        field('reserved', 'Reserved', 0, 28, reserved, reserved),
-      ],
-      issues,
-      index,
-    ),
-  }
-}
-
-function buildGenericObject(
-  raw32: number,
-  index: number,
-  parentSectionKey: string,
-  byteOffset: number,
-  kind: Section['kind'] = 'data_object',
-  title = `Data Object ${index + 1}`,
-  semanticKind = 'raw_data_object',
-): BuiltSection {
-  return {
-    section: createSection(
-      `${parentSectionKey}:object-${index}:${semanticKind}`,
-      kind,
-      title,
-      semanticKind,
-      byteOffset,
-      raw32,
-      [field('raw32', 'Raw 32-bit Value', 0, 32, raw32, hex(raw32, 8))],
-      [],
-      index,
-    ),
-  }
-}
-
 function appendTrailingRawPayload(
   sections: Section[],
   payloadBytes: Uint8Array,
@@ -1313,6 +804,45 @@ export function explainDataObjects(
     )
   }
 
+  if (messageType.name === 'BIST') {
+    return appendTrailingRawPayload(
+      explainBistDataObjects(
+        payloadBytes.subarray(0, count * 4),
+        payloadSectionKey,
+        payloadByteOffset,
+      ),
+      payloadBytes,
+      payloadSectionKey,
+      payloadByteOffset,
+    )
+  }
+
+  if (messageType.name === 'Battery_Status') {
+    return appendTrailingRawPayload(
+      explainBatteryStatusDataObjects(
+        payloadBytes.subarray(0, count * 4),
+        payloadSectionKey,
+        payloadByteOffset,
+      ),
+      payloadBytes,
+      payloadSectionKey,
+      payloadByteOffset,
+    )
+  }
+
+  if (messageType.name === 'Alert') {
+    return appendTrailingRawPayload(
+      explainAlertDataObjects(
+        payloadBytes.subarray(0, count * 4),
+        payloadSectionKey,
+        payloadByteOffset,
+      ),
+      payloadBytes,
+      payloadSectionKey,
+      payloadByteOffset,
+    )
+  }
+
   const sections: Section[] = []
 
   for (let index = 0; index < count; index += 1) {
@@ -1321,25 +851,7 @@ export function explainDataObjects(
 
     let built: BuiltSection
 
-    if (messageType.name === 'BIST' && index === 0) {
-      built = buildBistDataObject(
-        raw32,
-        index,
-        payloadSectionKey,
-        byteOffset,
-        count,
-      )
-    } else if (messageType.name === 'BIST') {
-      built = buildGenericObject(
-        raw32,
-        index,
-        payloadSectionKey,
-        byteOffset,
-        'data_object',
-        `BIST Test Data Object ${index + 1}`,
-        'bist_test_data_object',
-      )
-    } else if (messageType.name === 'Enter_USB' && index === 0) {
+    if (messageType.name === 'Enter_USB' && index === 0) {
       built = buildEnterUsbDataObject(
         raw32,
         index,
@@ -1386,24 +898,13 @@ export function explainDataObjects(
         byteOffset,
         count,
       )
-    } else if (messageType.name === 'Battery_Status' && index === 0) {
-      built = buildBatteryStatusDataObject(
-        raw32,
-        index,
-        payloadSectionKey,
-        byteOffset,
-        count,
-      )
-    } else if (messageType.name === 'Alert' && index === 0) {
-      built = buildAlertDataObject(
-        raw32,
-        index,
-        payloadSectionKey,
-        byteOffset,
-        count,
-      )
     } else {
-      built = buildGenericObject(raw32, index, payloadSectionKey, byteOffset)
+      built = buildGenericDataObject(
+        raw32,
+        index,
+        payloadSectionKey,
+        byteOffset,
+      )
     }
 
     sections.push(built.section)
