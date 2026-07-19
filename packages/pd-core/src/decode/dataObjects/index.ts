@@ -1,23 +1,23 @@
-import type { MessageTypeInfo, Section, StartOfPacket } from '../types.js'
-import { readUint32Le } from '../utils/bits.js'
-import { explainAlertDataObjects } from './dataObjects/alertDataObject.js'
-import { explainBatteryStatusDataObjects } from './dataObjects/batteryStatusDataObject.js'
-import { explainBistDataObjects } from './dataObjects/bistDataObject.js'
-import { explainCountryCodeDataObjects } from './dataObjects/countryCodeDataObject.js'
-import { explainEnterUsbDataObjects } from './dataObjects/enterUsbDataObject.js'
-import { explainEprModeDataObjects } from './dataObjects/eprModeDataObject.js'
-import { explainPowerDataObjects } from './dataObjects/powerDataObjects.js'
+import type { MessageTypeInfo, Section, StartOfPacket } from '../../types.js'
+import { readUint32Le } from '../../utils/bits.js'
+import { explainAlertDataObjects } from './alertDataObject.js'
+import { explainBatteryStatusDataObjects } from './batteryStatusDataObject.js'
+import { explainBistDataObjects } from './bistDataObject.js'
+import { explainCountryCodeDataObjects } from './countryCodeDataObject.js'
+import { explainEnterUsbDataObjects } from './enterUsbDataObject.js'
+import { explainEprModeDataObjects } from './eprModeDataObject.js'
+import { explainPowerDataObjects } from './powerDataObjects.js'
 import {
   explainRequestDataObjects,
   type RdoKind,
-} from './dataObjects/requestDataObjects.js'
-import { explainRevisionDataObjects } from './dataObjects/revisionMessageDataObject.js'
-import { buildGenericDataObject } from './dataObjects/sectionBuilders.js'
-import { explainSourceInfoDataObjects } from './dataObjects/sourceInfoDataObjects.js'
-import { explainVendorDefinedMessage } from './dataObjects/vendorDefinedMessages/index.js'
+} from './requestDataObjects.js'
+import { explainRevisionDataObjects } from './revisionMessageDataObject.js'
+import { buildGenericDataObject } from './sectionBuilders.js'
+import { explainSourceInfoDataObjects } from './sourceInfoDataObjects.js'
+import { explainVendorDefinedMessage } from './vendorDefinedMessages/index.js'
 
-export type { RdoKind } from './dataObjects/requestDataObjects.js'
-export { classifyRdoKindFromPdo } from './dataObjects/requestDataObjects.js'
+export type { RdoKind } from './requestDataObjects.js'
+export { classifyRdoKindFromPdo } from './requestDataObjects.js'
 
 function appendTrailingRawPayload(
   sections: Section[],

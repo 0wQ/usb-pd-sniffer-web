@@ -20,7 +20,7 @@ import {
   classifyRdoKindFromPdo,
   explainDataObjects,
   type RdoKind,
-} from './dataObjects.js'
+} from './dataObjects/index.js'
 import { explainExtendedDataBlocks } from './extendedDataBlocks.js'
 import {
   decodeExtendedMessageHeader,

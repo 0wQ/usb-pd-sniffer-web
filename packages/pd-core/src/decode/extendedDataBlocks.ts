@@ -6,7 +6,7 @@ import type {
   Section,
   StartOfPacket,
 } from '../types.js'
-import { explainDataObjects } from './dataObjects.js'
+import { explainDataObjects } from './dataObjects/index.js'
 
 type BuiltSection = {
   section: Section
