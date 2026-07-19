@@ -100,6 +100,11 @@ const SendPdDialog = ({
       }
     }
   }, [hasMultilinePayload, hexPayload, mode, sop])
+  const previewIssueCount =
+    preview?.result?.decoded.sections.reduce(
+      (count, section) => count + section.issues.length,
+      preview.result.decoded.issues.length,
+    ) ?? 0
 
   useEffect(() => {
     setTxDialogDraft({ mode, sop, hexPayload })
@@ -215,7 +220,7 @@ const SendPdDialog = ({
     }
 
     const editedBytes = applyFieldRawValue(
-      preview.result.frame.bytes,
+      preview.result.frame.messageBytes,
       section,
       field,
       rawValue,
@@ -233,17 +238,17 @@ const SendPdDialog = ({
       case 'SOP':
         setMode('raw')
         setSop('SOP')
-        setHexPayload(hexBytes(selectedFrame.bytes))
+        setHexPayload(hexBytes(selectedFrame.messageBytes))
         return
       case 'SOP_PRIME':
         setMode('raw')
         setSop('SOP_PRIME')
-        setHexPayload(hexBytes(selectedFrame.bytes))
+        setHexPayload(hexBytes(selectedFrame.messageBytes))
         return
       case 'SOP_DPRIME':
         setMode('raw')
         setSop('SOP_DPRIME')
-        setHexPayload(hexBytes(selectedFrame.bytes))
+        setHexPayload(hexBytes(selectedFrame.messageBytes))
         return
       default:
         toast.error(
@@ -473,7 +478,7 @@ const SendPdDialog = ({
                   <div className="text-sm font-medium">Local Preview</div>
                   {preview?.result && (
                     <div className="font-mono text-xs text-base-content/65">
-                      {preview.result.frame.bytes.length} B
+                      {preview.result.frame.messageBytes.length} B
                     </div>
                   )}
                 </div>
@@ -520,7 +525,7 @@ const SendPdDialog = ({
                           Payload
                         </div>
                         <div className="mt-1 font-mono text-xs">
-                          {preview.result.frame.bytes.length} B
+                          {preview.result.frame.messageBytes.length} B
                         </div>
                       </div>
                       <div className="rounded-md border border-base-300 bg-base-100 px-3 py-2">
@@ -539,7 +544,7 @@ const SendPdDialog = ({
                       </div>
                       <RawPacketView
                         className="mt-2"
-                        bytes={preview.result.frame.bytes}
+                        bytes={preview.result.frame.messageBytes}
                         sections={preview.result.decoded.sections}
                       />
                       <div className="mt-2 text-[11px] text-base-content/55">
@@ -552,14 +557,24 @@ const SendPdDialog = ({
                       <div className="text-[10px] uppercase tracking-[0.14em] text-base-content/45">
                         Parser Issues
                       </div>
-                      {preview.result.decoded.issues.length === 0 ? (
+                      {previewIssueCount === 0 ? (
                         <div className="mt-1 text-xs text-success">
                           No parser issues.
                         </div>
                       ) : (
-                        <div className="mt-2">
-                          <IssueList issues={preview.result.decoded.issues} />
-                        </div>
+                        <>
+                          <div className="mt-1 text-xs text-warning">
+                            {previewIssueCount}{' '}
+                            {previewIssueCount === 1 ? 'issue' : 'issues'}.
+                          </div>
+                          {preview.result.decoded.issues.length > 0 && (
+                            <div className="mt-2">
+                              <IssueList
+                                issues={preview.result.decoded.issues}
+                              />
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
 

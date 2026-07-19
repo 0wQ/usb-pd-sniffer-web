@@ -138,8 +138,6 @@ function createSection(
   kind: Section['kind'],
   title: string,
   semanticKind: string,
-  _parentSectionKey: string,
-  _depth: number,
   byteOffset: number,
   raw32: number,
   fields: BitField[],
@@ -421,8 +419,6 @@ function buildFixedPowerObject(
       'data_object',
       powerObjectTitle(titleBase, index, 'Fixed Supply'),
       `${role}_fixed_supply_pdo`,
-      parentSectionKey,
-      1,
       byteOffset,
       raw32,
       fields,
@@ -450,8 +446,6 @@ function buildBatteryPowerObject(
       'data_object',
       powerObjectTitle(titleBase, index, 'Battery'),
       `${role}_battery_pdo`,
-      parentSectionKey,
-      1,
       byteOffset,
       raw32,
       [
@@ -520,8 +514,6 @@ function buildVariablePowerObject(
       'data_object',
       powerObjectTitle(titleBase, index, 'Variable Supply'),
       `${role}_variable_supply_pdo`,
-      parentSectionKey,
-      1,
       byteOffset,
       raw32,
       [
@@ -604,8 +596,6 @@ function buildPpsPowerObject(
       'data_object',
       powerObjectTitle(titleBase, index, 'SPR PPS APDO'),
       `${role}_spr_pps_apdo`,
-      parentSectionKey,
-      1,
       byteOffset,
       raw32,
       [
@@ -722,8 +712,6 @@ function buildSprAvsPowerObject(
         'data_object',
         powerObjectTitle(titleBase, index, 'SPR AVS APDO'),
         'source_spr_avs_apdo',
-        parentSectionKey,
-        1,
         byteOffset,
         raw32,
         [
@@ -793,8 +781,6 @@ function buildSprAvsPowerObject(
       'data_object',
       powerObjectTitle(titleBase, index, 'SPR AVS APDO'),
       'sink_spr_avs_apdo',
-      parentSectionKey,
-      1,
       byteOffset,
       raw32,
       [
@@ -864,8 +850,6 @@ function buildEprAvsPowerObject(
         'data_object',
         powerObjectTitle(titleBase, index, 'EPR AVS APDO'),
         'source_epr_avs_apdo',
-        parentSectionKey,
-        1,
         byteOffset,
         raw32,
         [
@@ -936,8 +920,6 @@ function buildEprAvsPowerObject(
       'data_object',
       powerObjectTitle(titleBase, index, 'EPR AVS APDO'),
       'sink_epr_avs_apdo',
-      parentSectionKey,
-      1,
       byteOffset,
       raw32,
       [
@@ -995,8 +977,6 @@ function buildReservedApdo(
       'data_object',
       powerObjectTitle(titleBase, index, 'Reserved APDO'),
       'reserved_apdo',
-      parentSectionKey,
-      1,
       byteOffset,
       raw32,
       [
@@ -1030,8 +1010,6 @@ function buildEmptyPdoObject(
       'data_object',
       powerObjectTitle(titleBase, index, 'Empty PDO'),
       'empty_pdo',
-      parentSectionKey,
-      1,
       byteOffset,
       raw32,
       [
@@ -1543,8 +1521,6 @@ function buildRequestObject(
       'request_data_object',
       buildRequestSectionTitle(messageTypeName, options.resolvedKind ?? null),
       buildRequestSemanticKind(messageTypeName, options.resolvedKind ?? null),
-      parentSectionKey,
-      1,
       byteOffset,
       raw32,
       buildRdoFields(raw32, options.resolvedKind ?? null),
@@ -1973,8 +1949,6 @@ function buildVdmHeaderObject(
         'vdm_header',
         'VDM Header',
         'unstructured_vdm_header',
-        parentSectionKey,
-        1,
         byteOffset,
         raw32,
         [
@@ -2081,8 +2055,6 @@ function buildVdmHeaderObject(
       'vdm_header',
       'VDM Header',
       'structured_vdm_header',
-      parentSectionKey,
-      1,
       byteOffset,
       raw32,
       [
@@ -2154,7 +2126,6 @@ function createVendorSection(
   key: string,
   title: string,
   semanticKind: string,
-  parentSectionKey: string,
   byteOffset: number,
   raw32: number,
   fields: BitField[],
@@ -2166,8 +2137,6 @@ function createVendorSection(
     'vendor_data_object',
     title,
     semanticKind,
-    parentSectionKey,
-    1,
     byteOffset,
     raw32,
     fields,
@@ -2276,7 +2245,6 @@ function buildIdHeaderVdo(
       `${parentSectionKey}:object-${index}:id-header-vdo`,
       'ID Header VDO',
       'discover_identity_id_header_vdo',
-      parentSectionKey,
       byteOffset,
       raw32,
       [
@@ -2391,7 +2359,6 @@ function buildCertStatVdo(
       `${parentSectionKey}:object-${index}:cert-stat-vdo`,
       'Cert Stat VDO',
       'discover_identity_cert_stat_vdo',
-      parentSectionKey,
       byteOffset,
       raw32,
       [field('xid', 'XID', 0, 32, raw32, hex(raw32, 8))],
@@ -2415,7 +2382,6 @@ function buildProductVdo(
       `${parentSectionKey}:object-${index}:product-vdo`,
       'Product VDO',
       'discover_identity_product_vdo',
-      parentSectionKey,
       byteOffset,
       raw32,
       [
@@ -2547,7 +2513,6 @@ function buildUfpVdo(
       `${parentSectionKey}:object-${index}:ufp-vdo`,
       'UFP VDO',
       'discover_identity_ufp_vdo',
-      parentSectionKey,
       byteOffset,
       raw32,
       [
@@ -2799,7 +2764,6 @@ function buildDfpVdo(
       `${parentSectionKey}:object-${index}:dfp-vdo`,
       'DFP VDO',
       'discover_identity_dfp_vdo',
-      parentSectionKey,
       byteOffset,
       raw32,
       [
@@ -2980,7 +2944,6 @@ function buildPassiveCableVdo(
       `${parentSectionKey}:object-${index}:passive-cable-vdo`,
       'Passive Cable VDO',
       'discover_identity_passive_cable_vdo',
-      parentSectionKey,
       byteOffset,
       raw32,
       [
@@ -3190,7 +3153,6 @@ function buildActiveCableVdo1(
       `${parentSectionKey}:object-${index}:active-cable-vdo1`,
       'Active Cable VDO1',
       'discover_identity_active_cable_vdo1',
-      parentSectionKey,
       byteOffset,
       raw32,
       [
@@ -3442,7 +3404,6 @@ function buildActiveCableVdo2(
       `${parentSectionKey}:object-${index}:active-cable-vdo2`,
       'Active Cable VDO2',
       'discover_identity_active_cable_vdo2',
-      parentSectionKey,
       byteOffset,
       raw32,
       [
@@ -3701,7 +3662,6 @@ function buildVpdVdo(
       `${parentSectionKey}:object-${index}:vpd-vdo`,
       'VPD VDO',
       'discover_identity_vpd_vdo',
-      parentSectionKey,
       byteOffset,
       raw32,
       [
@@ -3841,7 +3801,6 @@ function buildDrdPadObject(
       `${parentSectionKey}:object-${index}:drd-pad-object`,
       'DRD Pad Object',
       'discover_identity_drd_pad_object',
-      parentSectionKey,
       byteOffset,
       raw32,
       [
@@ -3882,7 +3841,6 @@ function buildDiscoverSvidVdo(
       `${parentSectionKey}:object-${index}:discover-svids-vdo`,
       `Discover SVIDs VDO ${index}`,
       'discover_svids_vdo',
-      parentSectionKey,
       byteOffset,
       raw32,
       [
@@ -3913,7 +3871,6 @@ function buildDiscoverModeVdo(
       `${parentSectionKey}:object-${index}:discover-mode-vdo`,
       `Mode VDO ${index}`,
       'discover_modes_vdo',
-      parentSectionKey,
       byteOffset,
       raw32,
       [
@@ -3940,7 +3897,6 @@ function buildAlternateModeCommandVdo(
       `${parentSectionKey}:object-${index}:${semanticKind}`,
       title,
       semanticKind,
-      parentSectionKey,
       byteOffset,
       raw32,
       [
@@ -3999,7 +3955,6 @@ function buildDisplayPortModeVdo(
       `${parentSectionKey}:object-${index}:displayport-mode-vdo`,
       `DisplayPort Mode VDO ${index}`,
       'displayport_mode_vdo',
-      parentSectionKey,
       byteOffset,
       raw32,
       [
@@ -4091,7 +4046,6 @@ function buildDisplayPortStatusVdo(
       `${parentSectionKey}:object-${index}:displayport-status-vdo`,
       'DisplayPort Status VDO',
       'displayport_status_vdo',
-      parentSectionKey,
       byteOffset,
       raw32,
       [
@@ -4304,8 +4258,6 @@ function buildAlertDataObject(
       'data_object',
       'Alert Data Object',
       'alert_data_object',
-      parentSectionKey,
-      1,
       byteOffset,
       raw32,
       [
@@ -4515,8 +4467,6 @@ function buildBatteryStatusDataObject(
       'data_object',
       'Battery Status Data Object',
       'battery_status_data_object',
-      parentSectionKey,
-      1,
       byteOffset,
       raw32,
       [
@@ -4727,8 +4677,6 @@ function buildEnterUsbDataObject(
       'data_object',
       'Enter USB Data Object',
       'enter_usb_data_object',
-      parentSectionKey,
-      1,
       byteOffset,
       raw32,
       [
@@ -4847,8 +4795,6 @@ function buildSourceInfoDataObject1(
       'data_object',
       'Source Information Data Object 1',
       'source_info_data_object_1',
-      parentSectionKey,
-      1,
       byteOffset,
       raw32,
       [
@@ -4936,8 +4882,6 @@ function buildSourceInfoDataObject2(
       'data_object',
       'Source Information Data Object 2',
       'source_info_data_object_2',
-      parentSectionKey,
-      1,
       byteOffset,
       raw32,
       [
@@ -5022,8 +4966,6 @@ function buildRevisionDataObject(
       'data_object',
       'Revision Message Data Object',
       'revision_message_data_object',
-      parentSectionKey,
-      1,
       byteOffset,
       raw32,
       [
@@ -5115,8 +5057,6 @@ function buildGetCountryInfoDataObject(
       'data_object',
       'Country Code Data Object',
       'country_code_data_object',
-      parentSectionKey,
-      1,
       byteOffset,
       raw32,
       [
@@ -5260,8 +5200,6 @@ function buildEprModeDataObject(
       'data_object',
       'EPR Mode Data Object',
       'epr_mode_data_object',
-      parentSectionKey,
-      1,
       byteOffset,
       raw32,
       [
@@ -5353,8 +5291,6 @@ function buildBistDataObject(
       'data_object',
       'BIST Data Object',
       'bist_data_object',
-      parentSectionKey,
-      1,
       byteOffset,
       raw32,
       [
@@ -6104,8 +6040,6 @@ function buildGenericObject(
       kind,
       title,
       semanticKind,
-      parentSectionKey,
-      1,
       byteOffset,
       raw32,
       [field('raw32', 'Raw 32-bit Value', 0, 32, raw32, hex(raw32, 8))],
@@ -6312,18 +6246,6 @@ export function explainDataObjects(
         'data_object',
         `Unexpected EPR Request Data Object ${index + 1}`,
         'unexpected_epr_request_data_object',
-      )
-    } else if (messageType.name === 'Vendor_Defined' && index === 0) {
-      built = buildVdmHeaderObject(raw32, index, payloadSectionKey, byteOffset)
-    } else if (messageType.name === 'Vendor_Defined') {
-      built = buildGenericObject(
-        raw32,
-        index,
-        payloadSectionKey,
-        byteOffset,
-        'vendor_data_object',
-        `Vendor Data Object ${index + 1}`,
-        'vendor_data_object',
       )
     } else {
       built = buildGenericObject(raw32, index, payloadSectionKey, byteOffset)

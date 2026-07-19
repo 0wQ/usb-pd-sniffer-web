@@ -1,18 +1,23 @@
-// @ts-nocheck
-import { describe, expect, test } from 'vitest'
+import { describe, expect, expectTypeOf, test } from 'vitest'
+import type { MessageFrame, MessagePacket } from '../types.js'
 import { calculatePdCrc32 } from '../utils/pdCrc32.js'
 import { decodeMessage, decodePacket } from './message.js'
 
 describe('decodePacket', () => {
+  test('keeps packet and CRC-free frame inputs structurally distinct', () => {
+    expectTypeOf<MessagePacket>().not.toMatchTypeOf<MessageFrame>()
+    expectTypeOf<MessageFrame>().not.toMatchTypeOf<MessagePacket>()
+  })
+
   test('splits CRC32 from the packet tail instead of truncating by header-derived length', () => {
     const decoded = decodePacket({
       sop: 'SOP',
-      bytes: Uint8Array.from([
+      packetBytes: Uint8Array.from([
         0xb1, 0x9e, 0x00, 0x8c, 0x00, 0x00, 0xe6, 0x1a, 0x4d, 0xe6,
       ]),
     })
 
-    expect(Array.from(decoded.frame.bytes)).toEqual([
+    expect(Array.from(decoded.frame.messageBytes)).toEqual([
       0xb1, 0x9e, 0x00, 0x8c, 0x00, 0x00,
     ])
     expect(decoded.packetLayout.actualMessageByteLength).toBe(6)
@@ -22,7 +27,7 @@ describe('decodePacket', () => {
     expect(decoded.crc.expectedRaw32).toBe(0xe64d1ae6)
     expect(decoded.crc.status).toBe('present')
     expect(decoded.crc.checkStatus).toBe('valid')
-    expect(calculatePdCrc32(decoded.frame.bytes)).toBe(0xe64d1ae6)
+    expect(calculatePdCrc32(decoded.frame.messageBytes)).toBe(0xe64d1ae6)
     expect(
       decoded.issues.some((issue) => issue.code === 'PD_CRC32_INVALID'),
     ).toBe(false)
@@ -36,12 +41,12 @@ describe('decodePacket', () => {
   test('reports invalid CRC32 without changing packet tail splitting', () => {
     const decoded = decodePacket({
       sop: 'SOP',
-      bytes: Uint8Array.from([
+      packetBytes: Uint8Array.from([
         0xb1, 0x9e, 0x00, 0x8c, 0x00, 0x00, 0xe7, 0x1a, 0x4d, 0xe6,
       ]),
     })
 
-    expect(Array.from(decoded.frame.bytes)).toEqual([
+    expect(Array.from(decoded.frame.messageBytes)).toEqual([
       0xb1, 0x9e, 0x00, 0x8c, 0x00, 0x00,
     ])
     expect(decoded.crc.raw32).toBe(0xe64d1ae7)
@@ -50,7 +55,7 @@ describe('decodePacket', () => {
     expect(decoded.crc.checkStatus).toBe('invalid')
     expect(
       decoded.issues.some((issue) => issue.code === 'PD_CRC32_INVALID'),
-    ).toBe(true)
+    ).toBe(false)
     expect(
       decoded.sections
         .find((section) => section.title === 'CRC32')
@@ -61,7 +66,7 @@ describe('decodePacket', () => {
   test('accepts the USB PD R3.2 v1.2 Active Cable VDO1 Version 1.3', () => {
     const decoded = decodePacket({
       sop: 'SOP_PRIME',
-      bytes: Uint8Array.from([
+      packetBytes: Uint8Array.from([
         0x8f, 0x61, 0x41, 0xa0, 0x00, 0xff, 0x34, 0x12, 0x60, 0x20, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30, 0x68, 0x00, 0x00, 0x00,
         0x00, 0x00, 0xe5, 0x53, 0x25, 0x70,
@@ -110,7 +115,7 @@ describe('decodePacket', () => {
   test('classifies Discover Identity UFP and DFP VDO versions per R3.2 v1.2', () => {
     const decoded = decodeMessage({
       sop: 'SOP',
-      bytes: Uint8Array.from([
+      messageBytes: Uint8Array.from([
         0x8f, 0x71, 0x41, 0xa0, 0x00, 0xff, 0x34, 0x12, 0x00, 0x11, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -154,7 +159,7 @@ describe('decodePacket', () => {
     const decodeSopVersions = (ufpVersion: number, dfpVersion: number) =>
       decodeMessage({
         sop: 'SOP',
-        bytes: Uint8Array.from([
+        messageBytes: Uint8Array.from([
           0x8f,
           0x71,
           0x41,
@@ -244,7 +249,7 @@ describe('decodePacket', () => {
     for (let version = 0; version < 8; version += 1) {
       const decoded = decodeMessage({
         sop: 'SOP_PRIME',
-        bytes: Uint8Array.from([
+        messageBytes: Uint8Array.from([
           0x8f,
           0x61,
           0x41,
@@ -288,21 +293,21 @@ describe('decodePacket', () => {
   test('classifies deprecated Discover Identity ID Header and passive cable values', () => {
     const idHeader = decodeMessage({
       sop: 'SOP',
-      bytes: Uint8Array.from([
+      messageBytes: Uint8Array.from([
         0x8f, 0x41, 0x41, 0xa0, 0x00, 0xff, 0x34, 0x12, 0x00, 0x2a, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
       ]),
     }).sections.find((section) => section.title === 'ID Header VDO')
     const passiveCable = decodeMessage({
       sop: 'SOP_PRIME',
-      bytes: Uint8Array.from([
+      messageBytes: Uint8Array.from([
         0x8f, 0x51, 0x41, 0xa0, 0x00, 0xff, 0x34, 0x12, 0x00, 0x18, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00,
       ]),
     }).sections.find((section) => section.title === 'Passive Cable VDO')
     const activeCable = decodeMessage({
       sop: 'SOP_PRIME',
-      bytes: Uint8Array.from([
+      messageBytes: Uint8Array.from([
         0x8f, 0x61, 0x41, 0xa0, 0x00, 0xff, 0x34, 0x12, 0x00, 0x20, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x60, 0x00, 0x00, 0x00,
         0x00, 0x00,
@@ -356,7 +361,7 @@ describe('decodePacket', () => {
   test('decodes USB PD R3.2 v1.2 Source_Info SIDO1 and DPS SIDO2', () => {
     const decoded = decodePacket({
       sop: 'SOP',
-      bytes: Uint8Array.from([
+      packetBytes: Uint8Array.from([
         0x8b, 0x20, 0x64, 0x64, 0x8c, 0x00, 0x78, 0x30, 0x02, 0x40, 0xc6, 0x44,
         0xbe, 0xf3,
       ]),
@@ -392,7 +397,7 @@ describe('decodePacket', () => {
   test('accepts USB PD R3.2 v1.2 Alert Extended Event Type 5', () => {
     const decoded = decodePacket({
       sop: 'SOP',
-      bytes: Uint8Array.from([
+      packetBytes: Uint8Array.from([
         0x86, 0x10, 0x05, 0x00, 0x00, 0x80, 0xf6, 0xb2, 0xad, 0xc3,
       ]),
     })
@@ -418,7 +423,7 @@ describe('decodePacket', () => {
   test('labels USB PD R3.2 v1.2 EPR AVS Sink PDO low byte as Maximum Power', () => {
     const decoded = decodePacket({
       sop: 'SOP',
-      bytes: Uint8Array.from([
+      packetBytes: Uint8Array.from([
         0x84, 0x10, 0x8c, 0x96, 0xc0, 0xd3, 0x0e, 0xf9, 0x32, 0xde,
       ]),
     })
@@ -441,7 +446,7 @@ describe('decodePacket', () => {
   test('does not emit empty generic payload container sections for Extended_Control', () => {
     const decoded = decodePacket({
       sop: 'SOP',
-      bytes: Uint8Array.from([
+      packetBytes: Uint8Array.from([
         0xb0, 0x92, 0x02, 0x80, 0x03, 0x00, 0x6e, 0x46, 0xdf, 0x60,
       ]),
     })
@@ -464,7 +469,7 @@ describe('decodePacket', () => {
   test('uses Data Size instead of NDO length for unchunked extended messages', () => {
     const decoded = decodePacket({
       sop: 'SOP',
-      bytes: Uint8Array.from([
+      packetBytes: Uint8Array.from([
         0xa4, 0x90, 0x01, 0x00, 0x01, 0x4e, 0x75, 0x00, 0x88,
       ]),
     })
@@ -487,7 +492,7 @@ describe('decodePacket', () => {
   test('shows Security_Request as a dedicated raw SRQDB section without assemble requirements', () => {
     const decoded = decodeMessage({
       sop: 'SOP',
-      bytes: Uint8Array.from([0xa8, 0x90, 0x03, 0x00, 0x11, 0x22, 0x33]),
+      messageBytes: Uint8Array.from([0xa8, 0x90, 0x03, 0x00, 0x11, 0x22, 0x33]),
     })
 
     expect(decoded.messageType.name).toBe('Security_Request')
@@ -521,7 +526,7 @@ describe('decodePacket', () => {
     for (const testCase of cases) {
       const decoded = decodeMessage({
         sop: 'SOP',
-        bytes: testCase.bytes,
+        messageBytes: testCase.bytes,
       })
 
       expect(decoded.messageType.name).toBe(testCase.messageTypeName)
@@ -534,7 +539,7 @@ describe('decodePacket', () => {
   test('shows chunked Security_Request follow-up chunks as SRQDB raw without previous chunk context', () => {
     const decoded = decodeMessage({
       sop: 'SOP',
-      bytes: Uint8Array.from([0xa8, 0x90, 0x1d, 0x88, 0xaa, 0xbb, 0xcc]),
+      messageBytes: Uint8Array.from([0xa8, 0x90, 0x1d, 0x88, 0xaa, 0xbb, 0xcc]),
     })
 
     expect(decoded.messageType.name).toBe('Security_Request')
@@ -549,7 +554,7 @@ describe('decodePacket', () => {
   test('separates final chunk padding from Security_Request raw data', () => {
     const decoded = decodeMessage({
       sop: 'SOP',
-      bytes: Uint8Array.from([
+      messageBytes: Uint8Array.from([
         0x08, 0xa0, 0x1d, 0x88, 0x11, 0x22, 0x33, 0x00, 0x00, 0x00,
       ]),
     })
@@ -571,7 +576,7 @@ describe('decodePacket', () => {
     const decoded = decodeMessage(
       {
         sop: 'SOP',
-        bytes: Uint8Array.from([
+        messageBytes: Uint8Array.from([
           0x1e, 0xa0, 0x1d, 0x88, 0x1a, 0x1b, 0x1c, 0x00, 0x00, 0x00,
         ]),
       },
@@ -582,7 +587,7 @@ describe('decodePacket', () => {
               kind: 'frame',
               frame: {
                 sop: 'SOP',
-                bytes: Uint8Array.from([
+                messageBytes: Uint8Array.from([
                   0x1e, 0xf0, 0x1d, 0x80, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
                   0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
                   0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19,
@@ -612,11 +617,13 @@ describe('decodePacket', () => {
   test('diagnoses invalid Extended Message Header field combinations', () => {
     const unchunked = decodeMessage({
       sop: 'SOP',
-      bytes: Uint8Array.from([0x1e, 0x90, 0x04, 0x0c, 0xaa, 0xbb, 0xcc, 0xdd]),
+      messageBytes: Uint8Array.from([
+        0x1e, 0x90, 0x04, 0x0c, 0xaa, 0xbb, 0xcc, 0xdd,
+      ]),
     })
     const chunked = decodeMessage({
       sop: 'SOP',
-      bytes: Uint8Array.from([0x1e, 0x90, 0x05, 0xd1, 0x00, 0x00]),
+      messageBytes: Uint8Array.from([0x1e, 0x90, 0x05, 0xd1, 0x00, 0x00]),
     })
     const unchunkedIssues = unchunked.sections.find(
       (section) => section.title === 'Extended Message Header',
@@ -643,7 +650,7 @@ describe('decodePacket', () => {
   test('shows Request Chunk payload bytes as padding', () => {
     const decoded = decodePacket({
       sop: 'SOP',
-      bytes: Uint8Array.from([
+      packetBytes: Uint8Array.from([
         0xb1, 0x9e, 0x00, 0x8c, 0x00, 0x00, 0xe6, 0x1a, 0x4d, 0xe6,
       ]),
     })
@@ -673,7 +680,7 @@ describe('decodePacket', () => {
   test('reports non-zero Request Chunk padding bytes', () => {
     const decoded = decodePacket({
       sop: 'SOP',
-      bytes: Uint8Array.from([
+      packetBytes: Uint8Array.from([
         0xb1, 0x9e, 0x00, 0x8c, 0x01, 0x00, 0xa7, 0x2b, 0x56, 0xff,
       ]),
     })
@@ -693,7 +700,7 @@ describe('decodePacket', () => {
   test('reports packets shorter than message header plus CRC32', () => {
     const decoded = decodePacket({
       sop: 'SOP',
-      bytes: Uint8Array.from([0x12, 0x34, 0x56, 0x78, 0x9a]),
+      packetBytes: Uint8Array.from([0x12, 0x34, 0x56, 0x78, 0x9a]),
     })
 
     expect(
@@ -717,7 +724,7 @@ describe('decodePacket', () => {
     const decoded = decodePacket(
       {
         sop: 'SOP',
-        bytes: Uint8Array.from([
+        packetBytes: Uint8Array.from([
           0xa2, 0x11, 0xc8, 0x20, 0x03, 0x20, 0x11, 0x22, 0x33, 0x44,
         ]),
       },
@@ -726,9 +733,9 @@ describe('decodePacket', () => {
           kind: 'packet',
           packet: {
             sop: 'SOP',
-            bytes: Uint8Array.from([
+            packetBytes: Uint8Array.from([
               0xa1, 0x31, 0x2c, 0x91, 0x01, 0x00, 0xc8, 0xd0, 0x02, 0x00, 0x2c,
-              0x41, 0x06, 0x00, 0xaa, 0xbb, 0xcc, 0xdd,
+              0x41, 0x06, 0x00, 0xc9, 0x46, 0x82, 0xb0,
             ]),
           },
         },
@@ -748,10 +755,76 @@ describe('decodePacket', () => {
     ).toBe(true)
   })
 
+  test('ignores Source_Capabilities packet context with an invalid CRC32', () => {
+    const decoded = decodePacket(
+      {
+        sop: 'SOP',
+        packetBytes: Uint8Array.from([
+          0xa2, 0x11, 0xc8, 0x20, 0x03, 0x20, 0x11, 0x22, 0x33, 0x44,
+        ]),
+      },
+      {
+        sourceCapabilities: {
+          kind: 'packet',
+          packet: {
+            sop: 'SOP',
+            packetBytes: Uint8Array.from([
+              0xa1, 0x31, 0x2c, 0x91, 0x01, 0x00, 0xc8, 0xd0, 0x02, 0x00, 0x2c,
+              0x41, 0x06, 0x00, 0xaa, 0xbb, 0xcc, 0xdd,
+            ]),
+          },
+        },
+      },
+    )
+
+    expect(decoded.explainContext.mode).toBe('single_frame')
+    expect(
+      decoded.explainContext.notes.some((note) =>
+        note.includes('invalid CRC32'),
+      ),
+    ).toBe(true)
+    expect(
+      decoded.sections.some((section) => section.title === 'RDO - Common'),
+    ).toBe(true)
+    expect(
+      decoded.sections.some(
+        (section) => section.title === 'RDO - Fixed and Variable',
+      ),
+    ).toBe(false)
+  })
+
+  test('ignores Source_Capabilities packet context without a CRC32', () => {
+    const decoded = decodeMessage(
+      {
+        sop: 'SOP',
+        messageBytes: Uint8Array.from([0xa2, 0x11, 0xc8, 0x20, 0x03, 0x20]),
+      },
+      {
+        sourceCapabilities: {
+          kind: 'packet',
+          packet: {
+            sop: 'SOP',
+            packetBytes: Uint8Array.from([0xa1, 0x31]),
+          },
+        },
+      },
+    )
+
+    expect(decoded.explainContext.mode).toBe('single_frame')
+    expect(
+      decoded.explainContext.notes.some((note) =>
+        note.includes('has no CRC32'),
+      ),
+    ).toBe(true)
+    expect(
+      decoded.sections.some((section) => section.title === 'RDO - Common'),
+    ).toBe(true)
+  })
+
   test('keeps Request on the common RDO branch without Source_Capabilities context', () => {
     const decoded = decodePacket({
       sop: 'SOP',
-      bytes: Uint8Array.from([
+      packetBytes: Uint8Array.from([
         0xa2, 0x11, 0xc8, 0x20, 0x03, 0x20, 0x11, 0x22, 0x33, 0x44,
       ]),
     })
@@ -777,7 +850,7 @@ describe('decodeMessage', () => {
   test('keeps Message Type meaning semantic without duplicating the raw value', () => {
     const decoded = decodeMessage({
       sop: 'SOP',
-      bytes: Uint8Array.from([0x01, 0x00]),
+      messageBytes: Uint8Array.from([0x01, 0x00]),
     })
 
     const headerSection = decoded.sections.find(
@@ -795,7 +868,7 @@ describe('decodeMessage', () => {
   test('shows Message Header B5 as Reserved for SOP prime packets', () => {
     const decoded = decodeMessage({
       sop: 'SOP_PRIME',
-      bytes: Uint8Array.from([0x8f, 0x51]),
+      messageBytes: Uint8Array.from([0x8f, 0x51]),
     })
 
     const headerSection = decoded.sections.find(
@@ -815,7 +888,7 @@ describe('decodeMessage', () => {
   test('reports non-zero Message Header B5 for SOP prime packets', () => {
     const decoded = decodeMessage({
       sop: 'SOP_PRIME',
-      bytes: Uint8Array.from([0xaf, 0x51]),
+      messageBytes: Uint8Array.from([0xaf, 0x51]),
     })
 
     const headerSection = decoded.sections.find(
@@ -838,7 +911,7 @@ describe('decodeMessage', () => {
   test('decodes all-zero Source_Capabilities objects as Empty PDO', () => {
     const decoded = decodeMessage({
       sop: 'SOP',
-      bytes: Uint8Array.from([0xa1, 0x11, 0x00, 0x00, 0x00, 0x00]),
+      messageBytes: Uint8Array.from([0xa1, 0x11, 0x00, 0x00, 0x00, 0x00]),
     })
 
     expect(decoded.messageType.name).toBe('Source_Capabilities')
@@ -855,7 +928,7 @@ describe('decodeMessage', () => {
   test('decodes EPR_Source_Capabilities chunk 0 as a partial semantic prefix', () => {
     const decoded = decodeMessage({
       sop: 'SOP',
-      bytes: Uint8Array.from([
+      messageBytes: Uint8Array.from([
         0xb1, 0xfb, 0x24, 0x80, 0x2c, 0x91, 0x81, 0x08, 0x2c, 0xd1, 0x02, 0x00,
         0x0a, 0xb1, 0x04, 0x00, 0xc8, 0x40, 0x06, 0x00, 0x48, 0x32, 0xdc, 0xc0,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -888,7 +961,7 @@ describe('decodeMessage', () => {
   test('keeps EPR_Source_Capabilities chunk 1 raw-only without previous chunk context', () => {
     const decoded = decodeMessage({
       sop: 'SOP',
-      bytes: Uint8Array.from([
+      messageBytes: Uint8Array.from([
         0xb1, 0xbd, 0x24, 0x88, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0xd0,
       ]),
@@ -910,7 +983,7 @@ describe('decodeMessage', () => {
     const decoded = decodeMessage(
       {
         sop: 'SOP',
-        bytes: Uint8Array.from([
+        messageBytes: Uint8Array.from([
           0xb1, 0xbd, 0x24, 0x88, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
           0x00, 0x00, 0xd0,
         ]),
@@ -922,7 +995,7 @@ describe('decodeMessage', () => {
               kind: 'frame',
               frame: {
                 sop: 'SOP',
-                bytes: Uint8Array.from([
+                messageBytes: Uint8Array.from([
                   0xb1, 0xfb, 0x24, 0x80, 0x2c, 0x91, 0x81, 0x08, 0x2c, 0xd1,
                   0x02, 0x00, 0x0a, 0xb1, 0x04, 0x00, 0xc8, 0x40, 0x06, 0x00,
                   0x48, 0x32, 0xdc, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -959,10 +1032,52 @@ describe('decodeMessage', () => {
     ).toBe(true)
   })
 
+  test('keeps a chunk raw-only when packet context has an invalid CRC32', () => {
+    const decoded = decodeMessage(
+      {
+        sop: 'SOP',
+        messageBytes: Uint8Array.from([
+          0xb1, 0xbd, 0x24, 0x88, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+          0x00, 0x00, 0xd0,
+        ]),
+      },
+      {
+        chunkedExtendedMessage: {
+          previousChunks: [
+            {
+              kind: 'packet',
+              packet: {
+                sop: 'SOP',
+                packetBytes: Uint8Array.from([
+                  0xb1, 0xfb, 0x24, 0x80, 0x2c, 0x91, 0x81, 0x08, 0x2c, 0xd1,
+                  0x02, 0x00, 0x0a, 0xb1, 0x04, 0x00, 0xc8, 0x40, 0x06, 0x00,
+                  0x48, 0x32, 0xdc, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                  0xaa, 0xbb, 0xcc, 0xdd,
+                ]),
+              },
+            },
+          ],
+        },
+      },
+    )
+
+    expect(decoded.explainContext.mode).toBe('single_frame')
+    expect(
+      decoded.explainContext.notes.some((note) =>
+        note.includes('previous chunk 0 has an invalid CRC32'),
+      ),
+    ).toBe(true)
+    expect(decoded.sections.map((section) => section.title)).toEqual([
+      'Message Header',
+      'Extended Message Header',
+      'EPR_Source_Capabilities Data Block',
+    ])
+  })
+
   test('applies the same neutral position titles to EPR_Sink_Capabilities', () => {
     const decoded = decodeMessage({
       sop: 'SOP',
-      bytes: Uint8Array.from([
+      messageBytes: Uint8Array.from([
         0xb2, 0xfb, 0x24, 0x80, 0x2c, 0x91, 0x81, 0x08, 0x2c, 0xd1, 0x02, 0x00,
         0x0a, 0xb1, 0x04, 0x00, 0xc8, 0x40, 0x06, 0x00, 0x48, 0x32, 0xdc, 0xc0,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00,

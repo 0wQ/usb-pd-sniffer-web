@@ -57,6 +57,15 @@ function formatMilliamps(milliamps: number): string {
   return `${milliamps.toFixed(3)} mA`
 }
 
+function issueKeys(decoded: DecodedPacket): string[] {
+  return [
+    ...decoded.issues.map((issue) => `message:${issue.code}`),
+    ...decoded.sections.flatMap((section) =>
+      section.issues.map((issue) => `${section.key}:${issue.code}`),
+    ),
+  ]
+}
+
 function contextDiffSummary(
   withContext: DecodedPacket,
   withoutContext: DecodedPacket,
@@ -75,9 +84,11 @@ function contextDiffSummary(
     )
   }
 
-  if (withContext.issues.length !== withoutContext.issues.length) {
+  const withContextIssueKeys = issueKeys(withContext)
+  const withoutContextIssueKeys = issueKeys(withoutContext)
+  if (withContextIssueKeys.join('\n') !== withoutContextIssueKeys.join('\n')) {
     differences.push(
-      `Issue count changed from ${withoutContext.issues.length} to ${withContext.issues.length}`,
+      `Issues changed from ${withoutContextIssueKeys.length} to ${withContextIssueKeys.length}`,
     )
   }
 
@@ -308,7 +319,7 @@ const DecodeCard = ({ className, selectedIndex }: Props) => {
               <RawPacketView
                 className="mt-2"
                 bytes={
-                  decodedFrame?.packet.bytes ??
+                  decodedFrame?.packet.packetBytes ??
                   selectedRecord.data.slice(0, selectedRecord.data_len)
                 }
                 sections={decodedWithoutContext?.sections}

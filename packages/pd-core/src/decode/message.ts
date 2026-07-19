@@ -34,6 +34,16 @@ type SplitPacketResult = {
   crc: PacketCrc
 }
 
+type NormalizedContextMessage =
+  | {
+      frame: MessageFrame
+      rejectionReason: null
+    }
+  | {
+      frame: null
+      rejectionReason: 'an invalid CRC32' | 'no CRC32'
+    }
+
 type ExplainMode = 'single_frame' | 'sequence'
 
 type ParsedChunkedExtendedFrame = {
@@ -109,12 +119,12 @@ function expectedMessageByteLength(messageBytes: Uint8Array): number | null {
 }
 
 function splitMessagePacket(packet: MessagePacket): SplitPacketResult {
-  const hasFullCrc = packet.bytes.length >= 6
+  const hasFullCrc = packet.packetBytes.length >= 6
   const messageBytes = hasFullCrc
-    ? packet.bytes.subarray(0, packet.bytes.length - 4)
-    : packet.bytes
+    ? packet.packetBytes.subarray(0, packet.packetBytes.length - 4)
+    : packet.packetBytes
   const crcBytes = hasFullCrc
-    ? packet.bytes.subarray(packet.bytes.length - 4)
+    ? packet.packetBytes.subarray(packet.packetBytes.length - 4)
     : new Uint8Array(0)
   const expectedLength = expectedMessageByteLength(messageBytes)
   const rawCrc32 = crcBytes.length === 4 ? readUint32Le(crcBytes, 0) : null
@@ -123,7 +133,7 @@ function splitMessagePacket(packet: MessagePacket): SplitPacketResult {
   return {
     message: {
       sop: packet.sop,
-      bytes: messageBytes,
+      messageBytes,
     },
     packetLayout: {
       expectedMessageByteLength: expectedLength,
@@ -146,16 +156,35 @@ function splitMessagePacket(packet: MessagePacket): SplitPacketResult {
   }
 }
 
-function normalizeContextMessage(input: DecodeContextMessage): MessageFrame {
-  return input.kind === 'frame'
-    ? input.frame
-    : splitMessagePacket(input.packet).message
+function normalizeContextMessage(
+  input: DecodeContextMessage,
+): NormalizedContextMessage {
+  if (input.kind === 'frame') {
+    return {
+      frame: input.frame,
+      rejectionReason: null,
+    }
+  }
+
+  const split = splitMessagePacket(input.packet)
+  if (split.crc.checkStatus !== 'valid') {
+    return {
+      frame: null,
+      rejectionReason:
+        split.crc.checkStatus === 'invalid' ? 'an invalid CRC32' : 'no CRC32',
+    }
+  }
+
+  return {
+    frame: split.message,
+    rejectionReason: null,
+  }
 }
 
 function parseChunkedExtendedFrame(
   frame: MessageFrame,
 ): ParsedChunkedExtendedFrame | null {
-  if (frame.bytes.length < 4) {
+  if (frame.messageBytes.length < 4) {
     return null
   }
 
@@ -165,14 +194,16 @@ function parseChunkedExtendedFrame(
   }
 
   const messageType = buildMessageTypeInfo(header)
-  const extendedHeader = decodeExtendedMessageHeader(frame.bytes.subarray(2, 4))
+  const extendedHeader = decodeExtendedMessageHeader(
+    frame.messageBytes.subarray(2, 4),
+  )
 
   return {
     frame,
     header,
     messageType,
     extendedHeader,
-    payloadBytes: frame.bytes.subarray(4),
+    payloadBytes: frame.messageBytes.subarray(4),
   }
 }
 
@@ -267,11 +298,25 @@ function resolveRequestRdoKindFromContext(
 
   const issues: DecodeIssue[] = []
   const notes: string[] = []
-  const sourceCapabilitiesFrame = normalizeContextMessage(
+  const normalizedSourceCapabilities = normalizeContextMessage(
     context.sourceCapabilities,
   )
 
-  if (frame.bytes.length < 6) {
+  if (normalizedSourceCapabilities.frame === null) {
+    notes.push(
+      `Provided Source_Capabilities packet context was ignored because it has ${normalizedSourceCapabilities.rejectionReason}.`,
+    )
+    return {
+      issues,
+      mode: 'single_frame',
+      notes,
+      resolvedKind: null,
+    }
+  }
+
+  const sourceCapabilitiesFrame = normalizedSourceCapabilities.frame
+
+  if (frame.messageBytes.length < 6) {
     notes.push(
       'Source_Capabilities context was provided, but this Request frame is too short to resolve its RDO format.',
     )
@@ -283,7 +328,7 @@ function resolveRequestRdoKindFromContext(
     }
   }
 
-  if (sourceCapabilitiesFrame.bytes.length < 2) {
+  if (sourceCapabilitiesFrame.messageBytes.length < 2) {
     notes.push(
       'Source_Capabilities context was provided, but the frame is shorter than a PD Message Header.',
     )
@@ -316,7 +361,7 @@ function resolveRequestRdoKindFromContext(
     }
   }
 
-  const requestRaw32 = readUint32Le(frame.bytes, 2)
+  const requestRaw32 = readUint32Le(frame.messageBytes, 2)
   const objectPosition = extractBits(requestRaw32, 28, 4)
 
   if (objectPosition === 0 || objectPosition >= 14) {
@@ -358,7 +403,7 @@ function resolveRequestRdoKindFromContext(
   }
 
   const requestedPdoOffset = 2 + (objectPosition - 1) * 4
-  if (sourceCapabilitiesFrame.bytes.length < requestedPdoOffset + 4) {
+  if (sourceCapabilitiesFrame.messageBytes.length < requestedPdoOffset + 4) {
     notes.push(
       `Source_Capabilities context could not resolve Request object position ${objectPosition}, because the referenced PDO bytes are missing from the provided frame.`,
     )
@@ -371,7 +416,7 @@ function resolveRequestRdoKindFromContext(
   }
 
   const referencedPdoRaw32 = readUint32Le(
-    sourceCapabilitiesFrame.bytes,
+    sourceCapabilitiesFrame.messageBytes,
     requestedPdoOffset,
   )
   const resolvedKind = classifyRdoKindFromPdo(referencedPdoRaw32)
@@ -406,7 +451,7 @@ function resolveChunkedExtendedPayloadContext(
   extendedHeader: ExtendedMessageHeader,
   context: DecodeContext,
 ): ResolvedExtendedPayloadContext {
-  const currentPayloadBytes = frame.bytes.subarray(4)
+  const currentPayloadBytes = frame.messageBytes.subarray(4)
   const messageTypeName = messageType.name
   const isPrefixDecodable =
     messageTypeName !== null &&
@@ -508,9 +553,22 @@ function resolveChunkedExtendedPayloadContext(
       }
     }
 
-    const parsed = parseChunkedExtendedFrame(
-      normalizeContextMessage(previousChunk),
-    )
+    const normalizedPreviousChunk = normalizeContextMessage(previousChunk)
+    if (normalizedPreviousChunk.frame === null) {
+      notes.push(
+        `Provided chunked Extended context was ignored because previous chunk ${expectedChunkNumber} has ${normalizedPreviousChunk.rejectionReason}.`,
+      )
+
+      return {
+        mode: 'single_frame',
+        notes,
+        payloadBytes: currentPayloadBytes,
+        payloadIsAssembled: false,
+        rawOnly: true,
+      }
+    }
+
+    const parsed = parseChunkedExtendedFrame(normalizedPreviousChunk.frame)
     if (parsed === null) {
       notes.push(
         `Provided chunked Extended context was ignored because previous chunk ${expectedChunkNumber} is shorter than the required Extended Message framing.`,
@@ -644,7 +702,7 @@ export function decodeMessage(
   const issues: DecodeIssue[] = []
   const sections: Section[] = []
 
-  if (frame.bytes.length < 2) {
+  if (frame.messageBytes.length < 2) {
     issues.push({
       severity: 'error',
       code: 'PD_SHORT_FRAME',
@@ -682,7 +740,7 @@ export function decodeMessage(
   sections.push(explainMessageHeader(header, frame))
 
   if (header.extended) {
-    if (frame.bytes.length < 4) {
+    if (frame.messageBytes.length < 4) {
       issues.push({
         severity: 'error',
         code: 'PD_SHORT_EXTENDED_FRAME',
@@ -705,7 +763,7 @@ export function decodeMessage(
       }
     }
 
-    const extendedHeaderBytes = frame.bytes.slice(2, 4)
+    const extendedHeaderBytes = frame.messageBytes.slice(2, 4)
     const extendedHeader = decodeExtendedMessageHeader(extendedHeaderBytes)
     sections.push(
       explainExtendedMessageHeader(extendedHeader, extendedHeaderBytes),
@@ -760,7 +818,7 @@ export function decodeMessage(
     }
   }
 
-  const payloadBytes = frame.bytes.slice(2)
+  const payloadBytes = frame.messageBytes.slice(2)
   const expectedPayloadBytes = header.numberOfDataObjects * 4
 
   if (payloadBytes.length !== expectedPayloadBytes) {
@@ -810,23 +868,12 @@ export function decodePacket(
   const issues = [...decodedMessage.issues]
   const sections = [...decodedMessage.sections]
 
-  if (packet.bytes.length < 6) {
+  if (packet.packetBytes.length < 6) {
     issues.push({
       severity: 'error',
       code: 'PD_PACKET_TOO_SHORT',
       message:
         'PD packet is shorter than 6 bytes, so it cannot contain both a 2-byte Message Header and a 4-byte CRC32.',
-    })
-  }
-
-  if (split.crc.checkStatus === 'invalid') {
-    issues.push({
-      severity: 'error',
-      code: 'PD_CRC32_INVALID',
-      message:
-        split.crc.expectedRaw32 === null
-          ? 'CRC32 does not match the message bytes.'
-          : `CRC32 does not match the message bytes. Expected ${formatCrc32(split.crc.expectedRaw32)}.`,
     })
   }
 

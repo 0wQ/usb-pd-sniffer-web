@@ -1,8 +1,24 @@
-export * from './decode/dataObjects.js'
-export * from './decode/extendedMessageHeader.js'
-export * from './decode/message.js'
-export * from './decode/messageHeader.js'
-export * from './registry/messageTypes.js'
-export * from './types.js'
-export * from './utils/bits.js'
-export * from './utils/pdCrc32.js'
+export { decodeMessage, decodePacket } from './decode/message.js'
+export type {
+  BitField,
+  ChunkedExtendedMessageContext,
+  DecodeContext,
+  DecodeContextMessage,
+  DecodedMessage,
+  DecodedPacket,
+  DecodeIssue,
+  ExplainContext,
+  ExtendedMessageHeader,
+  MessageCategory,
+  MessageFrame,
+  MessageHeader,
+  MessagePacket,
+  MessageTypeInfo,
+  PacketCrc,
+  PacketLayout,
+  Section,
+  SectionKind,
+  SpecificationRevision,
+  StartOfPacket,
+} from './types.js'
+export { calculatePdCrc32 } from './utils/pdCrc32.js'

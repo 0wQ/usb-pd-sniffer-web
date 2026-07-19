@@ -18,7 +18,7 @@
     "build": "pnpm run clean && pnpm exec tsc -b tsconfig.json",
     "clean": "rm -rf packages/*/dist packages/*/*.tsbuildinfo",
     "test": "pnpm exec vitest run",
-    "typecheck": "pnpm exec tsc -b tsconfig.json --pretty false"
+    "typecheck": "pnpm exec tsc -b tsconfig.json --pretty false && pnpm -C packages/pd-core run typecheck:tests"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.11",

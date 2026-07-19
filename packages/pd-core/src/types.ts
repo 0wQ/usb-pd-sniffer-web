@@ -7,20 +7,24 @@ export type StartOfPacket =
 
 export type MessagePacket = {
   sop: StartOfPacket
-  bytes: Uint8Array
+  /** Complete packet bytes, including the trailing 4-byte CRC32. */
+  packetBytes: Uint8Array
 }
 
 export type MessageFrame = {
   sop: StartOfPacket
-  bytes: Uint8Array
+  /** Message Header and payload bytes without CRC32. */
+  messageBytes: Uint8Array
 }
 
 export type DecodeContextMessage =
   | {
+      /** CRC-free bytes that the caller has already validated when necessary. */
       kind: 'frame'
       frame: MessageFrame
     }
   | {
+      /** Packet bytes whose CRC32 must be valid before context is used. */
       kind: 'packet'
       packet: MessagePacket
     }
@@ -126,6 +130,7 @@ export type DecodedMessage = {
   extendedHeader: ExtendedMessageHeader | null
   explainContext: ExplainContext
   sections: Section[]
+  /** Issues that cannot be assigned to a specific decoded section. */
   issues: DecodeIssue[]
 }
 

@@ -3,14 +3,28 @@ import {
   decodePacket,
   type MessagePacket,
 } from '@usb-pd-sniffer/pd-core'
-import type { PdFrame } from '@usb-pd-sniffer/pd-device-native-hid'
 import type { CaptureRecord } from '@usb-pd-sniffer/pd-device-types'
 import { CAPTURE_EVENT } from '@usb-pd-sniffer/pd-device-types'
 
-export function recordToMessagePacket(record: CaptureRecord) {
-  const rawPayload = Uint8Array.from(record.data.slice(0, record.data_len))
-  const frame = recordToPdFrame(record.event_type, rawPayload)
-  return frame
+export function recordToMessagePacket(
+  record: CaptureRecord,
+): MessagePacket | null {
+  const packetBytes = Uint8Array.from(record.data.slice(0, record.data_len))
+
+  switch (record.event_type) {
+    case CAPTURE_EVENT.PD_SOP0:
+      return { sop: 'SOP', packetBytes }
+    case CAPTURE_EVENT.PD_SOP1:
+      return { sop: 'SOP_PRIME', packetBytes }
+    case CAPTURE_EVENT.PD_SOP2:
+      return { sop: 'SOP_DPRIME', packetBytes }
+    case CAPTURE_EVENT.PD_SOP1_DEBUG:
+      return { sop: 'SOP_PRIME_DEBUG', packetBytes }
+    case CAPTURE_EVENT.PD_SOP2_DEBUG:
+      return { sop: 'SOP_DPRIME_DEBUG', packetBytes }
+    default:
+      return null
+  }
 }
 
 export function decodeSingleRecord(
@@ -237,24 +251,5 @@ export function decodeRecordAtIndex(
       sourceCapabilities.scannedRecords,
       previousChunkedExtendedPackets.scannedRecords,
     ),
-  }
-}
-function recordToPdFrame(
-  eventType: CaptureRecord['event_type'],
-  payload: Uint8Array,
-): PdFrame | null {
-  switch (eventType) {
-    case CAPTURE_EVENT.PD_SOP0:
-      return { sop: 'SOP', bytes: payload }
-    case CAPTURE_EVENT.PD_SOP1:
-      return { sop: 'SOP_PRIME', bytes: payload }
-    case CAPTURE_EVENT.PD_SOP2:
-      return { sop: 'SOP_DPRIME', bytes: payload }
-    case CAPTURE_EVENT.PD_SOP1_DEBUG:
-      return { sop: 'SOP_PRIME_DEBUG', bytes: payload }
-    case CAPTURE_EVENT.PD_SOP2_DEBUG:
-      return { sop: 'SOP_DPRIME_DEBUG', bytes: payload }
-    default:
-      return null
   }
 }

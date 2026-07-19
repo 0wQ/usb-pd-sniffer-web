@@ -18,6 +18,7 @@
   "scripts": {
     "build": "rm -rf dist && pnpm exec tsc -b tsconfig.json --force",
     "clean": "rm -rf dist *.tsbuildinfo",
-    "typecheck": "pnpm exec tsc -p tsconfig.json --pretty false"
+    "typecheck": "pnpm exec tsc -p tsconfig.json --pretty false && pnpm run typecheck:tests",
+    "typecheck:tests": "pnpm exec tsc -p tsconfig.test.json --pretty false"
   }
 }

@@ -42,7 +42,7 @@ export function previewPdTxFrame(
   const payload = parsePdHexPayload(hexPayload)
   const frame: MessageFrame = {
     sop: messageSopForTxSop(sop),
-    bytes: payload,
+    messageBytes: payload,
   }
 
   return {

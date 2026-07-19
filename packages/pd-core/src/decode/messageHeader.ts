@@ -87,7 +87,7 @@ function createIssue(code: string, message: string): DecodeIssue {
 }
 
 export function decodeMessageHeader(frame: MessageFrame): MessageHeader {
-  const raw16 = readUint16Le(frame.bytes, 0)
+  const raw16 = readUint16Le(frame.messageBytes, 0)
   const extended = extractBits(raw16, 15, 1) === 1
   const numberOfDataObjects = extractBits(raw16, 12, 3)
   const messageId = extractBits(raw16, 9, 3)
@@ -200,7 +200,7 @@ export function explainMessageHeader(
     title: 'Message Header',
     byteOffset: 0,
     byteLength: 2,
-    rawBytes: frame.bytes.slice(0, 2),
+    rawBytes: frame.messageBytes.slice(0, 2),
     fields,
     issues,
   }
