@@ -6,8 +6,11 @@ import type {
   Section,
   StartOfPacket,
 } from '../types.js'
+import { readUint16Le } from '../utils/bits.js'
 import { explainDataObjects } from './dataObjects/index.js'
 import { buildDeclaredDataSizeIssues } from './extendedDataBlocks/dataBlockValidation.js'
+import { buildExtendedControlDataBlock } from './extendedDataBlocks/extendedControlDataBlock.js'
+import { buildPpsStatusDataBlock } from './extendedDataBlocks/ppsStatusDataBlock.js'
 import {
   type BuiltSection,
   boolDisplay,
@@ -80,10 +83,6 @@ function buildRawExtendedDataBlock(
   }
 }
 
-function readUint16Le(bytes: Uint8Array, offset: number): number {
-  return (bytes[offset] ?? 0) | ((bytes[offset + 1] ?? 0) << 8)
-}
-
 function batteryReferenceDisplay(value: number): string {
   if (value <= 3) {
     return `Fixed Battery ${value}`
@@ -102,21 +101,6 @@ function manufacturerInfoTargetDisplay(value: number): string {
     return 'Battery'
   }
   return 'Reserved'
-}
-
-function ppsTemperatureFlagDisplay(value: number): string {
-  switch (value) {
-    case 0:
-      return 'Not Supported'
-    case 1:
-      return 'Normal'
-    case 2:
-      return 'Warning'
-    case 3:
-      return 'Over Temperature'
-    default:
-      return 'Reserved'
-  }
 }
 
 function loadStepDisplay(value: number): string {
@@ -153,23 +137,6 @@ function touchTempDisplay(value: number, source: 'source' | 'sink'): string {
       return '[IEC 62368-1] TS1'
     case 3:
       return '[IEC 62368-1] TS2'
-    default:
-      return 'Reserved'
-  }
-}
-
-function extendedControlTypeDisplay(value: number): string {
-  switch (value) {
-    case 0x01:
-      return 'EPR_Get_Source_Cap'
-    case 0x02:
-      return 'EPR_Get_Sink_Cap'
-    case 0x03:
-      return 'EPR_KeepAlive'
-    case 0x04:
-      return 'EPR_KeepAlive_Ack'
-    case 0x00:
-      return 'Reserved'
     default:
       return 'Reserved'
   }
@@ -1611,94 +1578,6 @@ function buildManufacturerInfoDataBlock(
   }
 }
 
-function buildPpsStatusDataBlock(
-  bytes: Uint8Array,
-  declaredDataSize: number,
-  parentSectionKey: string,
-  byteOffset: number,
-): BuiltSection {
-  const issues = buildDeclaredDataSizeIssues(
-    'PPS_Status',
-    4,
-    declaredDataSize,
-    bytes.length,
-  )
-  const outputVoltage = readUint16Le(bytes, 0)
-  const outputCurrent = bytes[2] ?? 0
-  const realTimeFlags = bytes[3] ?? 0
-  const reservedBit0 = realTimeFlags & 0x01
-  const ptf = (realTimeFlags >>> 1) & 0x03
-  const omf = (realTimeFlags >>> 3) & 0x01
-  const reservedHigh = (realTimeFlags >>> 4) & 0x0f
-
-  if ((reservedBit0 | reservedHigh) !== 0 && bytes.length >= 4) {
-    issues.push(
-      createIssue(
-        'PD_PPS_STATUS_RESERVED_REAL_TIME_FLAGS_NONZERO',
-        'PPS Status Real Time Flags reserved bits are non-zero.',
-      ),
-    )
-  }
-
-  return {
-    section: createDataBlockSection(
-      `${parentSectionKey}:pps-status`,
-      'PPS Status Data Block',
-      'pps_status_data_block',
-      byteOffset,
-      bytes.subarray(0, Math.min(bytes.length, 4)),
-      [
-        field(
-          'output_voltage',
-          'Output Voltage',
-          0,
-          16,
-          outputVoltage,
-          outputVoltage,
-          {
-            displayValue:
-              outputVoltage === 0xffff
-                ? 'Not Supported'
-                : `${outputVoltage * 20} mV`,
-            note: outputVoltage === 0xffff ? undefined : '20mV units.',
-          },
-        ),
-        field(
-          'output_current',
-          'Output Current',
-          16,
-          8,
-          outputCurrent,
-          outputCurrent,
-          {
-            displayValue:
-              outputCurrent === 0xff
-                ? 'Not Supported'
-                : `${outputCurrent * 50} mA`,
-            note: outputCurrent === 0xff ? undefined : '50mA units.',
-          },
-        ),
-        field('reserved_bit_0', 'Reserved', 24, 1, reservedBit0, reservedBit0, {
-          note: 'Real Time Flags bit 0 shall be set to zero.',
-        }),
-        field('ptf', 'PTF', 25, 2, ptf, ptf, {
-          displayValue: ppsTemperatureFlagDisplay(ptf),
-          note: 'Present Temperature Flag.',
-        }),
-        field('omf', 'OMF', 27, 1, omf, omf === 1, {
-          displayValue:
-            omf === 1 ? 'Current Limit Mode' : 'Constant Voltage Mode',
-          note: 'Operating Mode Flag.',
-        }),
-        field('reserved_high', 'Reserved', 28, 4, reservedHigh, reservedHigh, {
-          note: 'Real Time Flags bits 7..4 shall be set to zero.',
-        }),
-      ],
-      issues,
-    ),
-  }
-}
-
 function buildCountryCodesDataBlock(
   bytes: Uint8Array,
   declaredDataSize: number,
@@ -1886,60 +1765,6 @@ function buildCountryInfoDataBlock(
             note: 'Country-defined 1..22 byte payload. Unsupported Code is returned as a null-terminated ASCII string.',
           },
         ),
-      ],
-      issues,
-    ),
-  }
-}
-
-function buildExtendedControlDataBlock(
-  bytes: Uint8Array,
-  declaredDataSize: number,
-  parentSectionKey: string,
-  byteOffset: number,
-): BuiltSection {
-  const issues = buildDeclaredDataSizeIssues(
-    'Extended_Control',
-    2,
-    declaredDataSize,
-    bytes.length,
-  )
-  const type = bytes[0] ?? 0
-  const data = bytes[1] ?? 0
-
-  if (type === 0x00 || type >= 0x05) {
-    issues.push(
-      createIssue(
-        'PD_EXTENDED_CONTROL_TYPE_RESERVED',
-        'Extended_Control Type value is reserved.',
-      ),
-    )
-  }
-
-  if (data !== 0 && bytes.length >= 2) {
-    issues.push(
-      createIssue(
-        'PD_EXTENDED_CONTROL_DATA_NONZERO',
-        'Extended_Control Data byte shall be zero when not used.',
-      ),
-    )
-  }
-
-  return {
-    section: createDataBlockSection(
-      `${parentSectionKey}:extended-control`,
-      'Extended Control Data Block',
-      'extended_control_data_block',
-      byteOffset,
-      bytes.subarray(0, Math.min(bytes.length, 2)),
-      [
-        field('type', 'Type', 0, 8, type, type, {
-          displayValue: extendedControlTypeDisplay(type),
-        }),
-        field('data', 'Data', 8, 8, data, data, {
-          displayValue: hex(data, 2),
-          note: 'Set to zero when unused.',
-        }),
       ],
       issues,
     ),
