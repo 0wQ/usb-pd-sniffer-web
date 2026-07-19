@@ -52,4 +52,65 @@ describe('message type names', () => {
       }).messageType.name,
     ).toBeNull()
   })
+
+  test('keeps Message Type meaning semantic without duplicating the raw value', () => {
+    const decoded = decodeMessage({
+      sop: 'SOP',
+      messageBytes: Uint8Array.from([0x01, 0x00]),
+    })
+
+    const headerSection = decoded.sections.find(
+      (section) => section.title === 'Message Header',
+    )
+    const messageTypeField = headerSection?.fields.find(
+      (field) => field.label === 'Message Type',
+    )
+
+    expect(decoded.messageType.name).toBe('GoodCRC')
+    expect(messageTypeField?.rawValue).toBe(1)
+    expect(messageTypeField?.displayValue).toBe('GoodCRC')
+  })
+
+  test('shows Message Header B5 as Reserved for SOP prime packets', () => {
+    const decoded = decodeMessage({
+      sop: 'SOP_PRIME',
+      messageBytes: Uint8Array.from([0x8f, 0x51]),
+    })
+
+    const headerSection = decoded.sections.find(
+      (section) => section.title === 'Message Header',
+    )
+    const bit5Field = headerSection?.fields.find(
+      (field) => field.bitStart === 5,
+    )
+
+    expect(bit5Field?.label).toBe('Reserved')
+    expect(bit5Field?.rawValue).toBe(0)
+    expect(bit5Field?.displayValue).toBe('0')
+    expect(bit5Field?.note).toBeUndefined()
+    expect(headerSection?.issues).toHaveLength(0)
+  })
+
+  test('reports non-zero Message Header B5 for SOP prime packets', () => {
+    const decoded = decodeMessage({
+      sop: 'SOP_PRIME',
+      messageBytes: Uint8Array.from([0xaf, 0x51]),
+    })
+
+    const headerSection = decoded.sections.find(
+      (section) => section.title === 'Message Header',
+    )
+    const bit5Field = headerSection?.fields.find(
+      (field) => field.bitStart === 5,
+    )
+
+    expect(bit5Field?.label).toBe('Reserved')
+    expect(bit5Field?.rawValue).toBe(1)
+    expect(bit5Field?.displayValue).toBe('1')
+    expect(
+      headerSection?.issues.some(
+        (issue) => issue.code === 'PD_MESSAGE_HEADER_RESERVED_B5_NONZERO',
+      ),
+    ).toBe(true)
+  })
 })
