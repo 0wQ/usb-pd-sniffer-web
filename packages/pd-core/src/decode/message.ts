@@ -21,7 +21,7 @@ import {
   explainDataObjects,
   type RdoKind,
 } from './dataObjects/index.js'
-import { explainExtendedDataBlocks } from './extendedDataBlocks.js'
+import { explainExtendedDataBlocks } from './extendedDataBlocks/index.js'
 import {
   decodeExtendedMessageHeader,
   explainExtendedMessageHeader,

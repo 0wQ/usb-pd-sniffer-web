@@ -3,35 +3,35 @@ import type {
   MessageTypeInfo,
   Section,
   StartOfPacket,
-} from '../types.js'
-import { explainDataObjects } from './dataObjects/index.js'
+} from '../../types.js'
+import { explainDataObjects } from '../dataObjects/index.js'
 import {
   buildBatteryCapabilitiesDataBlock,
   buildGetBatteryCapDataBlock,
   buildGetBatteryStatusDataBlock,
-} from './extendedDataBlocks/batteryDataBlocks.js'
+} from './batteryDataBlocks.js'
 import {
   buildSinkCapabilitiesExtendedDataBlock,
   buildSourceCapabilitiesExtendedDataBlock,
-} from './extendedDataBlocks/capabilitiesDataBlocks.js'
+} from './capabilitiesDataBlocks.js'
 import {
   buildCountryCodesDataBlock,
   buildCountryInfoDataBlock,
-} from './extendedDataBlocks/countryDataBlocks.js'
-import { buildExtendedControlDataBlock } from './extendedDataBlocks/extendedControlDataBlock.js'
-import { buildExternalSpecificationDataBlock } from './extendedDataBlocks/externalSpecificationDataBlocks.js'
+} from './countryDataBlocks.js'
+import { buildExtendedControlDataBlock } from './extendedControlDataBlock.js'
+import { buildExternalSpecificationDataBlock } from './externalSpecificationDataBlocks.js'
 import {
   buildGetManufacturerInfoDataBlock,
   buildManufacturerInfoDataBlock,
-} from './extendedDataBlocks/manufacturerInfoDataBlocks.js'
-import { buildPpsStatusDataBlock } from './extendedDataBlocks/ppsStatusDataBlock.js'
+} from './manufacturerInfoDataBlocks.js'
+import { buildPpsStatusDataBlock } from './ppsStatusDataBlock.js'
 import {
   type BuiltSection,
   buildPaddingSection,
   createDataBlockSection,
-} from './extendedDataBlocks/sectionBuilders.js'
-import { buildStatusDataBlock } from './extendedDataBlocks/statusDataBlock.js'
-import { buildVendorDefinedExtendedDataBlock } from './extendedDataBlocks/vendorDefinedExtendedDataBlock.js'
+} from './sectionBuilders.js'
+import { buildStatusDataBlock } from './statusDataBlock.js'
+import { buildVendorDefinedExtendedDataBlock } from './vendorDefinedExtendedDataBlock.js'
 
 const MAX_EXTENDED_MESSAGE_CHUNK_LENGTH = 26
 
