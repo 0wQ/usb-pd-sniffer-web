@@ -62,9 +62,9 @@ describe('decodePacket', () => {
     const decoded = decodePacket({
       sop: 'SOP_PRIME',
       bytes: Uint8Array.from([
-        0x8f, 0x61, 0x41, 0xa0, 0x00, 0xff, 0x34, 0x12, 0x60, 0x20, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30, 0x68, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0xe5, 0x53, 0x25, 0x70,
+        0x8f, 0x61, 0x41, 0xa0, 0x00, 0xff, 0x34, 0x12, 0x60, 0x20, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30, 0x68, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0xe5, 0x53, 0x25, 0x70,
       ]),
     })
 
@@ -72,15 +72,52 @@ describe('decodePacket', () => {
       (section) => section.title === 'Active Cable VDO1',
     )
 
-    expect(activeCableVdo1?.fields.find((field) => field.key === 'vdo_version'))
-      .toMatchObject({
-        rawValue: 3,
-        displayValue: 'Version 1.3',
-      })
+    expect(
+      activeCableVdo1?.fields.find((field) => field.key === 'vdo_version'),
+    ).toMatchObject({
+      rawValue: 3,
+      displayValue: 'Version 1.3',
+    })
     expect(
       activeCableVdo1?.issues.some(
         (issue) => issue.code === 'PD_ACTIVE_CABLE_VDO1_VERSION_RESERVED',
       ),
+    ).toBe(false)
+    expect(decoded.crc.checkStatus).toBe('valid')
+  })
+
+  test('decodes USB PD R3.2 v1.2 Source_Info SIDO1 and DPS SIDO2', () => {
+    const decoded = decodePacket({
+      sop: 'SOP',
+      bytes: Uint8Array.from([
+        0x8b, 0x20, 0x64, 0x64, 0x8c, 0x00, 0x78, 0x30, 0x02, 0x40, 0xc6, 0x44,
+        0xbe, 0xf3,
+      ]),
+    })
+
+    const sido2 = decoded.sections.find(
+      (section) => section.title === 'Source Information Data Object 2',
+    )
+
+    expect(decoded.sections.map((section) => section.title)).toContain(
+      'Source Information Data Object 1',
+    )
+    expect(
+      sido2?.fields.find((field) => field.key === 'dps_port'),
+    ).toMatchObject({
+      decodedValue: true,
+      displayValue: 'DPS Port',
+    })
+    expect(
+      sido2?.fields.find((field) => field.key === 'port_maximum_pdp'),
+    ).toMatchObject({
+      decodedValue: 140,
+      displayValue: '140 W',
+    })
+    expect(
+      decoded.sections
+        .flatMap((section) => section.issues)
+        .some((issue) => issue.code === 'PD_SOURCE_INFO_OBJECT_COUNT_INVALID'),
     ).toBe(false)
     expect(decoded.crc.checkStatus).toBe('valid')
   })

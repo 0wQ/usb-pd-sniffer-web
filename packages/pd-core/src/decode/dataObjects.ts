@@ -4724,7 +4724,7 @@ function buildEnterUsbDataObject(
   }
 }
 
-function buildSourceInfoDataObject(
+function buildSourceInfoDataObject1(
   raw32: number,
   index: number,
   parentSectionKey: string,
@@ -4738,11 +4738,11 @@ function buildSourceInfoDataObject(
   const portReportedPdp = extractBits(raw32, 0, 8)
   const issues: DecodeIssue[] = []
 
-  if (objectCount !== 1) {
+  if (objectCount !== 2) {
     issues.push(
       createIssue(
         'PD_SOURCE_INFO_OBJECT_COUNT_INVALID',
-        `Source_Info Message shall contain exactly one Source Information Data Object; found ${objectCount}.`,
+        `Source_Info Message shall contain exactly two Source Information Data Objects; found ${objectCount}.`,
       ),
     )
   }
@@ -4758,10 +4758,10 @@ function buildSourceInfoDataObject(
 
   return {
     section: createSection(
-      `${parentSectionKey}:object-${index}:source_info_data_object`,
+      `${parentSectionKey}:object-${index}:source_info_data_object_1`,
       'data_object',
-      'Source Information Data Object',
-      'source_info_data_object',
+      'Source Information Data Object 1',
+      'source_info_data_object_1',
       parentSectionKey,
       1,
       byteOffset,
@@ -4805,6 +4805,91 @@ function buildSourceInfoDataObject(
           portReportedPdp,
           {
             displayValue: `${portReportedPdp} W`,
+          },
+        ),
+      ],
+      issues,
+      index,
+    ),
+  }
+}
+
+function buildSourceInfoDataObject2(
+  raw32: number,
+  index: number,
+  parentSectionKey: string,
+  byteOffset: number,
+): BuiltSection {
+  const portType = extractBits(raw32, 31, 1)
+  const dpsPort = extractBits(raw32, 30, 1)
+  const reserved = extractBits(raw32, 18, 12)
+  const portMaximumPdp = extractBits(raw32, 9, 9)
+  const portGuaranteedPdp = extractBits(raw32, 0, 9)
+  const issues: DecodeIssue[] = []
+
+  if (reserved !== 0) {
+    issues.push(
+      createIssue(
+        'PD_SOURCE_INFO_2_RESERVED_BITS_NONZERO',
+        'Source Information Data Object 2 reserved bits 29..18 are non-zero.',
+      ),
+    )
+  }
+
+  if (dpsPort === 1 && portType !== 0) {
+    issues.push(
+      createIssue(
+        'PD_SOURCE_INFO_2_DPS_PORT_TYPE_INVALID',
+        'DPS Port requires Port Type to be Managed Capability Port.',
+      ),
+    )
+  }
+
+  return {
+    section: createSection(
+      `${parentSectionKey}:object-${index}:source_info_data_object_2`,
+      'data_object',
+      'Source Information Data Object 2',
+      'source_info_data_object_2',
+      parentSectionKey,
+      1,
+      byteOffset,
+      raw32,
+      [
+        field('port_type', 'Port Type', 31, 1, portType, portType === 1, {
+          displayValue:
+            portType === 1
+              ? 'Guaranteed Capability Port'
+              : 'Managed Capability Port',
+        }),
+        field('dps_port', 'DPS Port', 30, 1, dpsPort, dpsPort === 1, {
+          displayValue: boolDisplay(dpsPort === 1, 'DPS Port', 'Non-DPS Port'),
+        }),
+        field('reserved', 'Reserved', 18, 12, reserved, reserved),
+        field(
+          'port_maximum_pdp',
+          'Port Maximum PDP',
+          9,
+          9,
+          portMaximumPdp,
+          portMaximumPdp / 2,
+          {
+            displayValue: `${portMaximumPdp / 2} W`,
+            unit: 'W',
+            note: '0.5W units',
+          },
+        ),
+        field(
+          'port_guaranteed_pdp',
+          'Port Guaranteed PDP',
+          0,
+          9,
+          portGuaranteedPdp,
+          portGuaranteedPdp / 2,
+          {
+            displayValue: `${portGuaranteedPdp / 2} W`,
+            unit: 'W',
+            note: '0.5W units',
           },
         ),
       ],
@@ -6059,12 +6144,19 @@ export function explainDataObjects(
         count,
       )
     } else if (messageType.name === 'Source_Info' && index === 0) {
-      built = buildSourceInfoDataObject(
+      built = buildSourceInfoDataObject1(
         raw32,
         index,
         payloadSectionKey,
         byteOffset,
         count,
+      )
+    } else if (messageType.name === 'Source_Info' && index === 1) {
+      built = buildSourceInfoDataObject2(
+        raw32,
+        index,
+        payloadSectionKey,
+        byteOffset,
       )
     } else if (messageType.name === 'Revision' && index === 0) {
       built = buildRevisionDataObject(
