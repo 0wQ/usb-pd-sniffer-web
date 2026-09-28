@@ -6,7 +6,7 @@ import type {
 } from '@usb-pd-sniffer/pd-device-types'
 import { CAPTURE_EVENT } from '@usb-pd-sniffer/pd-device-types'
 import {
-  type CCModeConfig,
+  type CCPullConfig,
   encodeNativeHidTxCommandBody,
   NATIVE_HID_PAYLOAD_MAX_LEN,
   NATIVE_HID_REPORT_BODY_SIZE,
@@ -89,7 +89,7 @@ export type NativeHidDevice = BaseCaptureDevice & {
   sendRawPd(sop: PdTxSop, payload: Uint8Array): Promise<void>
   sendHardReset(): Promise<void>
   sendCableReset(): Promise<void>
-  setCCMode(config: CCModeConfig): Promise<void>
+  setCCPull(config: CCPullConfig): Promise<void>
 }
 
 export type CaptureRecordNormalizer = {
@@ -700,9 +700,9 @@ export function createNativeHidDevice(): NativeHidDevice {
     async sendCableReset(): Promise<void> {
       await sendCommand({ opcode: NATIVE_HID_TX_CMD.SEND_CABLE_RESET })
     },
-    async setCCMode(config: CCModeConfig): Promise<void> {
+    async setCCPull(config: CCPullConfig): Promise<void> {
       await sendCommand({
-        opcode: NATIVE_HID_TX_CMD.SET_CC_MODE,
+        opcode: NATIVE_HID_TX_CMD.SET_CC_PULL,
         activeCC: config.activeCC,
         cc1: config.cc1,
         cc2: config.cc2,

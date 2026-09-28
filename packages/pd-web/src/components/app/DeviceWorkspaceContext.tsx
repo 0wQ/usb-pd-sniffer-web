@@ -3,7 +3,7 @@ import { createContext, type ReactNode, useContext, useMemo } from 'react'
 import type { AppView } from '@/components/app/ViewTabs'
 import type { CaptureBuffer } from '@/lib/buffers/captureBuffer'
 import type {
-  CCModeConfig,
+  CCPullConfig,
   DeviceDriver,
   DeviceKind,
   PdTxSop,
@@ -35,7 +35,7 @@ export type DeviceWorkspaceContextValue = {
   sendRawPdFrame: (sop: PdTxSop, hexPayload: string) => Promise<void>
   sendHardReset: () => Promise<void>
   sendCableReset: () => Promise<void>
-  setCCMode: (config: CCModeConfig) => Promise<void>
+  setCCPull: (config: CCPullConfig) => Promise<void>
   setAutoConnectOnLoad: (value: boolean) => void
   setAutoReconnectOnHotplug: (value: boolean) => void
   isTxDialogOpen: boolean

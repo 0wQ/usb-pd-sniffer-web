@@ -5,7 +5,7 @@ import type {
 } from '@usb-pd-sniffer/pd-device-types'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  type CCModeConfig,
+  type CCPullConfig,
   DEVICE_OPTIONS,
   type DeviceKind,
   getDeviceDriver,
@@ -235,8 +235,8 @@ export function useCaptureDevice() {
     }
   }, [selectedDriver, selectedDeviceKind])
 
-  const setCCMode = useCallback(
-    async (config: CCModeConfig) => {
+  const setCCPull = useCallback(
+    async (config: CCPullConfig) => {
       const device = deviceRef.current
       if (device === null || !isNativeDevice(device, selectedDeviceKind)) {
         throw new Error(
@@ -246,7 +246,7 @@ export function useCaptureDevice() {
 
       setIsSending(true)
       try {
-        await device.setCCMode(config)
+        await device.setCCPull(config)
       } finally {
         setIsSending(false)
       }
@@ -283,7 +283,7 @@ export function useCaptureDevice() {
     sendRawPdFrame,
     sendHardReset,
     sendCableReset,
-    setCCMode,
+    setCCPull,
     isSending,
     isDeviceSupported,
     deviceError,

@@ -56,7 +56,7 @@ const ProtocolPage = () => {
     sendRawPdFrame,
     sendHardReset,
     sendCableReset,
-    setCCMode,
+    setCCPull,
     isTxDialogOpen,
     openTxDialog,
     closeTxDialog,
@@ -272,7 +272,7 @@ const ProtocolPage = () => {
         onSendRaw={sendRawPdFrame}
         onSendHardReset={sendHardReset}
         onSendCableReset={sendCableReset}
-        onSetCCMode={setCCMode}
+        onSetCCPull={setCCPull}
       />
     </main>
   )

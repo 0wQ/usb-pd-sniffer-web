@@ -4,7 +4,7 @@ import type { AppView } from '@/components/app/ViewTabs'
 import PowerPage from '@/components/pages/PowerPage'
 import ProtocolPage from '@/components/pages/ProtocolPage'
 import { useCaptureDevice } from '@/hooks/useCaptureDevice'
-import type { CCModeConfig, PdTxSop } from '@/lib/devices/deviceDrivers'
+import type { CCPullConfig, PdTxSop } from '@/lib/devices/deviceDrivers'
 import useDeviceStore from '@/stores/deviceStore'
 
 type Props = {
@@ -23,7 +23,7 @@ const DeviceWorkspace = ({ currentView, onViewChange }: Props) => {
     sendRawPdFrame,
     sendHardReset,
     sendCableReset,
-    setCCMode,
+    setCCPull,
     isSending,
     isDeviceSupported,
     deviceError,
@@ -79,9 +79,9 @@ const DeviceWorkspace = ({ currentView, onViewChange }: Props) => {
     [sendCableReset],
   )
 
-  const handleSetCCMode = useCallback(
-    (config: CCModeConfig) => setCCMode(config),
-    [setCCMode],
+  const handleSetCCPull = useCallback(
+    (config: CCPullConfig) => setCCPull(config),
+    [setCCPull],
   )
 
   const workspaceValue = useMemo(
@@ -110,7 +110,7 @@ const DeviceWorkspace = ({ currentView, onViewChange }: Props) => {
       sendRawPdFrame: handleSendRawPdFrame,
       sendHardReset: handleSendHardReset,
       sendCableReset: handleSendCableReset,
-      setCCMode: handleSetCCMode,
+      setCCPull: handleSetCCPull,
       setAutoConnectOnLoad,
       setAutoReconnectOnHotplug,
     }),
@@ -128,7 +128,7 @@ const DeviceWorkspace = ({ currentView, onViewChange }: Props) => {
       handleSendCableReset,
       handleSendHardReset,
       handleSendRawPdFrame,
-      handleSetCCMode,
+      handleSetCCPull,
       importRecords,
       isConnected,
       isConnecting,

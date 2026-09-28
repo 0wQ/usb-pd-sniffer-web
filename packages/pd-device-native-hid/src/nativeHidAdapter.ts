@@ -71,25 +71,36 @@ export const NATIVE_HID_TX_CMD = {
   SEND_RAW_SOP2: 0x03,
   SEND_HARD_RESET: 0x04,
   SEND_CABLE_RESET: 0x05,
-  SET_CC_MODE: 0x10,
+  SET_CC_PULL: 0x10,
   GET_STATUS: 0x20,
 } as const
 
 export type ActiveCCMode = 'auto' | 'cc1' | 'cc2'
 
-export const NATIVE_HID_CC_MODE = {
+// Mirrors bsp_pd_cc_pull_t in the firmware. Rp values follow USB Type-C spec
+// Table 4-27 "Source CC Termination (Rp) Requirements": Default USB Power is
+// the 80 uA source, 1.5 A @ 5 V is 180 uA and 3.0 A @ 5 V is 330 uA.
+export const NATIVE_HID_CC_PULL = {
   OPEN: 0x00,
   RD: 0x01,
   RA: 0x02,
-  RP: 0x03,
+  RP_DEFAULT_USB: 0x03,
+  RP_1P5A: 0x04,
+  RP_3A: 0x05,
 } as const
 
-export type CCMode = 'open' | 'rd' | 'ra' | 'rp'
+export type CCPull =
+  | 'open'
+  | 'rd'
+  | 'ra'
+  | 'rp-default-usb'
+  | 'rp-1p5a'
+  | 'rp-3a'
 
-export type CCModeConfig = {
+export type CCPullConfig = {
   activeCC: ActiveCCMode
-  cc1: CCMode
-  cc2: CCMode
+  cc1: CCPull
+  cc2: CCPull
 }
 
 export type NativeHidTxOpcode =
@@ -110,10 +121,10 @@ export type NativeHidTxCommand =
       payload?: Uint8Array | null
     }
   | {
-      opcode: typeof NATIVE_HID_TX_CMD.SET_CC_MODE
+      opcode: typeof NATIVE_HID_TX_CMD.SET_CC_PULL
       activeCC: ActiveCCMode
-      cc1: CCMode
-      cc2: CCMode
+      cc1: CCPull
+      cc2: CCPull
       payload?: Uint8Array | null
     }
   | { opcode: typeof NATIVE_HID_TX_CMD.GET_STATUS; payload?: Uint8Array | null }
@@ -161,16 +172,20 @@ function getU32LE(bytes: Uint8Array, offset: number): number {
   )
 }
 
-function ccModeToByte(mode: CCMode): number {
-  switch (mode) {
+function ccPullToByte(pull: CCPull): number {
+  switch (pull) {
     case 'open':
-      return NATIVE_HID_CC_MODE.OPEN
+      return NATIVE_HID_CC_PULL.OPEN
     case 'rd':
-      return NATIVE_HID_CC_MODE.RD
+      return NATIVE_HID_CC_PULL.RD
     case 'ra':
-      return NATIVE_HID_CC_MODE.RA
-    case 'rp':
-      return NATIVE_HID_CC_MODE.RP
+      return NATIVE_HID_CC_PULL.RA
+    case 'rp-default-usb':
+      return NATIVE_HID_CC_PULL.RP_DEFAULT_USB
+    case 'rp-1p5a':
+      return NATIVE_HID_CC_PULL.RP_1P5A
+    case 'rp-3a':
+      return NATIVE_HID_CC_PULL.RP_3A
   }
 }
 
@@ -387,17 +402,17 @@ export function encodeNativeHidCommandPayload(
         )
       }
       return Uint8Array.from([command.opcode])
-    case NATIVE_HID_TX_CMD.SET_CC_MODE:
+    case NATIVE_HID_TX_CMD.SET_CC_PULL:
       if (payload.length !== 0) {
         throw new Error(
-          `CC mode command payload must be encoded from activeCC/cc1/cc2, got ${payload.length} raw bytes.`,
+          `CC pull command payload must be encoded from activeCC/cc1/cc2, got ${payload.length} raw bytes.`,
         )
       }
       return Uint8Array.from([
         command.opcode,
         activeCCModeToByte(command.activeCC),
-        ccModeToByte(command.cc1),
-        ccModeToByte(command.cc2),
+        ccPullToByte(command.cc1),
+        ccPullToByte(command.cc2),
       ])
   }
 

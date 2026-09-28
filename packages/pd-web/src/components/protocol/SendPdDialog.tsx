@@ -18,8 +18,8 @@ import {
 } from '@/lib/analyzer/txPreview'
 import type {
   ActiveCCMode,
-  CCMode,
-  CCModeConfig,
+  CCPull,
+  CCPullConfig,
   PdTxSop,
 } from '@/lib/devices/deviceDrivers'
 import useAppStore, { type SendMode } from '@/stores/appStore'
@@ -46,7 +46,7 @@ type Props = {
   onSendRaw: (sop: PdTxSop, hexPayload: string) => Promise<void>
   onSendHardReset: () => Promise<void>
   onSendCableReset: () => Promise<void>
-  onSetCCMode: (config: CCModeConfig) => Promise<void>
+  onSetCCPull: (config: CCPullConfig) => Promise<void>
 }
 
 const SendPdDialog = ({
@@ -57,7 +57,7 @@ const SendPdDialog = ({
   onSendRaw,
   onSendHardReset,
   onSendCableReset,
-  onSetCCMode,
+  onSetCCPull,
 }: Props) => {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const txDialogDraft = useAppStore((state) => state.txDialogDraft)
@@ -66,11 +66,11 @@ const SendPdDialog = ({
   const [sop, setSop] = useState<PdTxSop>(txDialogDraft.sop)
   const [hexPayload, setHexPayload] = useState(txDialogDraft.hexPayload)
   const [activeCCMode, setActiveCCMode] = useState<ActiveCCMode>('auto')
-  const [cc1Mode, setCC1Mode] = useState<CCMode>('open')
-  const [cc2Mode, setCC2Mode] = useState<CCMode>('open')
+  const [cc1Pull, setCC1Pull] = useState<CCPull>('open')
+  const [cc2Pull, setCC2Pull] = useState<CCPull>('open')
   const [isTxCommandSending, setIsTxCommandSending] = useState(false)
   const [isBatchSending, setIsBatchSending] = useState(false)
-  const [isApplyingCCMode, setIsApplyingCCMode] = useState(false)
+  const [isApplyingCCPull, setIsApplyingCCPull] = useState(false)
   const isSendBusy = isTxCommandSending || isBatchSending
   const hasMultilinePayload = hasPdTxPayloadNewline(hexPayload)
   const payloadLines = useMemo(
@@ -196,17 +196,17 @@ const SendPdDialog = ({
     await runCommand(onSendCableReset, 'Sent cable reset.')
   }
 
-  const handleSetCCMode = async () => {
+  const handleSetCCPull = async () => {
     try {
-      setIsApplyingCCMode(true)
-      await onSetCCMode({ activeCC: activeCCMode, cc1: cc1Mode, cc2: cc2Mode })
+      setIsApplyingCCPull(true)
+      await onSetCCPull({ activeCC: activeCCMode, cc1: cc1Pull, cc2: cc2Pull })
       toast.success(
-        `Applied CC mode: Active ${activeCCMode.toUpperCase()}, CC1 ${cc1Mode.toUpperCase()}, CC2 ${cc2Mode.toUpperCase()}.`,
+        `Applied CC pull: Active ${activeCCMode.toUpperCase()}, CC1 ${cc1Pull.toUpperCase()}, CC2 ${cc2Pull.toUpperCase()}.`,
       )
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Command failed.')
     } finally {
-      setIsApplyingCCMode(false)
+      setIsApplyingCCPull(false)
     }
   }
 
@@ -318,15 +318,15 @@ const SendPdDialog = ({
           <div className="rounded-lg border border-base-300 bg-base-200/70 p-3">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div>
-                <div className="text-sm font-semibold">CC Mode</div>
+                <div className="text-sm font-semibold">CC Pull</div>
               </div>
               <button
                 className="btn btn-sm rounded-full border-primary/30 bg-primary/10 px-4 normal-case text-primary hover:bg-primary/15"
-                onClick={() => void handleSetCCMode()}
-                disabled={!isConnected || isApplyingCCMode}
+                onClick={() => void handleSetCCPull()}
+                disabled={!isConnected || isApplyingCCPull}
                 type="button"
               >
-                {isApplyingCCMode ? 'Applying...' : 'Apply CC Mode'}
+                {isApplyingCCPull ? 'Applying...' : 'Apply CC Pull'}
               </button>
             </div>
 
@@ -355,14 +355,16 @@ const SendPdDialog = ({
                 </span>
                 <select
                   className="select select-bordered select-sm w-full"
-                  value={cc1Mode}
-                  onChange={(e) => setCC1Mode(e.target.value as CCMode)}
+                  value={cc1Pull}
+                  onChange={(e) => setCC1Pull(e.target.value as CCPull)}
                   disabled={!isConnected}
                 >
                   <option value="open">Open</option>
                   <option value="rd">Rd</option>
                   <option value="ra">Ra</option>
-                  <option value="rp">Rp</option>
+                  <option value="rp-default-usb">Rp Default USB</option>
+                  <option value="rp-1p5a">Rp 1.5A</option>
+                  <option value="rp-3a">Rp 3A</option>
                 </select>
               </label>
 
@@ -372,14 +374,16 @@ const SendPdDialog = ({
                 </span>
                 <select
                   className="select select-bordered select-sm w-full"
-                  value={cc2Mode}
-                  onChange={(e) => setCC2Mode(e.target.value as CCMode)}
+                  value={cc2Pull}
+                  onChange={(e) => setCC2Pull(e.target.value as CCPull)}
                   disabled={!isConnected}
                 >
                   <option value="open">Open</option>
                   <option value="rd">Rd</option>
                   <option value="ra">Ra</option>
-                  <option value="rp">Rp</option>
+                  <option value="rp-default-usb">Rp Default USB</option>
+                  <option value="rp-1p5a">Rp 1.5A</option>
+                  <option value="rp-3a">Rp 3A</option>
                 </select>
               </label>
             </div>

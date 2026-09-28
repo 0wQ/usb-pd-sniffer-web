@@ -2,8 +2,8 @@ import { createAtkC2Device } from '@usb-pd-sniffer/pd-device-atk-c2'
 import { createNativeCdcDevice } from '@usb-pd-sniffer/pd-device-native-cdc'
 import type {
   ActiveCCMode,
-  CCMode,
-  CCModeConfig,
+  CCPull,
+  CCPullConfig,
   NativeHidDevice,
   PdTxSop,
 } from '@usb-pd-sniffer/pd-device-native-hid'
@@ -20,7 +20,7 @@ export type DeviceKind =
   | 'witrn-k2-hid'
   | 'atk-c2'
 
-export type { ActiveCCMode, CCMode, CCModeConfig, PdTxSop }
+export type { ActiveCCMode, CCPull, CCPullConfig, PdTxSop }
 
 // Both native transports (HID and WinUSB/bulk) speak the same 64-byte record
 // protocol, so they expose the same control surface.
