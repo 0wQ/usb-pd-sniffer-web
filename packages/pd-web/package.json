@@ -39,7 +39,6 @@
     "babel-plugin-react-compiler": "19.1.0-rc.3",
     "daisyui": "^5.5.19",
     "typescript": "~7.0.2",
-    "vite": "^8.0.10",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite": "^8.0.10"
   }
 }
