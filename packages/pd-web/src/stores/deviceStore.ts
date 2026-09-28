@@ -60,7 +60,12 @@ type DevicePersistedState = Pick<
 >
 
 const CAPTURE_BATCH_SIZE = 1000
-const CAPTURE_BATCH_TIMEOUT = 50
+// Flush once the stream has been quiet for this long. Device traffic arrives in
+// bursts, so keying on quiet parks the store/render work in the gap after a
+// burst instead of in the middle of one, where it stalls the WebUSB read pump.
+const CAPTURE_BATCH_IDLE_MS = 40
+// Hard cap so a continuous stream cannot starve the UI indefinitely.
+const CAPTURE_BATCH_MAX_WAIT_MS = 500
 const CAPTURE_BUFFER_CAPACITY = 500_000
 const CAPTURE_AUTO_EXPORT_RECORD_LIMIT = 100_000
 const DEVICE_STORE_STORAGE_KEY = 'usb-pd-device-store'
@@ -172,7 +177,8 @@ const useDeviceStore = create<DeviceState>()(
     (set, get) => {
       const captureQueue = createBatchedQueue<CaptureRecord>({
         maxBatchSize: CAPTURE_BATCH_SIZE,
-        timeoutMs: CAPTURE_BATCH_TIMEOUT,
+        idleMs: CAPTURE_BATCH_IDLE_MS,
+        maxWaitMs: CAPTURE_BATCH_MAX_WAIT_MS,
         onFlush(records) {
           const { captureBuffer } = get()
 
