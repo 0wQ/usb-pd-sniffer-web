@@ -9,7 +9,8 @@ import {
   DEVICE_OPTIONS,
   type DeviceKind,
   getDeviceDriver,
-  isNativeHidDevice,
+  isNativeDevice,
+  isNativeWinusbDevice,
   type PdTxSop,
 } from '@/lib/devices/deviceDrivers'
 import useDeviceStore from '@/stores/deviceStore'
@@ -48,7 +49,8 @@ export function useCaptureDevice() {
   const resetDevice = useDeviceStore((state) => state.resetDevice)
   const selectedDriver = getDeviceDriver(selectedDeviceKind)
   const selectedFingerprint = lastDeviceFingerprints[selectedDeviceKind] ?? null
-  const supportsTx = selectedDeviceKind === 'native'
+  const supportsTx =
+    selectedDeviceKind === 'native' || selectedDeviceKind === 'native-winusb'
 
   const deviceRef = useRef<CaptureDevice | null>(null)
   const latestAutoReconnect = useRef(autoReconnectOnHotplug)
@@ -106,8 +108,26 @@ export function useCaptureDevice() {
     })
     const offState = device.onState(syncDeviceState)
 
+    // Surfaces the firmware's monotonic recv counter and drop counter. If
+    // recvCount advances while no records arrive, the device is producing
+    // events and the fault is in the transport; if it never moves, the device
+    // has nothing to report.
+    let lastStatsKey = ''
+    const offStats = isNativeWinusbDevice(device, driver.kind)
+      ? device.onStats((stats) => {
+          const key = `${stats.recvCount}/${stats.dropCount}`
+          if (key === lastStatsKey) return
+          lastStatsKey = key
+          logDevice('winusb stats', {
+            recvCount: stats.recvCount,
+            dropCount: stats.dropCount,
+          })
+        })
+      : null
+
     return () => {
       logDevice('dispose device', { kind: driver.kind })
+      offStats?.()
       offState()
       offRecord()
       device.dispose()
@@ -172,7 +192,7 @@ export function useCaptureDevice() {
   const sendRawPdFrame = useCallback(
     async (sop: PdTxSop, hexPayload: string) => {
       const device = deviceRef.current
-      if (device === null || !isNativeHidDevice(device, selectedDeviceKind)) {
+      if (device === null || !isNativeDevice(device, selectedDeviceKind)) {
         throw new Error(`${selectedDriver.label} does not support PD TX.`)
       }
 
@@ -189,7 +209,7 @@ export function useCaptureDevice() {
 
   const sendHardReset = useCallback(async () => {
     const device = deviceRef.current
-    if (device === null || !isNativeHidDevice(device, selectedDeviceKind)) {
+    if (device === null || !isNativeDevice(device, selectedDeviceKind)) {
       throw new Error(`${selectedDriver.label} does not support PD TX.`)
     }
 
@@ -203,7 +223,7 @@ export function useCaptureDevice() {
 
   const sendCableReset = useCallback(async () => {
     const device = deviceRef.current
-    if (device === null || !isNativeHidDevice(device, selectedDeviceKind)) {
+    if (device === null || !isNativeDevice(device, selectedDeviceKind)) {
       throw new Error(`${selectedDriver.label} does not support PD TX.`)
     }
 
@@ -218,7 +238,7 @@ export function useCaptureDevice() {
   const setCCMode = useCallback(
     async (config: CCModeConfig) => {
       const device = deviceRef.current
-      if (device === null || !isNativeHidDevice(device, selectedDeviceKind)) {
+      if (device === null || !isNativeDevice(device, selectedDeviceKind)) {
         throw new Error(
           `${selectedDriver.label} does not support CC mode control.`,
         )
