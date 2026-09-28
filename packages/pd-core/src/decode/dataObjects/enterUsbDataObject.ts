@@ -146,7 +146,7 @@ function buildEnterUsbDataObject(
     section: createSection(
       `${parentSectionKey}:object-${index}:enter_usb_data_object`,
       'data_object',
-      'Enter USB Data Object',
+      'Enter_USB Data Object (EUDO)',
       'enter_usb_data_object',
       byteOffset,
       raw32,

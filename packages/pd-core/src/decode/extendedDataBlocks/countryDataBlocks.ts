@@ -108,7 +108,7 @@ export function buildCountryCodesDataBlock(
   return {
     section: createDataBlockSection(
       `${parentSectionKey}:country-codes`,
-      'Country Codes Data Block',
+      'Country Codes Data Block (CCDB)',
       'country_codes_data_block',
       byteOffset,
       decodeBytes,
@@ -166,7 +166,7 @@ export function buildCountryInfoDataBlock(
   return {
     section: createDataBlockSection(
       `${parentSectionKey}:country-info`,
-      'Country Info Data Block',
+      'Country Info Data Block (CIDB)',
       'country_info_data_block',
       byteOffset,
       decodeBytes,

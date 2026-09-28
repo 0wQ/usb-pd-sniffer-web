@@ -38,7 +38,7 @@ describe('Extended Message framing', () => {
     expect(decoded.sections.map((section) => section.title)).toEqual([
       'Message Header',
       'Extended Message Header',
-      'Get Battery Status Data Block',
+      'Get Battery Status Data Block (GBSDB)',
       'CRC32',
     ])
   })

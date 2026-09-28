@@ -252,7 +252,7 @@ export function buildStatusDataBlock(
     return {
       section: createDataBlockSection(
         `${parentSectionKey}:status-sop`,
-        'SOP Status Data Block',
+        'SOP Status Data Block (SDB)',
         'sop_status_data_block',
         byteOffset,
         bytes.subarray(0, Math.min(bytes.length, 7)),

@@ -98,7 +98,7 @@ function buildBatteryStatusDataObject(
     section: createSection(
       `${parentSectionKey}:object-${index}:battery_status_data_object`,
       'data_object',
-      'Battery Status Data Object',
+      'Battery Status Data Object (BSDO)',
       'battery_status_data_object',
       byteOffset,
       raw32,

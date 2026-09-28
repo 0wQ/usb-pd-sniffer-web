@@ -45,7 +45,7 @@ function buildSourceInfoDataObject1(
     section: createSection(
       `${parentSectionKey}:object-${index}:source_info_data_object_1`,
       'data_object',
-      'Source Information Data Object 1',
+      'Source_Info Data Object 1 (SIDO1)',
       'source_info_data_object_1',
       byteOffset,
       raw32,
@@ -132,7 +132,7 @@ function buildSourceInfoDataObject2(
     section: createSection(
       `${parentSectionKey}:object-${index}:source_info_data_object_2`,
       'data_object',
-      'Source Information Data Object 2',
+      'Source_Info Data Object 2 (SIDO2)',
       'source_info_data_object_2',
       byteOffset,
       raw32,

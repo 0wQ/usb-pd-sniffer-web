@@ -536,7 +536,7 @@ export function buildSourceCapabilitiesExtendedDataBlock(
   return {
     section: createDataBlockSection(
       `${parentSectionKey}:source-capabilities-extended`,
-      'Source Capabilities Extended Data Block',
+      'Source Capabilities Extended Data Block (SCEDB)',
       'source_capabilities_extended_data_block',
       byteOffset,
       bytes.subarray(0, Math.min(bytes.length, 25)),
@@ -732,7 +732,7 @@ export function buildSinkCapabilitiesExtendedDataBlock(
   return {
     section: createDataBlockSection(
       `${parentSectionKey}:sink-capabilities-extended`,
-      'Sink Capabilities Extended Data Block',
+      'Sink Capabilities Extended Data Block (SKEDB)',
       'sink_capabilities_extended_data_block',
       byteOffset,
       bytes.subarray(0, Math.min(bytes.length, 24)),

@@ -10,7 +10,7 @@ describe('Status Data Blocks', () => {
     })
 
     const status = decoded.sections.find(
-      (section) => section.title === 'SOP Status Data Block',
+      (section) => section.title === 'SOP Status Data Block (SDB)',
     )
 
     expect(status?.semanticKind).toBe('sop_status_data_block')
@@ -38,7 +38,7 @@ describe('Status Data Blocks', () => {
       messageBytes: extendedMessageBytes(0x02, [0, 0, 0], 7),
     })
     const status = decoded.sections.find(
-      (section) => section.title === 'SOP Status Data Block',
+      (section) => section.title === 'SOP Status Data Block (SDB)',
     )
 
     expect(status?.issues.map((issue) => issue.code)).toContain(
@@ -53,7 +53,7 @@ describe('Status Data Blocks', () => {
     })
 
     expect(decoded.sections.map((section) => section.title)).toContain(
-      'PPS Status Data Block',
+      'PPS Status Data Block (PPSSDB)',
     )
   })
 
@@ -63,7 +63,7 @@ describe('Status Data Blocks', () => {
       messageBytes: extendedMessageBytes(0x0c, [0, 0, 0, 0x11]),
     })
     const status = decoded.sections.find(
-      (section) => section.title === 'PPS Status Data Block',
+      (section) => section.title === 'PPS Status Data Block (PPSSDB)',
     )
 
     expect(status?.issues.map((issue) => issue.code)).toContain(

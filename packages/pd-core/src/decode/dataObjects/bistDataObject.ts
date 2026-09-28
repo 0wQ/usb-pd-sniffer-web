@@ -74,7 +74,7 @@ function buildBistDataObject(
     section: createSection(
       `${parentSectionKey}:object-${index}:bist_data_object`,
       'data_object',
-      'BIST Data Object',
+      'BIST Data Object (BDO)',
       'bist_data_object',
       byteOffset,
       raw32,

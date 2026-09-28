@@ -8,12 +8,12 @@ describe('Capabilities Extended Data Blocks', () => {
       {
         messageType: 0x01,
         payload: Array.from({ length: 25 }, () => 0),
-        title: 'Source Capabilities Extended Data Block',
+        title: 'Source Capabilities Extended Data Block (SCEDB)',
       },
       {
         messageType: 0x0f,
         payload: Array.from({ length: 24 }, () => 0),
-        title: 'Sink Capabilities Extended Data Block',
+        title: 'Sink Capabilities Extended Data Block (SKEDB)',
       },
     ] as const
 
@@ -38,7 +38,8 @@ describe('Capabilities Extended Data Blocks', () => {
       messageBytes: extendedMessageBytes(0x01, [0, 0, 0, 0], 25),
     })
     const capabilities = decoded.sections.find(
-      (section) => section.title === 'Source Capabilities Extended Data Block',
+      (section) =>
+        section.title === 'Source Capabilities Extended Data Block (SCEDB)',
     )
 
     expect(capabilities?.issues.map((issue) => issue.code)).toContain(

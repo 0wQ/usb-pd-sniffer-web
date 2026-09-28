@@ -13,7 +13,7 @@ describe('Extended Control Data Block', () => {
     expect(decoded.sections.map((section) => section.title)).toEqual([
       'Message Header',
       'Extended Message Header',
-      'Extended Control Data Block',
+      'Extended Control Data Block (ECDB)',
       'CRC32',
     ])
     expect(
@@ -31,7 +31,7 @@ describe('Extended Control Data Block', () => {
       messageBytes: Uint8Array.from([0x90, 0x90, 0x02, 0x00, 0x00, 0x01]),
     })
     const control = decoded.sections.find(
-      (section) => section.title === 'Extended Control Data Block',
+      (section) => section.title === 'Extended Control Data Block (ECDB)',
     )
 
     expect(control?.issues.map((issue) => issue.code)).toEqual([

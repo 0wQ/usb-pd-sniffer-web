@@ -147,7 +147,7 @@ export function buildManufacturerInfoDataBlock(
   return {
     section: createDataBlockSection(
       `${parentSectionKey}:manufacturer-info`,
-      'Manufacturer Info Data Block',
+      'Manufacturer Info Data Block (MIDB)',
       'manufacturer_info_data_block',
       byteOffset,
       decodeBytes,

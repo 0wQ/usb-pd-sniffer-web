@@ -43,7 +43,7 @@ function buildGetCountryInfoDataObject(
     section: createSection(
       `${parentSectionKey}:object-${index}:country_code_data_object`,
       'data_object',
-      'Country Code Data Object',
+      'Country Code Data Object (CCDO)',
       'country_code_data_object',
       byteOffset,
       raw32,

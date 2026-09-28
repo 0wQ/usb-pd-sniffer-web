@@ -114,7 +114,7 @@ function buildEprModeDataObject(
     section: createSection(
       `${parentSectionKey}:object-${index}:epr_mode_data_object`,
       'data_object',
-      'EPR Mode Data Object',
+      'EPR Mode Data Object (EPRMDO)',
       'epr_mode_data_object',
       byteOffset,
       raw32,

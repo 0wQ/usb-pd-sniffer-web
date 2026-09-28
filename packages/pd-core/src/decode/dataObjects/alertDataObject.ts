@@ -133,7 +133,7 @@ function buildAlertDataObject(
     section: createSection(
       `${parentSectionKey}:object-${index}:alert_data_object`,
       'data_object',
-      'Alert Data Object',
+      'Alert Data Object (ADO)',
       'alert_data_object',
       byteOffset,
       raw32,

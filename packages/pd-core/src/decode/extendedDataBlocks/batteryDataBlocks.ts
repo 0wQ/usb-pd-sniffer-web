@@ -44,7 +44,7 @@ export function buildGetBatteryCapDataBlock(
   return {
     section: createDataBlockSection(
       `${parentSectionKey}:get-battery-cap`,
-      'Get Battery Cap Data Block',
+      'Get Battery Cap Data Block (GBCDB)',
       'get_battery_cap_data_block',
       byteOffset,
       bytes.subarray(0, Math.min(bytes.length, 1)),
@@ -92,7 +92,7 @@ export function buildGetBatteryStatusDataBlock(
   return {
     section: createDataBlockSection(
       `${parentSectionKey}:get-battery-status`,
-      'Get Battery Status Data Block',
+      'Get Battery Status Data Block (GBSDB)',
       'get_battery_status_data_block',
       byteOffset,
       bytes.subarray(0, Math.min(bytes.length, 1)),
@@ -169,7 +169,7 @@ export function buildBatteryCapabilitiesDataBlock(
   return {
     section: createDataBlockSection(
       `${parentSectionKey}:battery-capabilities`,
-      'Battery Capabilities Data Block',
+      'Battery Capability Data Block (BCDB)',
       'battery_capabilities_data_block',
       byteOffset,
       bytes.subarray(0, Math.min(bytes.length, 9)),

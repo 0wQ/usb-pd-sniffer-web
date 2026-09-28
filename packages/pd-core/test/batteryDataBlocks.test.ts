@@ -8,17 +8,17 @@ describe('Battery Data Blocks', () => {
       {
         messageType: 0x03,
         payload: [0],
-        title: 'Get Battery Cap Data Block',
+        title: 'Get Battery Cap Data Block (GBCDB)',
       },
       {
         messageType: 0x04,
         payload: [0],
-        title: 'Get Battery Status Data Block',
+        title: 'Get Battery Status Data Block (GBSDB)',
       },
       {
         messageType: 0x05,
         payload: [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        title: 'Battery Capabilities Data Block',
+        title: 'Battery Capability Data Block (BCDB)',
       },
     ] as const
 
@@ -43,7 +43,7 @@ describe('Battery Data Blocks', () => {
       messageBytes: extendedMessageBytes(0x03, [8]),
     })
     const request = decoded.sections.find(
-      (section) => section.title === 'Get Battery Cap Data Block',
+      (section) => section.title === 'Get Battery Cap Data Block (GBCDB)',
     )
 
     expect(request?.issues.map((issue) => issue.code)).toContain(

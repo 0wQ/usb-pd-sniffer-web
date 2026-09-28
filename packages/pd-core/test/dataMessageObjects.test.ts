@@ -7,44 +7,44 @@ describe('message-specific Data Objects', () => {
       {
         name: 'BIST',
         messageBytes: [0x83, 0x10, 0x00, 0x00, 0x00, 0x50],
-        title: 'BIST Data Object',
+        title: 'BIST Data Object (BDO)',
       },
       {
         name: 'Battery_Status',
         messageBytes: [0x85, 0x10, 0xff, 0xff, 0x00, 0x00],
-        title: 'Battery Status Data Object',
+        title: 'Battery Status Data Object (BSDO)',
       },
       {
         name: 'Alert',
         messageBytes: [0x86, 0x10, 0x00, 0x00, 0x00, 0x00],
-        title: 'Alert Data Object',
+        title: 'Alert Data Object (ADO)',
       },
       {
         name: 'Get_Country_Info',
         messageBytes: [0x87, 0x10, 0x00, 0x00, 0x53, 0x55],
-        title: 'Country Code Data Object',
+        title: 'Country Code Data Object (CCDO)',
       },
       {
         name: 'Enter_USB',
         messageBytes: [0x88, 0x10, 0x00, 0x00, 0x00, 0x00],
-        title: 'Enter USB Data Object',
+        title: 'Enter_USB Data Object (EUDO)',
       },
       {
         name: 'EPR_Mode',
         messageBytes: [0x8a, 0x10, 0x00, 0x00, 0x64, 0x01],
-        title: 'EPR Mode Data Object',
+        title: 'EPR Mode Data Object (EPRMDO)',
       },
       {
         name: 'Source_Info',
         messageBytes: [
           0x8b, 0x20, 0x64, 0x64, 0x8c, 0x00, 0x78, 0x30, 0x02, 0x40,
         ],
-        title: 'Source Information Data Object 1',
+        title: 'Source_Info Data Object 1 (SIDO1)',
       },
       {
         name: 'Revision',
         messageBytes: [0x8c, 0x10, 0x00, 0x00, 0x21, 0x32],
-        title: 'Revision Message Data Object',
+        title: 'Revision Message Data Object (RMDO)',
       },
     ] as const
 
@@ -83,7 +83,7 @@ describe('message-specific Data Objects', () => {
       ]),
     })
     const bist = decoded.sections.find(
-      (section) => section.title === 'BIST Data Object',
+      (section) => section.title === 'BIST Data Object (BDO)',
     )
 
     expect(bist?.issues.map((issue) => issue.code)).toContain(
@@ -104,11 +104,11 @@ describe('message-specific Data Objects', () => {
     })
 
     const sido2 = decoded.sections.find(
-      (section) => section.title === 'Source Information Data Object 2',
+      (section) => section.title === 'Source_Info Data Object 2 (SIDO2)',
     )
 
     expect(decoded.sections.map((section) => section.title)).toContain(
-      'Source Information Data Object 1',
+      'Source_Info Data Object 1 (SIDO1)',
     )
     expect(
       sido2?.fields.find((field) => field.key === 'dps_port'),
@@ -139,7 +139,7 @@ describe('message-specific Data Objects', () => {
     })
 
     const alert = decoded.sections.find(
-      (section) => section.title === 'Alert Data Object',
+      (section) => section.title === 'Alert Data Object (ADO)',
     )
 
     expect(

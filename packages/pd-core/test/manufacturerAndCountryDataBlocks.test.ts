@@ -13,7 +13,7 @@ describe('Manufacturer and Country Data Blocks', () => {
       {
         messageType: 0x07,
         payload: [0x34, 0x12, 0x78, 0x56, 0],
-        title: 'Manufacturer Info Data Block',
+        title: 'Manufacturer Info Data Block (MIDB)',
       },
     ] as const
 
@@ -37,12 +37,12 @@ describe('Manufacturer and Country Data Blocks', () => {
       {
         messageType: 0x0d,
         payload: [0x55, 0x53, 0, 0, 0x58],
-        title: 'Country Info Data Block',
+        title: 'Country Info Data Block (CIDB)',
       },
       {
         messageType: 0x0e,
         payload: [1, 0, 0x55, 0x53],
-        title: 'Country Codes Data Block',
+        title: 'Country Codes Data Block (CCDB)',
       },
     ] as const
 
@@ -67,7 +67,7 @@ describe('Manufacturer and Country Data Blocks', () => {
       messageBytes: extendedMessageBytes(0x0e, [2, 0, 0x55, 0x53]),
     })
     const countryCodes = decoded.sections.find(
-      (section) => section.title === 'Country Codes Data Block',
+      (section) => section.title === 'Country Codes Data Block (CCDB)',
     )
 
     expect(countryCodes?.issues.map((issue) => issue.code)).toContain(

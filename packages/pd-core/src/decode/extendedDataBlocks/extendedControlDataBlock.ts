@@ -60,7 +60,7 @@ export function buildExtendedControlDataBlock(
   return {
     section: createDataBlockSection(
       `${parentSectionKey}:extended-control`,
-      'Extended Control Data Block',
+      'Extended Control Data Block (ECDB)',
       'extended_control_data_block',
       byteOffset,
       bytes.subarray(0, Math.min(bytes.length, 2)),

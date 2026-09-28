@@ -54,7 +54,7 @@ export function buildPpsStatusDataBlock(
   return {
     section: createDataBlockSection(
       `${parentSectionKey}:pps-status`,
-      'PPS Status Data Block',
+      'PPS Status Data Block (PPSSDB)',
       'pps_status_data_block',
       byteOffset,
       bytes.subarray(0, Math.min(bytes.length, 4)),

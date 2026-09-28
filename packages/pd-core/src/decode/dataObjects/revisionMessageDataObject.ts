@@ -44,7 +44,7 @@ function buildRevisionDataObject(
     section: createSection(
       `${parentSectionKey}:object-${index}:revision_message_data_object`,
       'data_object',
-      'Revision Message Data Object',
+      'Revision Message Data Object (RMDO)',
       'revision_message_data_object',
       byteOffset,
       raw32,
