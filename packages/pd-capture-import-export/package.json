@@ -25,7 +25,7 @@
     "@usb-pd-sniffer/pd-core": "workspace:*",
     "@usb-pd-sniffer/pd-device-atk-c2": "workspace:*",
     "@usb-pd-sniffer/pd-device-types": "workspace:*",
-    "fflate": "^0.8.2",
+    "fflate": "^0.8.3",
     "papaparse": "^5.5.3"
   },
   "devDependencies": {
